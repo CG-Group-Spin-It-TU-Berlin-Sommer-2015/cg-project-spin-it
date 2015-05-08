@@ -17,13 +17,21 @@ SOURCES += main.cpp\
     view/glwidget.cpp \
     model/objreader.cpp \
     view/mesh.cpp \
-    view/shader.cpp
+    view/utility/shader.cpp
 
 HEADERS  += view/mainwindow.h \
     view/glwidget.h \
     view/objreader.h \
     model/objreader.h \
     view/mesh.h \
-    view/shader.h
+    view/utility/shader.h
 
 FORMS    += view/mainwindow.ui
+
+OTHER_FILES += \
+    simple.vsh \
+    simple.fsh
+
+RESOURCES += \
+    shader.qrc
+

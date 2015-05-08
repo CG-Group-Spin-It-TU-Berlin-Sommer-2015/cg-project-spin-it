@@ -1,17 +1,37 @@
-int initialize()
-{
-    ifstream file;
-    file.open("shader.vs", "r");
-    char *code = "";
-    while (!feof(file)) {
-        code = code + file >> s;
-    }
-    int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, code);
-    glCompileShader(vertex_shader);
-    Log.log(glGetShaderInfoLog(vertex_shader));
+#include <iostream>
+#include <fstream>
+#include <string>
 
-    code = "";
+#include <QFile>
+#include <QTextStream>
+#include <QtOpenGL>
+#include <QOpenGLFunctions>
+
+using namespace std;
+
+int initShader()
+{
+    string code = "";
+    QFile file (":/shader/simple.vsh");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return 0;
+
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+
+        QString line = in.readLine();
+        code = code + line.toStdString() + "\n";
+    }
+    file.close();
+
+
+    QOpenGLFunctions *qf = new QOpenGLFunctions(QOpenGLContext::currentContext());
+    GLuint vs = qf->glCreateShader(GL_VERTEX_SHADER);
+    const char *c_str = code.c_str();
+    qf->glShaderSource(vs, 1, &c_str, NULL);
+    qf->glCompileShader(vs);
+    //qf->glGetShaderInfoLog(vs, NULL, NULL, &e_message);
+    /*code = "";
     File *file = fopen("shader.fs", "r");
     String code = "";
     while (file >> s) {
@@ -29,5 +49,5 @@ int initialize()
     Log.log(glGetProgramInfoLog(program));
     glUseProgram(program);
 
-    return program;
+    return program;*/
 }
