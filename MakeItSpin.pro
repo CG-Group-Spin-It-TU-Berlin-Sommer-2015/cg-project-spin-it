@@ -16,15 +16,15 @@ SOURCES += main.cpp\
     view/mainwindow.cpp \
     view/glwidget.cpp \
     model/objreader.cpp \
-    view/mesh.cpp \
-    view/utility/shader.cpp
+    view/utility/shader.cpp \
+    view/utility/mesh.cpp
 
 HEADERS  += view/mainwindow.h \
     view/glwidget.h \
     view/objreader.h \
     model/objreader.h \
-    view/mesh.h \
-    view/utility/shader.h
+    view/utility/shader.h \
+    view/utility/mesh.h
 
 FORMS    += view/mainwindow.ui
 
