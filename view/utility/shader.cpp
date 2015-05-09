@@ -9,45 +9,63 @@
 
 using namespace std;
 
-int initShader()
+/**
+ * @brief initShader
+ * @return the compiled shader program or 0 if the shader file does not exist
+ */
+GLuint loadShader(string shader_name)
 {
-    string code = "";
-    QFile file (":/shader/simple.vsh");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    QOpenGLFunctions* qf = new QOpenGLFunctions(QOpenGLContext::currentContext());
+    char* error;
+
+    QFile* file = new QFile((":/shader/" + shader_name + ".vsh").c_str());
+    if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
         return 0;
 
-    QTextStream in(&file);
-    while (!in.atEnd()) {
-
-        QString line = in.readLine();
+    string code = "";
+    QTextStream* in = new QTextStream(file);
+    while (!in->atEnd()) {
+        QString line = in->readLine();
         code = code + line.toStdString() + "\n";
     }
-    file.close();
+    file->close();
 
-
-    QOpenGLFunctions *qf = new QOpenGLFunctions(QOpenGLContext::currentContext());
     GLuint vs = qf->glCreateShader(GL_VERTEX_SHADER);
-    const char *c_str = code.c_str();
-    qf->glShaderSource(vs, 1, &c_str, NULL);
+    const char* v_str = code.c_str();
+    qf->glShaderSource(vs, 1, &v_str, NULL);
     qf->glCompileShader(vs);
-    //qf->glGetShaderInfoLog(vs, NULL, NULL, &e_message);
-    /*code = "";
-    File *file = fopen("shader.fs", "r");
-    String code = "";
-    while (file >> s) {
-        code = code + s;
+    qf->glGetShaderInfoLog(vs, NULL, NULL, error);
+    cout << error << "\n";
+
+    code = "";
+
+    delete file;
+    delete in;
+    file = new QFile((":/shader/" + shader_name + ".fsh").c_str());
+    if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
+        return 0;
+
+    in = new QTextStream(file);
+    while (!in->atEnd()) {
+        QString line = in->readLine();
+        code = code + line.toStdString() + "\n";
     }
-    int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, code);
-    glCompileShader(fragment_shader);
-    Log.log(glGetShaderInfoLog(fragment_shader));
+    file->close();
 
-    int program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-    Log.log(glGetProgramInfoLog(program));
-    glUseProgram(program);
+    GLuint fs = qf->glCreateShader(GL_FRAGMENT_SHADER);
+    const char *f_str = code.c_str();
+    qf->glShaderSource(fs, 1, &f_str, NULL);
+    qf->glCompileShader(fs);
+    qf->glGetShaderInfoLog(fs, NULL, NULL, error);
+    cout << error << "\n";
 
-    return program;*/
+    GLuint program = qf->glCreateProgram();
+    qf->glAttachShader(program, vs);
+    qf->glAttachShader(program, fs);
+    qf->glLinkProgram(program);
+    qf->glGetProgramInfoLog(program, NULL, NULL, error);
+    cout << error << "\n";
+    qf->glUseProgram(program);
+
+    return program;
 }

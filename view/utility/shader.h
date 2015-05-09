@@ -6,6 +6,6 @@
 
 using namespace std;
 
-int initShader();
+int loadShader(string shader_name);
 
 #endif // SHADER_H

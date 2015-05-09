@@ -18,7 +18,7 @@ GLWidget::~GLWidget()
 
 void GLWidget::initializeGL()
 {
-    initShader();
+    loadShader("simple");
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     qglClearColor(Qt::gray);
