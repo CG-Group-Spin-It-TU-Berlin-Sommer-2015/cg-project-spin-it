@@ -1,4 +1,5 @@
 #include "glwidget.h"
+#include "utility/shader.h"
 
 #include <QtOpenGL>
 

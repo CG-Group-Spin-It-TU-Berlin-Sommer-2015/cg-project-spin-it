@@ -7,6 +7,8 @@
 #include <QtOpenGL>
 #include <QOpenGLFunctions>
 
+#include "shader.h"
+
 using namespace std;
 
 /**

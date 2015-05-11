@@ -3,7 +3,7 @@
 
 #include <QGLWidget>
 
-#include "utility/shader.h"
+
 
 class GLWidget : public QGLWidget
 {

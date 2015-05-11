@@ -9,7 +9,7 @@ using namespace std;
 class Mesh
 {
 private:
-    bool isDirty = true;
+    bool isDirty;
 
     GLuint* vbo;
     GLuint* ibo;
