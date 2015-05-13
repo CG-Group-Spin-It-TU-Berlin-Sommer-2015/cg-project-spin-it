@@ -4,8 +4,6 @@
 #include <QtOpenGL>
 #include <QGLFunctions>
 
-using namespace std;
-
 class Mesh
 {
 private:
@@ -18,9 +16,12 @@ private:
     float* normals;
     short* indices;
 
+    const int GEOMETRY_DATA_SIZE    = 3;
+    const int COLOR_DATA_SIZE       = 4;
+    const int NORMAL_DATA_SIZE      = 3;
+
 public:
-    Mesh(char* file_name);
-    Mesh(int n_geo, int n_nor, int n_ind);
+    Mesh(float* geometry, short* indices);
     float* getGeometry();
     float* getNormals();
     short* getIndices();

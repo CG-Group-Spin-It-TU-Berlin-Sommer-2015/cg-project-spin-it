@@ -15,16 +15,15 @@ TEMPLATE = app
 SOURCES += main.cpp\
     view/mainwindow.cpp \
     view/glwidget.cpp \
-    model/objreader.cpp \
     view/utility/shader.cpp \
-    view/utility/mesh.cpp
+    view/utility/mesh.cpp \
+    view/utility/meshreader.cpp
 
 HEADERS  += view/mainwindow.h \
     view/glwidget.h \
-    view/objreader.h \
-    model/objreader.h \
     view/utility/shader.h \
-    view/utility/mesh.h
+    view/utility/mesh.h \
+    view/utility/meshreader.h
 
 FORMS    += view/mainwindow.ui
 

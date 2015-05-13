@@ -1,12 +1,3 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-
-#include <QFile>
-#include <QTextStream>
-#include <QtOpenGL>
-#include <QOpenGLFunctions>
-
 #include "shader.h"
 
 using namespace std;

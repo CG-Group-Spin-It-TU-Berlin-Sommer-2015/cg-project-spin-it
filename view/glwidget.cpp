@@ -1,11 +1,4 @@
 #include "glwidget.h"
-#include "utility/shader.h"
-
-#include <QtOpenGL>
-
-int rot_x = 0;
-int rot_y = 0;
-int rot_z = 0;
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
@@ -19,7 +12,9 @@ GLWidget::~GLWidget()
 
 void GLWidget::initializeGL()
 {
-    loadShader("simple");
+    program = loadShader("simple");
+    object = readMeshFromObjFile("test");
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     qglClearColor(Qt::gray);

@@ -1,17 +1,13 @@
 #include "mesh.h"
 
+using namespace std;
 
-
-Mesh::Mesh(char* file_name)
+Mesh::Mesh(float* geometry, short* indices)
 {
+    this->geometry = geometry;
+    this->indices = indices;
 
-}
-
-Mesh::Mesh(int num_geometry, int num_normals, int num_indices)
-{
-    this->geometry = new float[3 * num_geometry];
-    this->normals = new float[3 * num_normals];
-    this->indices = new short[num_indices];
+    //TODO: Normalen berechnen
 }
 
 float* Mesh::getGeometry()
@@ -34,13 +30,17 @@ void Mesh::render(GLuint program, GLenum primitive)
     QGLFunctions* qf = new QGLFunctions();
     if (isDirty) {
         vector<float>* fb = new vector<float>();
-        fb->reserve(sizeof(geometry) + sizeof(normals));
+        fb->reserve(sizeof(geometry));
         for (uint i = 0; i < sizeof(geometry) / 3; i++) {
             fb->push_back(geometry[i]);
             fb->push_back(geometry[i + 1]);
             fb->push_back(geometry[i + 2]);
-            fb->push_back(normals[i]);
-            fb->push_back(normals[i + 1]);
+            fb->push_back(100/255);
+            fb->push_back(100/255);
+            fb->push_back(100/255);
+            fb->push_back(100/255);
+            //fb->push_back(normals[i]);
+            //fb->push_back(normals[i + 1]);
         }
         qf->glGenBuffers(1, vbo);
         qf->glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);

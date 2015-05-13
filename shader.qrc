@@ -3,4 +3,7 @@
         <file>simple.fsh</file>
         <file>simple.vsh</file>
     </qresource>
+    <qresource prefix="/obj">
+        <file>test.obj</file>
+    </qresource>
 </RCC>
