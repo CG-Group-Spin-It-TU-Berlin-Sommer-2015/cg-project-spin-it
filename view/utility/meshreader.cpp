@@ -16,6 +16,7 @@ Mesh* readMeshFromObjFile (string file_name)
     vector<float> geometry;
     vector<short> indices;
 
+    /*
     char* token;
     QTextStream* in = new QTextStream(file);
     while (!in->atEnd()) {
@@ -38,4 +39,7 @@ Mesh* readMeshFromObjFile (string file_name)
 
     Mesh* mesh = new Mesh(geometry.data(), indices.data());
     return mesh;
+    */
+
+    return 0;
 }

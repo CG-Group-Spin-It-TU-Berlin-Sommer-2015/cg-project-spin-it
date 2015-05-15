@@ -16,9 +16,9 @@ private:
     float* normals;
     short* indices;
 
-    const int GEOMETRY_DATA_SIZE    = 3;
-    const int COLOR_DATA_SIZE       = 4;
-    const int NORMAL_DATA_SIZE      = 3;
+    static const int GEOMETRY_DATA_SIZE    = 3;
+    static const int COLOR_DATA_SIZE       = 4;
+    static const int NORMAL_DATA_SIZE      = 3;
 
 public:
     Mesh(float* geometry, short* indices);

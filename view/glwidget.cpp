@@ -12,8 +12,8 @@ GLWidget::~GLWidget()
 
 void GLWidget::initializeGL()
 {
-    program = loadShader("simple");
-    object = readMeshFromObjFile("test");
+    //program = loadShader("simple");
+    //object = readMeshFromObjFile("test");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
