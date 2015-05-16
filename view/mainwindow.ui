@@ -17,10 +17,10 @@
    <widget class="GLWidget" name="glWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>-1</x>
-      <y>-1</y>
+      <x>0</x>
+      <y>0</y>
       <width>750</width>
-      <height>750</height>
+      <height>441</height>
      </rect>
     </property>
     <property name="minimumSize">
@@ -28,6 +28,9 @@
       <width>750</width>
       <height>0</height>
      </size>
+    </property>
+    <property name="mouseTracking">
+     <bool>false</bool>
     </property>
    </widget>
   </widget>

@@ -50,14 +50,14 @@ GLuint loadShader(string shader_name)
     qf->glShaderSource(fs, 1, &f_str, NULL);
     qf->glCompileShader(fs);
     qf->glGetShaderInfoLog(fs, NULL, NULL, error);
-    cout << error << "\n";
+    cout << error << endl;
 
     GLuint program = qf->glCreateProgram();
     qf->glAttachShader(program, vs);
     qf->glAttachShader(program, fs);
     qf->glLinkProgram(program);
     qf->glGetProgramInfoLog(program, NULL, NULL, error);
-    cout << error << "\n";
+    cout << error << endl;
     qf->glUseProgram(program);
 
     return program;

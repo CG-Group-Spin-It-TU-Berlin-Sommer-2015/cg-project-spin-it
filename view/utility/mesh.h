@@ -5,29 +5,28 @@
 
 #include <QtOpenGL>
 #include <QGLFunctions>
+#include <QOpenGLBuffer>
 
 class Mesh
 {
 private:
     bool isDirty;
 
-    GLuint* vbo;
-    GLuint* ibo;
+    QOpenGLBuffer* vbo;
+    QOpenGLBuffer* ibo;
 
-    std::vector<float>* geometry;
-    std::vector<float>* normals;
-    std::vector<short>* indices;
-
-    const int GEOMETRY_DATA_SIZE    = 3;
-    const int COLOR_DATA_SIZE       = 4;
-    const int NORMAL_DATA_SIZE      = 3;
+    QVector<GLfloat>* geometry;
+    QVector<GLfloat>* normals;
+    QVector<GLshort>* indices;
 
 public:
-    Mesh(std::vector<float>* geometry, std::vector<short>* indices);
-    std::vector<float>* getGeometry();
-    std::vector<float>* getNormals();
-    std::vector<short>* getIndices();
-    void render(GLuint program, GLenum primitive);
+    Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices);
+    QVector<GLfloat>* getGeometry();
+    QVector<GLfloat>* getNormals();
+    QVector<GLshort>* getIndices();
+    void render(QGLShaderProgram* shader, GLenum primitive);
+
+    QVector3D getMean();
 };
 
 #endif // MESH_H
