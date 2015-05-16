@@ -2,25 +2,27 @@
 
 using namespace std;
 
-Mesh::Mesh(float* geometry, short* indices)
+Mesh::Mesh(std::vector<float>* geometry, std::vector<short>* indices)
 {
+    this->vbo = new GLuint[2];
+
     this->geometry = geometry;
     this->indices = indices;
 
     //TODO: Normalen berechnen
 }
 
-float* Mesh::getGeometry()
+std::vector<float>* Mesh::getGeometry()
 {
     return geometry;
 }
 
-float* Mesh::getNormals()
+std::vector<float>* Mesh::getNormals()
 {
     return normals;
 }
 
-short* Mesh::getIndices()
+std::vector<short>* Mesh::getIndices()
 {
     return indices;
 }
@@ -30,15 +32,15 @@ void Mesh::render(GLuint program, GLenum primitive)
     QGLFunctions* qf = new QGLFunctions();
     if (isDirty) {
         vector<float>* fb = new vector<float>();
-        fb->reserve(sizeof(geometry));
-        for (uint i = 0; i < sizeof(geometry) / 3; i++) {
-            fb->push_back(geometry[i]);
-            fb->push_back(geometry[i + 1]);
-            fb->push_back(geometry[i + 2]);
-            fb->push_back(100/255);
-            fb->push_back(100/255);
-            fb->push_back(100/255);
-            fb->push_back(100/255);
+        fb->reserve(geometry->size() + 4* geometry->size() / 3);
+        for (uint i = 0; i < geometry->size(); i += 3) {
+            fb->push_back(geometry->at(i));
+            fb->push_back(geometry->at(i + 1));
+            fb->push_back(geometry->at(i + 2));
+            fb->push_back((float) 100/255);
+            fb->push_back((float) 100/255);
+            fb->push_back((float) 100/255);
+            fb->push_back((float) 100/255);
             //fb->push_back(normals[i]);
             //fb->push_back(normals[i + 1]);
         }
@@ -48,9 +50,9 @@ void Mesh::render(GLuint program, GLenum primitive)
         qf->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         vector<short>* sb = new vector<short>();
-        sb->reserve(sizeof(indices));
-        for (uint i = 0; i < sizeof(indices); i++) {
-            sb->push_back(indices[i]);
+        sb->reserve(indices->size());
+        for (uint i = 0; i < indices->size(); i++) {
+            sb->push_back(indices->at(i));
         }
         qf->glGenBuffers(1, ibo);
         qf->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo[0]);

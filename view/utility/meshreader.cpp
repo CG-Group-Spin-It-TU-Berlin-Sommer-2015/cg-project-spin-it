@@ -13,29 +13,25 @@ Mesh* readMeshFromObjFile (string file_name)
     if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
         return 0;
 
-    vector<float> geometry;
-    vector<short> indices;
+    std::vector<float>* geometry = new std::vector<float>;
+    std::vector<short>* indices = new std::vector<short>;
 
-    char* token;
     QTextStream* in = new QTextStream(file);
     while (!in->atEnd()) {
-        string line = in->readLine().toStdString();
-        char c_line[line.length()];
-        strcpy(c_line, line.c_str());
-        token = strtok(c_line, " ");
-        if (strcmp(token, "v") == 1) {
-            geometry.push_back(atof(strtok(NULL, " ")));
-            geometry.push_back(atof(strtok(NULL, " ")));
-            geometry.push_back(atof(strtok(NULL, " ")));
+        QString line = in->readLine();
+        QStringList token = line.split(" ");
+        if (strcmp(token.at(0).toStdString().c_str(), "v") == 0) {
+            geometry->push_back(token.at(1).toFloat());
+            geometry->push_back(token.at(2).toFloat());
+            geometry->push_back(token.at(3).toFloat());
         }
-        if (strcmp(token, "f") == 1) {
-            indices.push_back(atoi(strtok(NULL, " ")));
-            indices.push_back(atoi(strtok(NULL, " ")));
-            indices.push_back(atoi(strtok(NULL, " ")));
+        if (strcmp(token.at(0).toStdString().c_str(), "f") == 0) {
+            indices->push_back(token.at(1).toShort());
+            indices->push_back(token.at(2).toShort());
+            indices->push_back(token.at(3).toShort());
         }
     }
     file->close();
 
-    Mesh* mesh = new Mesh(geometry.data(), indices.data());
-    return mesh;
+    return new Mesh(geometry, indices);
 }
