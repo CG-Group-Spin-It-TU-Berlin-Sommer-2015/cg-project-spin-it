@@ -57,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // set button for set test setting
     button = new QPushButton(buttonWidget);
-    button->setText(tr("Set Cube"));
+    button->setText(tr("Set Testobject 1"));
     button->setMinimumWidth(100);
     button->setMaximumWidth(100);
     button->setMaximumHeight(25);
@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // set button for set test setting
     button = new QPushButton(buttonWidget);
-    button->setText(tr("Set Cuboid"));
+    button->setText(tr("Set Testobject 2"));
     button->setMinimumWidth(100);
     button->setMaximumWidth(100);
     button->setMaximumHeight(25);
@@ -75,7 +75,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // set button for set test setting
     button = new QPushButton(buttonWidget);
-    button->setText(tr("Set DummyBoy"));
+    button->setText(tr("Set Testobject 3"));
     button->setMinimumWidth(100);
     button->setMaximumWidth(100);
     button->setMaximumHeight(25);
@@ -122,6 +122,18 @@ void MainWindow::setTestSetting3()
 void MainWindow::open()
 {
 
+    //QString fileName = QFileDialog::getOpenFileName(this, tr("Open OFF"), "", tr("(*.off)"));
+
+    QString fileName = "test.off";
+
+    if(fileName.compare("") == 0)
+    {
+        return;
+    }
+
+    w->openModel(fileName.toUtf8().data());
+    w->repaint();
+
 }
 
 /*
@@ -138,6 +150,24 @@ void MainWindow::save()
 void MainWindow::keyPressEvent(QKeyEvent* e)
 {
 
+    return;
+
+    if(e->key()==65)
+    {
+        w->unmarkMarkAllVertices();
+        w->repaint();
+    }
+    else
+    if(e->key()==71)
+    {
+        w->switchGrabMode();
+    }
+    else
+    if(e->key()==16777249)
+    {
+        w->setMarkMode(true);
+    }
+
 };
 
 /*
@@ -146,6 +176,13 @@ void MainWindow::keyPressEvent(QKeyEvent* e)
 void MainWindow::keyReleaseEvent(QKeyEvent *e)
 {
 
+    return;
+
+    if(e->key()==16777249)
+    {
+        w->setMarkMode(false);
+    }
+
 }
 
 /*
@@ -153,5 +190,17 @@ void MainWindow::keyReleaseEvent(QKeyEvent *e)
  */
 void MainWindow::wheelEvent(QWheelEvent* event)
 {
+
+    int numDegrees = event->delta() / 8;
+    float numSteps = numDegrees / 60.0;
+
+    if (event->orientation() == Qt::Vertical) {
+
+        w->changeScrollScaleValue(numSteps);
+        w->repaint();
+
+    }
+
+    event->accept();
 
 }

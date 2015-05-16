@@ -37,4 +37,4 @@ OTHER_FILES += \
 RESOURCES += \
     shader.qrc
 
-INCLUDEPATH += $$quote(C:/glm-0.9.6.1/glm/)
+INCLUDEPATH += C:/glm-0.9.6.1/glm

@@ -42,6 +42,9 @@ private:
     int xRot;
     int yRot;
     int zRot;
+    int xModelRot;
+    int yModelRot;
+    int zModelRot;
     QPoint lastPos;
 	QPointF windowPos;
 	QPoint firstPos;
@@ -73,10 +76,18 @@ public slots:
     void setYRotation(int angle);
     void setZRotation(int angle);
 
+    void setXModelRotation(int angle);
+    void setYModelRotation(int angle);
+    void setZModelRotation(int angle);
+
 signals:
     void xRotationChanged(int angle);
     void yRotationChanged(int angle);
     void zRotationChanged(int angle);
+
+    void xModelRotationChanged(int angle);
+    void yModelRotationChanged(int angle);
+    void zModelRotationChanged(int angle);
 };
 
 #endif // NewGLWidget_H

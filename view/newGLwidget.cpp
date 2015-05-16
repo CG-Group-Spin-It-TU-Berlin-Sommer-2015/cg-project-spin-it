@@ -19,6 +19,10 @@ NewGLWidget::NewGLWidget()
     yRot = .0;
     zRot = .0;
 
+    xModelRot = .0;
+    yModelRot = .0;
+    zModelRot = .0;
+
 	isClicked = false;
 	scaleValue = 1.0;
 
@@ -99,6 +103,9 @@ void NewGLWidget::openModel(char* meshPath)
 	xRot = .0;
     yRot = .0;
     zRot = .0;
+    xModelRot = .0;
+    yModelRot = .0;
+    zModelRot = .0;
 	scrollScaleValue = 1.0;
 
 	this->isGrabMode = false;
@@ -272,15 +279,24 @@ void NewGLWidget::paintGL()
 	glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
 	glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
 
+    glPushMatrix();
+
+    glRotatef(xModelRot / 16.0, 1.0, 0.0, 0.0);
+    glRotatef(yModelRot / 16.0, 0.0, 1.0, 0.0);
+    glRotatef(zModelRot / 16.0, 0.0, 0.0, 1.0);
+
 	float normedScaleValue = 4.0/scaleValue;
 
 	// scale
 	glScalef(normedScaleValue,normedScaleValue,normedScaleValue);
 	glScalef(scrollScaleValue,scrollScaleValue,scrollScaleValue);
 
-	// paint model and vertices of the model
-    //paintModel(model);
-    //paintVertices(model);
+	// paint model and vertices of the model 
+    paintModel(model);
+    paintVertices(model);
+
+    glPopMatrix();
+
 	paintSpinAxis();
 
 	glFlush();
@@ -313,6 +329,7 @@ void NewGLWidget::drawRectangle(QPoint* pos1, QPoint* pos2)
 
 	glDisable(GL_LIGHTING);
 
+    glLineWidth(1);
 	glColor3f(1.0,1.0,1.0);
 
 	// draw rectangle
@@ -342,6 +359,7 @@ void NewGLWidget::drawCross(QPointF* pos)
 
 	glDisable(GL_LIGHTING);
 
+    glLineWidth(1);
 	glColor3f(1.0,1.0,1.0);
 
 	// draw cross
@@ -420,7 +438,7 @@ void NewGLWidget::paintSpinAxis()
 {
 	glDisable(GL_LIGHTING);
 	
-	float value = 15.0f;
+    float value = 1000.0f;
 	
 	glLineWidth(2.5);
 	
@@ -460,7 +478,9 @@ void NewGLWidget::mousePressEvent(QMouseEvent *event)
 {
 	lastPos = event->pos();
 
-	if (event->buttons() & Qt::RightButton)
+    return;
+
+    if ( event->buttons() & Qt::RightButton)
 	{
 		isClicked = true;
 		
@@ -481,7 +501,9 @@ void NewGLWidget::mousePressEvent(QMouseEvent *event)
 void NewGLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
 
-	if (event->button() == Qt::RightButton) {
+    return;
+
+    if ( event->button() == Qt::RightButton) {
 
 		if(!isClicked)
 		{
@@ -553,7 +575,7 @@ void NewGLWidget::mouseReleaseEvent(QMouseEvent *event)
 void NewGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
 
-	if(isGrabMode)
+    if(isGrabMode)
 	{
 
 		// get vector for grabing marked vertices
@@ -573,9 +595,15 @@ void NewGLWidget::mouseMoveEvent(QMouseEvent *event)
     int dy = event->y() - lastPos.y();
 
 	// rotate model
-    if (event->buttons() & Qt::LeftButton) {
+    if (event->buttons() & Qt::RightButton) {
         setXRotation(xRot + 8 * dy);
         setYRotation(yRot + 8 * dx);
+    }
+
+    // rotate model
+    if (event->buttons() & Qt::LeftButton) {
+        setXModelRotation(xModelRot + 8 * dy);
+        setYModelRotation(yModelRot + 8 * dx);
     }
 	
 	lastPos = event->pos();
@@ -608,7 +636,7 @@ void NewGLWidget::transformPoint(QPoint* i, QPointF* o)
 void NewGLWidget::grabMarkedPoints(int x, int y)
 {
 
-	float vecScaleValue = 0.05;
+    float vecScaleValue = 0.05f;
 
 	glm::mat4 mat,mat_inv;
 	glm::vec4 vec_x,vec_y,vec_out;
@@ -692,6 +720,42 @@ void NewGLWidget::setZRotation(int angle)
     if (angle != zRot) {
         zRot = angle;
         emit zRotationChanged(angle);
+    }
+}
+
+/*
+ * set x rotation
+ */
+void NewGLWidget::setXModelRotation(int angle)
+{
+    qNormalizeAngle(angle);
+    if (angle != xModelRot) {
+        xModelRot = angle;
+        emit xModelRotationChanged(angle);
+    }
+}
+
+/*
+ * set y rotation
+ */
+void NewGLWidget::setYModelRotation(int angle)
+{
+    qNormalizeAngle(angle);
+    if (angle != yModelRot) {
+        yModelRot = angle;
+        emit yModelRotationChanged(angle);
+    }
+}
+
+/*
+ * set z rotation
+ */
+void NewGLWidget::setZModelRotation(int angle)
+{
+    qNormalizeAngle(angle);
+    if (angle != zModelRot) {
+        zModelRot = angle;
+        emit zModelRotationChanged(angle);
     }
 }
 
