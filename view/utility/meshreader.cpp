@@ -26,9 +26,9 @@ Mesh* readMeshFromObjFile (string file_name)
             geometry->push_back(token.at(3).toFloat());
         }
         if (strcmp(token.at(0).toStdString().c_str(), "f") == 0) {
-            indices->push_back(token.at(1).toShort());
-            indices->push_back(token.at(2).toShort());
-            indices->push_back(token.at(3).toShort());
+            indices->push_back(token.at(1).toShort() - 1);
+            indices->push_back(token.at(2).toShort() - 1);
+            indices->push_back(token.at(3).toShort() - 1);
         }
     }
     file->close();

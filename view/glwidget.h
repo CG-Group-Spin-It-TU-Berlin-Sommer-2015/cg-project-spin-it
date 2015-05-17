@@ -28,11 +28,16 @@ private:
     QVector3D camera_up;
 
     Mesh* object;
+    Mesh* grid;
 
-    bool mouse_pressed = false;
+    bool left_pressed = false;
+    bool right_pressed = false;
 
-    int rot_x = 0;
-    int rot_y = 0;
+    int rot_obj_phi = 0;
+    int rot_obj_psy = 0;
+
+    int rot_cam_phi = 0;
+    int rot_cam_psy = 0;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
@@ -45,7 +50,7 @@ protected:
 
     void mouseMoveEvent(QMouseEvent* ev);
     void mousePressEvent(QMouseEvent* ev);
-    void leaveEvent(QMouseEvent* ev);
+    void mouseReleaseEvent(QMouseEvent* ev);
 
 };
 

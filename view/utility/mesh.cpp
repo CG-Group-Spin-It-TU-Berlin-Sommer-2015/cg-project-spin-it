@@ -30,7 +30,7 @@ QVector<GLshort>* Mesh::getIndices()
 
 void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
 {
-    /*if (isDirty) {
+    if (isDirty) {
         vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         vbo->create();
         vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -50,23 +50,15 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
         isDirty = false;
     }
 
-    vbo->bind();*/
-    QVector<GLfloat> test;
-    for (uint i = 0; i < indices->size(); i++) {
-        test.push_back(geometry->at(3* (indices->at(i) - 1)));
-        test.push_back(geometry->at(3 * (indices->at(i) - 1) + 1));
-        test.push_back(geometry->at(3 * (indices->at(i) - 1) + 2));
-    }
-    //shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, 0);
-    shader->setAttributeArray("geometry", test.constData(), 3);
+    vbo->bind();
+    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3);
     shader->enableAttributeArray("geometry");
-    //vbo->release();
+    vbo->release();
 
-    glDrawArrays(GL_TRIANGLES, 0, test.size() / 3);
-    /*ibo->bind();
+    ibo->bind();
     glDrawElements(primitive, indices->length(), GL_UNSIGNED_SHORT, 0);
     ibo->release();
-    */
+
     shader->disableAttributeArray("geometry");
 }
 
