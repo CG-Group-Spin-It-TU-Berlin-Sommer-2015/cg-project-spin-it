@@ -8,14 +8,16 @@ GLWidget::GLWidget(QWidget *parent)
 
 GLWidget::~GLWidget()
 {
+    delete shader;
 }
 
 void GLWidget::initializeGL()
 {
+    glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    qglClearColor(Qt::gray);
+    qglClearColor(QColor(205, 205, 255));
 
     shader = new QGLShaderProgram();
     shader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/simple.vsh");
@@ -68,7 +70,6 @@ void GLWidget::paintGL()
     view_matrix.setToIdentity();
     view_matrix.lookAt(camera_position, camera_direction, camera_up);
     view_matrix.rotate(rot_cam_phi, 0.0, 1.0, 0.0);
-    view_matrix.rotate(rot_cam_psy, 1.0, 0.0, 0.0);
 
     shader->bind();
     model_matrix.setToIdentity();
@@ -79,7 +80,7 @@ void GLWidget::paintGL()
     model_matrix.translate(mean.x(), mean.y(), mean.z());
 
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
-    shader->setUniformValue("color", QColor(Qt::green));
+    shader->setUniformValue("color", QColor(Qt::darkGray));
     object->render(shader, GL_TRIANGLES);
 
     model_matrix.setToIdentity();
@@ -109,7 +110,6 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
     }
     if (right_pressed) {
         rot_cam_phi = ev->globalX() % 360;
-        rot_cam_psy = ev->globalY() % 360;
         this->updateGL();
     }
 }

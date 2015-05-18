@@ -30,14 +30,13 @@ private:
     Mesh* object;
     Mesh* grid;
 
-    bool left_pressed = false;
-    bool right_pressed = false;
+    bool left_pressed;
+    bool right_pressed;
 
-    int rot_obj_phi = 0;
-    int rot_obj_psy = 0;
+    int rot_obj_phi;
+    int rot_obj_psy;
 
-    int rot_cam_phi = 0;
-    int rot_cam_psy = 0;
+    int rot_cam_phi;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
