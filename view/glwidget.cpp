@@ -35,17 +35,17 @@ void GLWidget::initializeGL()
     camera_up.setY(1);
     camera_up.setZ(0);
 
-    ambient_light.setX(0.5);
-    ambient_light.setY(0.5);
-    ambient_light.setZ(0.5);
+    ambient_light.setX(0.75);
+    ambient_light.setY(0.75);
+    ambient_light.setZ(0.75);
     ambient_light.setW(1);
 
-    diffuse_light.setX(0.5);
-    diffuse_light.setY(0.5);
-    diffuse_light.setZ(0.5);
+    diffuse_light.setX(0.75);
+    diffuse_light.setY(0.75);
+    diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
-    object = readMeshFromObjFile("test");
+    object = readMeshFromObjFile("monkey");
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -106,7 +106,7 @@ void GLWidget::paintGL()
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
-    shader->setUniformValue("color", QColor(Qt::green));
+    shader->setUniformValue("color", QColor(115, 115, 85));
     object->render(shader, GL_TRIANGLES);
 
     model_matrix.setToIdentity();

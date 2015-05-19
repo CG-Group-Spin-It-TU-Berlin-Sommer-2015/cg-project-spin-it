@@ -6,5 +6,6 @@
     <qresource prefix="/obj">
         <file>test.obj</file>
         <file>cube.obj</file>
+        <file>monkey.obj</file>
     </qresource>
 </RCC>
