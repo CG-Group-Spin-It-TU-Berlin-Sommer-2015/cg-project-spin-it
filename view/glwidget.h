@@ -27,6 +27,11 @@ private:
     QVector3D camera_direction;
     QVector3D camera_up;
 
+    QVector4D ambient_light;
+    QVector4D diffuse_light;
+
+    QVector4D direction_light;
+
     Mesh* object;
     Mesh* grid;
 
@@ -37,6 +42,8 @@ private:
     int rot_obj_psy;
 
     int rot_cam_phi;
+
+    QPoint mouse_pos;
 
 public:
     explicit GLWidget(QWidget *parent = 0);

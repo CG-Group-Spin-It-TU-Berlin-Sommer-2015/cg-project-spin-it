@@ -12,16 +12,11 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
 
     this->normals = new QVector<GLfloat>();
     this->normals->reserve(geometry->size() * sizeof(GLfloat));
-    for (uint i = 0; i < geometry->size(); i++) {
+    for (int i = 0; i < geometry->size(); i++) {
         normals->push_back(0);
     }
 
-    int count[geometry->size() / 3];
-    for (uint i = 0; i < indices->size(); i += 3) {
-        count[indices->at(i)] += 1;
-        count[indices->at(i + 1)] += 1;
-        count[indices->at(i + 2)] += 1;
-
+    for (int i = 0; i < indices->size(); i += 3) {
         QVector3D n1;
         n1.setX(geometry->at(3 * indices->at(i)) - geometry->at(3 * indices->at(i + 1)));
         n1.setY(geometry->at(3 * indices->at(i) + 1) - geometry->at(3 * indices->at(i + 1) + 1));
@@ -32,7 +27,7 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
         n2.setY(geometry->at(3 * indices->at(i) + 1) - geometry->at(3 * indices->at(i + 2) + 1));
         n2.setZ(geometry->at(3 * indices->at(i) + 2) - geometry->at(3 * indices->at(i + 2) + 2));
 
-        QVector3D n = QVector3D::normal(n1, n2);
+        QVector3D n = QVector3D::crossProduct(n1, n2);
 
         normals->replace(3 * indices->at(i), normals->at(3 * indices->at(i)) + n.x());
         normals->replace(3 * indices->at(i) + 1, normals->at(3 * indices->at(i) + 1) + n.y());
@@ -47,11 +42,23 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
         normals->replace(3 * indices->at(i + 2) + 2, normals->at(3 * indices->at(i + 2) + 2) + n.z());
     }
 
-    for (uint i = 0; i < geometry->size() / 3; i++) {
-        normals->replace(i, normals->at(i) / count[i]);
-        normals->replace(i + 1, normals->at(i + 1) / count[i]);
-        normals->replace(i + 2, normals->at(i + 2) / count[i]);
+    for (int i = 0; i < geometry->size() / 3; i++) {
+        QVector3D normal;
+        normal.setX(normals->at(3*i));
+        normal.setY(normals->at(3*i + 1));
+        normal.setZ(normals->at(3*i + 2));
+
+        normals->replace(3 * i, normal.x() / normal.length());
+        normals->replace(3 * i + 1, normal.y() / normal.length());
+        normals->replace(3 * i + 2, normal.z() / normal.length());
     }
+}
+
+Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat> *normals, QVector<GLshort> *indices)
+{
+    this->geometry = geometry;
+    this->normals = normals;
+    this->indices = indices;
 }
 
 QVector<GLfloat>* Mesh::getGeometry()
@@ -74,7 +81,7 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     if (isDirty) {
         QVector<GLfloat> buffer;
         buffer.reserve(geometry->size() * sizeof(GLfloat) + normals->size() * sizeof(GLfloat));
-        for (uint i = 0; i < geometry->size() / GEOMETRY_DATA_SIZE; i++) {
+        for (int i = 0; i < geometry->size() / GEOMETRY_DATA_SIZE; i++) {
             buffer.push_back(geometry->at(3*i));
             buffer.push_back(geometry->at(3*i + 1));
             buffer.push_back(geometry->at(3*i + 2));
@@ -122,7 +129,7 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
 QVector3D Mesh::getMean()
 {
     QVector3D mean;
-    for (uint i = 0; i < geometry->size(); i += 3) {
+    for (int i = 0; i < geometry->size(); i += 3) {
         mean.setX(mean.x() + geometry->at(i));
         mean.setY(mean.y() + geometry->at(i + 1));
         mean.setZ(mean.z() + geometry->at(i + 2));
