@@ -10,6 +10,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    for (int i = 0; i < this->children().size(); i++) {
+        delete this->children().at(i);
+    }
     delete ui;
 }
 

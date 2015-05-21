@@ -54,6 +54,16 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
     }
 }
 
+Mesh::~Mesh()
+{
+    delete vbo;
+    delete ibo;
+
+    delete geometry;
+    delete normals;
+    delete indices;
+}
+
 Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat> *normals, QVector<GLshort> *indices)
 {
     this->geometry = geometry;
@@ -120,7 +130,6 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     vbo->release();
 
     ibo->bind();
-    cout << glGetError() << endl;
     glDrawElements(primitive, indices->length(), GL_UNSIGNED_SHORT, (void*) 0);
     ibo->release();
 

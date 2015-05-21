@@ -22,6 +22,7 @@ private:
 public:
     Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices);
     Mesh(QVector<GLfloat>* geometry, QVector<GLfloat>* normals, QVector<GLshort>* indices);
+    ~Mesh();
     QVector<GLfloat>* getGeometry();
     QVector<GLfloat>* getNormals();
     QVector<GLshort>* getIndices();

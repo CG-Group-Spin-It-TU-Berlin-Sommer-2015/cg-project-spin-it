@@ -3,15 +3,15 @@
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
-    QGLFormat glFormat;
-    glFormat.setVersion( 3, 2 );
-    glFormat.setProfile( QGLFormat::CoreProfile );
 }
 
 GLWidget::~GLWidget()
 {
     delete shader;
 
+    delete object;
+    delete grid;
+    delete rot_axis;
 }
 
 void GLWidget::initializeGL()
@@ -29,10 +29,9 @@ void GLWidget::initializeGL()
     camera_position.setX(1);
     camera_position.setY(-0.75);
     camera_position.setZ(1);
-
     camera_direction.setX(0);
     camera_direction.setY(0);
-    camera_direction.setZ(0);
+    camera_direction.setY(0);
 
     camera_up.setX(0);
     camera_up.setY(1);
@@ -101,8 +100,6 @@ void GLWidget::paintGL()
     shader->setUniformValue("diffuse_light", diffuse_light);
 
     model_matrix.setToIdentity();
-    QVector3D mean = object->getMean();
-    //model_matrix.translate(-mean.x(), -mean.y(), -mean.z());
     GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
     for (int i = 0; i < object->getGeometry()->size(); i += 3) {
         if (object->getGeometry()->at(i) > x_max) {
@@ -130,7 +127,6 @@ void GLWidget::paintGL()
     model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
-    //model_matrix.translate(mean.x(), mean.y(), mean.z());
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);

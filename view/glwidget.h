@@ -29,7 +29,6 @@ private:
 
     QVector4D ambient_light;
     QVector4D diffuse_light;
-
     QVector4D direction_light;
 
     Mesh* object;
