@@ -120,7 +120,8 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     vbo->release();
 
     ibo->bind();
-    glDrawElements(primitive, indices->length(), GL_UNSIGNED_SHORT, 0);
+    cout << glGetError() << endl;
+    glDrawElements(primitive, indices->length(), GL_UNSIGNED_SHORT, (void*) 0);
     ibo->release();
 
     shader->disableAttributeArray("geometry");

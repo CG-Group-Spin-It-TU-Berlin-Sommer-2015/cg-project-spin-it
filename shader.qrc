@@ -7,5 +7,6 @@
         <file>test.obj</file>
         <file>cube.obj</file>
         <file>monkey.obj</file>
+        <file>rot_axis.obj</file>
     </qresource>
 </RCC>

@@ -3,12 +3,15 @@
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
-
+    QGLFormat glFormat;
+    glFormat.setVersion( 3, 2 );
+    glFormat.setProfile( QGLFormat::CoreProfile );
 }
 
 GLWidget::~GLWidget()
 {
     delete shader;
+
 }
 
 void GLWidget::initializeGL()
@@ -46,6 +49,7 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     object = readMeshFromObjFile("monkey");
+    rot_axis = readMeshFromObjFile("rot_axis");
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -98,16 +102,54 @@ void GLWidget::paintGL()
 
     model_matrix.setToIdentity();
     QVector3D mean = object->getMean();
-    model_matrix.translate(-mean.x(), -mean.y(), -mean.z());
+    //model_matrix.translate(-mean.x(), -mean.y(), -mean.z());
+    GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
+    for (int i = 0; i < object->getGeometry()->size(); i += 3) {
+        if (object->getGeometry()->at(i) > x_max) {
+            x_max = object->getGeometry()->at(i);
+        }
+        if (object->getGeometry()->at(i) < x_min) {
+            x_min = object->getGeometry()->at(i);
+        }
+
+        if (object->getGeometry()->at(i + 1) > y_max) {
+            y_max = object->getGeometry()->at(i + 1);
+        }
+        if (object->getGeometry()->at(i + 1) < y_min) {
+            y_min = object->getGeometry()->at(i + 1);
+        }
+
+        if (object->getGeometry()->at(i + 2) > z_max) {
+            z_max = object->getGeometry()->at(i + 2);
+        }
+        if (object->getGeometry()->at(i + 2) < z_min) {
+            z_min = object->getGeometry()->at(i + 2);
+        }
+    }
+
+    model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
-    model_matrix.translate(mean.x(), mean.y(), mean.z());
+    //model_matrix.translate(mean.x(), mean.y(), mean.z());
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
     shader->setUniformValue("color", QColor(115, 115, 85));
     object->render(shader, GL_TRIANGLES);
+
+    model_matrix.setToIdentity();
+    GLfloat lowest_y = 0.0;
+    for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
+        if (rot_axis->getGeometry()->at(i) < lowest_y) {
+            lowest_y = rot_axis->getGeometry()->at(i);
+        }
+    }
+    model_matrix.translate(0.0, -2 - lowest_y, 0.0);
+    shader->setUniformValue("nMatrix", view_matrix * model_matrix);
+    shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
+    shader->setUniformValue("color", QColor(Qt::red));
+    rot_axis->render(shader, GL_TRIANGLES);
 
     model_matrix.setToIdentity();
     model_matrix.translate(0.0, -2.0, 0.0);

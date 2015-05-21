@@ -34,6 +34,7 @@ private:
 
     Mesh* object;
     Mesh* grid;
+    Mesh* rot_axis;
 
     bool left_pressed;
     bool right_pressed;
