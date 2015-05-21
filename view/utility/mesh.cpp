@@ -52,6 +52,7 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
         normals->replace(3 * i + 1, normal.y() / normal.length());
         normals->replace(3 * i + 2, normal.z() / normal.length());
     }
+    this->isDirty = true;
 }
 
 Mesh::~Mesh()
@@ -69,6 +70,7 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat> *normals, QVector<GLshor
     this->geometry = geometry;
     this->normals = normals;
     this->indices = indices;
+    this->isDirty = true;
 }
 
 QVector<GLfloat>* Mesh::getGeometry()
