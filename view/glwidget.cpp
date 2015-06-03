@@ -2,7 +2,8 @@
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
-{
+{   
+
 }
 
 GLWidget::~GLWidget()
@@ -18,6 +19,12 @@ void GLWidget::initializeGL()
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+    this->rot_obj_phi = 0;
+    this->rot_obj_psy = 0;
+    this->rot_cam_phi = 0;
+    this->trans_x = 0;
+    this->trans_z = 0;
 
     qglClearColor(QColor(205, 205, 255));
 
@@ -47,8 +54,11 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
-    object = readMeshFromObjFile("monkey");
-    rot_axis = readMeshFromObjFile("rot_axis");
+    object = readMeshFromObjFileDirectory("cube");
+    object->setKDTree();
+    object->setOctreeInteriors(0,0,0,5);
+
+    rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -124,7 +134,10 @@ void GLWidget::paintGL()
         }
     }
 
+    model_matrix.translate(trans_x,0,-trans_z);
+
     model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
+
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
@@ -200,6 +213,16 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
         mouse_pos = ev->pos();
         this->updateGL();
     }
+    if (middle_pressed) {
+
+        float scale = 0.05f;
+
+        trans_x += (mouse_pos.x() - ev->pos().x())*scale;
+        trans_z += (mouse_pos.y() - ev->pos().y())*scale;
+
+        mouse_pos = ev->pos();
+        this->updateGL();
+    }
 }
 
 void GLWidget::mousePressEvent(QMouseEvent *ev)
@@ -214,13 +237,39 @@ void GLWidget::mousePressEvent(QMouseEvent *ev)
         right_pressed = true;
         return;
     }
+    if (ev->button() == Qt::MiddleButton) {
+        mouse_pos = ev->pos();
+        middle_pressed = true;
+        return;
+    }
 }
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
     left_pressed = false;
     right_pressed = false;
+    middle_pressed = false;
 }
 
+void GLWidget::loadNewMesh()
+{
+    QString s = QFileDialog::getOpenFileName(this,tr("Open Mesh"), "../", tr("Meshes (*.obj)"));
+    Mesh* object = readMeshFromObjFile(s.toStdString());
 
+    if(object==0)
+    {
+        return;
+    }
+
+    this->object = object;
+    this->object->setKDTree();
+
+    this->rot_obj_phi = 0;
+    this->rot_obj_psy = 0;
+    this->rot_cam_phi = 0;
+    this->trans_x = 0;
+    this->trans_z = 0;
+
+    this->repaint();
+}
 

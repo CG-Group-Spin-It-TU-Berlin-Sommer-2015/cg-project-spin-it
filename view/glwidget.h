@@ -7,6 +7,8 @@
 #include <QtOpenGL>
 #include <QGLShader>
 #include <QGLShaderProgram>
+#include <QString>
+#include <QFileDialog>
 
 #include "utility/mesh.h"
 #include "utility/meshreader.h"
@@ -37,17 +39,25 @@ private:
 
     bool left_pressed;
     bool right_pressed;
+    bool middle_pressed;
 
     int rot_obj_phi;
     int rot_obj_psy;
 
     int rot_cam_phi;
 
+    GLfloat trans_x;
+    GLfloat trans_z;
+
     QPoint mouse_pos;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
     ~GLWidget();
+
+public slots:
+    void loadNewMesh();
+
 
 protected:
     void initializeGL();
