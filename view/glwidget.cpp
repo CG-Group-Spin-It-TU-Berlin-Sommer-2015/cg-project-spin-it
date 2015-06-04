@@ -56,7 +56,8 @@ void GLWidget::initializeGL()
 
     object = readMeshFromObjFileDirectory("cube");
     object->setKDTree();
-    object->setOctreeInteriors(0,0,0,5);
+    object->setOctreeInteriors(0,0,0,1);
+    octreeNode* root = object->getOctreeRoot();
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 

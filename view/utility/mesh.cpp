@@ -378,6 +378,9 @@ GLint Mesh::getNearestNeighborHelper2(GLint nodeIndex, float x, float y, float z
 
 }
 
+octreeNode* Mesh::getOctreeRoot(){
+    return &(interiorNodes->last());
+}
 
 GLint Mesh::getNearestNeighbor(float x, float y, float z)
 {
@@ -385,6 +388,14 @@ GLint Mesh::getNearestNeighbor(float x, float y, float z)
     GLint nodeIndex = getNearestNeighborHelper2(nodes->length()-1,x,y,z);
 
     return nodes->at(nodeIndex).index;
+}
+
+void Mesh::setOctreeInteriors(GLint maxDepth){
+    setOctreeInteriors(
+      this->getMean().x(),
+      this->getMean().y(),
+      this->getMean().z(),
+      maxDepth);
 }
 
 void Mesh::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth){
@@ -395,81 +406,67 @@ void Mesh::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth){
     GLfloat* gvd = geometry->data();
     GLshort* ivd = indices->data();
 
-    QVector<triObject>* triObjects = new QVector<triObject>();
+    QVector<triObject> triObjects;
     QVector<GLint> triObjectIndices;
+
     QVector<octreeNode>* nodes = new QVector<octreeNode>();
 
     int length = indices->length();
 
-    GLfloat xaverage;
-    GLfloat yaverage;
-    GLfloat zaverage;
-
+    GLfloat xaverage, yaverage, zaverage;
     GLdouble max_v = 0;
-
     GLdouble max_g = 0;
 
     for (GLint i=0;i<length;i+=3)
     {
-        xaverage = gvd[ivd[i]*3+0];
-        yaverage = gvd[ivd[i]*3+1];
-        zaverage = gvd[ivd[i]*3+2];
 
-        xaverage += gvd[ivd[i+1]*3+0];
-        yaverage += gvd[ivd[i+1]*3+1];
-        zaverage += gvd[ivd[i+1]*3+2];
-
-        xaverage += gvd[ivd[i+2]*3+0];
-        yaverage += gvd[ivd[i+2]*3+1];
-        zaverage += gvd[ivd[i+2]*3+2];
-
-        xaverage /=3;
-        yaverage /=3;
-        zaverage /=3;
+        xaverage = gvd[ivd[i]*3+0];yaverage = gvd[ivd[i]*3+1];zaverage = gvd[ivd[i]*3+2];
+        xaverage += gvd[ivd[i+1]*3+0];yaverage += gvd[ivd[i+1]*3+1];zaverage += gvd[ivd[i+1]*3+2];
+        xaverage += gvd[ivd[i+2]*3+0];yaverage += gvd[ivd[i+2]*3+1];zaverage += gvd[ivd[i+2]*3+2];
+        xaverage /=3;yaverage /=3;zaverage /=3;
 
         max_v = 0;
 
-        max_v = max(max_v,fabs(gvd[ivd[i]*3+0]-xaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i]*3+1]-yaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i]*3+2]-zaverage));
-
+        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+0]-xaverage));
+        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+1]-yaverage));
+        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+2]-zaverage));
         max_v = max(max_v,fabs(gvd[ivd[i+1]*3+0]-xaverage));
         max_v = max(max_v,fabs(gvd[ivd[i+1]*3+1]-yaverage));
         max_v = max(max_v,fabs(gvd[ivd[i+1]*3+2]-zaverage));
-
         max_v = max(max_v,fabs(gvd[ivd[i+2]*3+0]-xaverage));
         max_v = max(max_v,fabs(gvd[ivd[i+2]*3+1]-yaverage));
         max_v = max(max_v,fabs(gvd[ivd[i+2]*3+2]-zaverage));
 
         triObject obj;
         obj.index = i;
-        obj.x = xaverage;
-        obj.y = yaverage;
-        obj.z = z;
+        obj.p.setX(xaverage);
+        obj.p.setY(yaverage);
+        obj.p.setZ(zaverage);
         obj.halflength = max_v;
 
-        triObjects->push_back(obj);
+        triObjects.push_back(obj);
         triObjectIndices.push_back(i/3);
 
-        max_g = max(max_g,fabs(gvd[ivd[i]*3+0]));
-        max_g = max(max_g,fabs(gvd[ivd[i]*3+1]));
-        max_g = max(max_g,fabs(gvd[ivd[i]*3+2]));
-
+        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+0]));
+        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+1]));
+        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+2]));
         max_g = max(max_g,fabs(gvd[ivd[i+1]*3+0]));
         max_g = max(max_g,fabs(gvd[ivd[i+1]*3+1]));
         max_g = max(max_g,fabs(gvd[ivd[i+1]*3+2]));
-
         max_g = max(max_g,fabs(gvd[ivd[i+2]*3+0]));
         max_g = max(max_g,fabs(gvd[ivd[i+2]*3+1]));
-        max_g = max(max_g,fabs(geometry->data()[ivd[i+2]*3+2]));
+        max_g = max(max_g,fabs(gvd[ivd[i+2]*3+2]));
 
     }
 
     max_g += 1;
+    x -= max_g;y -= max_g;z -= max_g;
+    max_g *= 2;
 
-    setOctreeInteriorsHelper(max_g,x,y,z,nodes,triObjects,&triObjectIndices,0,maxDepth);
 
-    delete triObjects;
+    setOctreeInteriorsHelper(max_g,x,y,z,nodes,&triObjects,&triObjectIndices,1,maxDepth);
+
+    this->interiorNodes = nodes;
 
 }
 
@@ -477,13 +474,15 @@ inline void Mesh::testIntersection(QVector<triObject>* triObjects,QVector<GLint>
 
     int length2 = oldTriObjectIndices->length();
 
+    QVector3D p,diff;
+    p.setX(x);
+    p.setY(y);
+    p.setZ(z);
 
     GLint index;
     triObject obj;
 
     GLfloat halfLength = length/2;
-
-    GLfloat xdiff,ydiff,zdiff;
     GLfloat distance;
 
     for (GLint i=0;i<length2;i++)
@@ -494,11 +493,10 @@ inline void Mesh::testIntersection(QVector<triObject>* triObjects,QVector<GLint>
         obj = triObjects->at(index);
         distance = halfLength+obj.halflength;
 
-        xdiff = fabs(x+halfLength-obj.x);
-        ydiff = fabs(y+halfLength-obj.y);
-        zdiff = fabs(z+halfLength-obj.z);
+        diff = p-obj.p;
+        diff.setX(diff.x()+halfLength);diff.setY(diff.y()+halfLength);diff.setZ(diff.z()+halfLength);
 
-        if(xdiff<distance && ydiff<distance && zdiff<distance){
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
            newTriObjectIndices->push_back(index);
         }
 
@@ -506,12 +504,139 @@ inline void Mesh::testIntersection(QVector<triObject>* triObjects,QVector<GLint>
 
 }
 
+inline bool Mesh::lineCutsSquare(GLfloat halfLength, QVector3D p0, QVector3D p1){
+
+    QVector3D diff = p1-p0;
+
+    if(diff.x()==0){return fabs(p0.y())<=halfLength;}
+    if(diff.y()==0){return fabs(p0.x())<=halfLength;}
+
+    GLfloat lambda;
+
+    lambda = (halfLength-p0.x())/diff.x();
+    if(0<=lambda && lambda<=1){return true;}
+
+    lambda = (-halfLength-p0.x())/diff.x();
+    if(0<=lambda && lambda<=1){return true;}
+
+    lambda = (halfLength-p0.y())/diff.y();
+    if(0<=lambda && lambda<=1){return true;}
+
+    lambda = (-halfLength-p0.y())/diff.y();
+    if(0<=lambda && lambda<=1){return true;}
+
+    return false;
+}
+
+inline bool Mesh::triangleCutsPlance(GLfloat halfLength, QVector3D p, QVector3D n0, QVector3D n1){
+
+    bool c0 = false;bool c1 = false;bool c2 = false;
+    QVector3D cv0,cv1,cv2;
+
+    // line 0
+    //parallel
+    if(n0.z()==0){
+        //on plane
+        if(p.x()==0){
+            //complete(yes)
+            if(n1.z()==0){
+                return lineCutsSquare(halfLength,p+n0,p) || lineCutsSquare(halfLength,p+n1,p) || lineCutsSquare(halfLength,p+n1,p+n0);
+            }
+            //complete(no)
+            else{
+                return lineCutsSquare(halfLength,p+n0,p);
+            }
+        }
+    }
+    //cut point exists (staight line)
+    else{
+
+        GLfloat lambda = -p.z()/n0.z();
+        // cut exists (line)
+        if(0 <=lambda && lambda <=1){
+            c0 = true;cv0 = p+n0*lambda;
+        }
+    }
+
+    // line 1
+    //parallel
+    if(n1.z()==0){
+        //on plane
+        if(p.x()==0){
+            return lineCutsSquare(halfLength,p+n1,p);
+        }
+    }
+    //cut point exists (staight line)
+    else{
+
+        GLfloat lambda = -p.z()/n1.z();
+        // cut exists (line)
+        if(0 <=lambda && lambda <=1){
+            c1 = true;cv1 = p+n1*lambda;
+        }
+    }
+
+    // line 2
+    //parallel
+    if( (c0&&!c1) || (!c0&&c1)){
+
+        QVector3D p1 = p+n0;
+        QVector3D n2 = n1-n0;
+
+        GLfloat lambda = -p1.z()/n2.z();
+        // cut exists (line)
+        if(0 <=lambda && lambda <=1){
+            c2 = true;cv2 = p1+n2*lambda;
+        }
+    }
+
+    if(c0&&c1){return lineCutsSquare(halfLength,cv0,cv1);}
+    if(c0&&c2){return lineCutsSquare(halfLength,cv0,cv2);}
+    if(c1&&c2){return lineCutsSquare(halfLength,cv1,cv2);}
+
+    return false;
+}
+
+inline bool Mesh::triangleCutsCube(GLfloat halfLength,QVector3D p,QVector3D n0,QVector3D n1){
+
+}
+
+
 inline bool Mesh::testIntersection2(QVector<triObject>* triObjects,QVector<GLint>* triObjectIndices,GLfloat x,GLfloat y,GLfloat z,GLfloat length){
+
+    QVector<GLfloat>* geometry = this->getGeometry();
+    QVector<GLshort>* indices = this->getIndices();
+
+    GLfloat* gvd = geometry->data();
+    GLshort* ivd = indices->data();
 
     int length2 = triObjectIndices->length();
 
+    GLfloat halfLength = length/2;
+    GLfloat distance = halfLength;
+
+    QVector3D middle;middle.setX(x+halfLength);middle.setY(y+halfLength);middle.setZ(z+halfLength);
+
+    GLshort i0,i1,i2;
+    QVector3D p0,p1,p2,diff;
+
     for (GLint i=0;i<length2;i++)
     {
+        triObject obj = triObjects->at(triObjectIndices->at(i));
+
+        i0 = ivd[obj.index*3+0];i1 = ivd[obj.index*3+1];i2 = ivd[obj.index*3+2];
+
+        p0.setX( gvd[i0+0]);p0.setY( gvd[i1+0]);p0.setZ( gvd[i2+0]);
+        p1.setX( gvd[i0+1]);p1.setY( gvd[i1+1]);p1.setZ( gvd[i2+1]);
+        p2.setX( gvd[i0+2]);p2.setY( gvd[i1+2]);p2.setZ( gvd[i2+2]);
+
+        diff = p0-middle;
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        diff = p1-middle;
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        diff = p2-middle;
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+
         /*test intersection of cube and triangle*/
     }
 
@@ -538,21 +663,19 @@ GLint Mesh::setOctreeInteriorsHelper(
 
         octreeNode obj;
 
-        obj.x=x;
-        obj.y=y;
-        obj.z=z;
+        obj.p0.setX(x);obj.p0.setY(y);obj.p0.setZ(z);
+        obj.p1.setX(x);obj.p1.setY(y);obj.p1.setZ(z+length);
+        obj.p2.setX(x);obj.p2.setY(y+length);obj.p2.setZ(z);
+        obj.p3.setX(x);obj.p3.setY(y+length);obj.p3.setZ(z+length);
 
-        obj.childIndex0=-1;
-        obj.childIndex1=-1;
-        obj.childIndex2=-1;
-        obj.childIndex3=-1;
+        obj.p4.setX(x+length);obj.p4.setY(y);obj.p4.setZ(z);
+        obj.p5.setX(x+length);obj.p5.setY(y);obj.p5.setZ(z+length);
+        obj.p6.setX(x+length);obj.p6.setY(y+length);obj.p6.setZ(z);
+        obj.p7.setX(x+length);obj.p7.setY(y+length);obj.p7.setZ(z+length);
 
-        obj.childIndex4=-1;
-        obj.childIndex5=-1;
-        obj.childIndex6=-1;
-        obj.childIndex7=-1;
+        obj.childIndex0=-1;obj.childIndex1=-1;obj.childIndex2=-1;obj.childIndex3=-1;
+        obj.childIndex4=-1;obj.childIndex5=-1;obj.childIndex6=-1;obj.childIndex7=-1;
 
-        obj.depth=depth;
         obj.cut = cut;
 
         nodes->push_back(obj);
@@ -562,22 +685,24 @@ GLint Mesh::setOctreeInteriorsHelper(
 
     octreeNode obj;
 
-    obj.x=x;
-    obj.y=y;
-    obj.z=z;
+    obj.p0.setX(x);obj.p0.setY(y);obj.p0.setZ(z);
+    obj.p1.setX(x);obj.p1.setY(y);obj.p1.setZ(z+length);
+    obj.p2.setX(x);obj.p2.setY(y+length);obj.p2.setZ(z);
+    obj.p3.setX(x);obj.p3.setY(y+length);obj.p3.setZ(z+length);
+
+    obj.p4.setX(x+length);obj.p4.setY(y);obj.p4.setZ(z);
+    obj.p5.setX(x+length);obj.p5.setY(y);obj.p5.setZ(z+length);
+    obj.p6.setX(x+length);obj.p6.setY(y+length);obj.p6.setZ(z);
+    obj.p7.setX(x+length);obj.p7.setY(y+length);obj.p7.setZ(z+length);
 
     GLint newDepth = depth+1;
     GLfloat newLength = length/2;
 
-    QVector<GLint> triObjectIndices0;
-    QVector<GLint> triObjectIndices1;
-    QVector<GLint> triObjectIndices2;
-    QVector<GLint> triObjectIndices3;
 
-    QVector<GLint> triObjectIndices4;
-    QVector<GLint> triObjectIndices5;
-    QVector<GLint> triObjectIndices6;
-    QVector<GLint> triObjectIndices7;
+    QVector<GLint> triObjectIndices0;QVector<GLint> triObjectIndices1;
+    QVector<GLint> triObjectIndices2;QVector<GLint> triObjectIndices3;
+    QVector<GLint> triObjectIndices4;QVector<GLint> triObjectIndices5;
+    QVector<GLint> triObjectIndices6;QVector<GLint> triObjectIndices7;
 
     testIntersection(triObjects,&triObjectIndices0,triObjectIndices,x,y,z,newLength);
     testIntersection(triObjects,&triObjectIndices1,triObjectIndices,x,y,z+newLength,newLength);
@@ -599,7 +724,7 @@ GLint Mesh::setOctreeInteriorsHelper(
     obj.childIndex6=setOctreeInteriorsHelper(newLength,x+newLength,y+newLength,z,nodes,triObjects,triObjectIndices,newDepth,maxDepth);
     obj.childIndex7=setOctreeInteriorsHelper(newLength,x+newLength,y+newLength,z+newLength,nodes,triObjects,triObjectIndices,newDepth,maxDepth);
 
-    obj.depth=depth;
+    obj.cut = true;
 
     nodes->push_back(obj);
     return nodes->length()-1;
