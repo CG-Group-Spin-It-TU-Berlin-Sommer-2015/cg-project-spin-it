@@ -118,6 +118,19 @@
       </property>
      </widget>
     </widget>
+    <widget class="QPushButton" name="loadMeshButton">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>250</y>
+       <width>121</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Load Mesh</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -159,8 +172,28 @@
    <extends>QWidget</extends>
    <header>view/glwidget.h</header>
    <container>1</container>
+   <slots>
+    <slot>loadNewMesh()</slot>
+   </slots>
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>loadMeshButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>loadNewMesh()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>780</x>
+     <y>301</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

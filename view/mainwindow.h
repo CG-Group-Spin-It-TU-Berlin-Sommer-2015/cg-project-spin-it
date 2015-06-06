@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+
 namespace Ui {
 class MainWindow;
 }
@@ -17,6 +18,7 @@ public:
 
 private slots:
 
+    void on_loadMeshButton_clicked();
 
 private:
     Ui::MainWindow *ui;

@@ -3,13 +3,23 @@
 using namespace std;
 
 /**
- * @brief readMeshFromObjFile Loads a Mesh from an .obj file
+ * @brief readMeshFromObjFileDirectory Loads a Mesh from an .obj file from a particular directory
  * @param file_name name of obj file
+ * @return Mesh object from obj. file if successful, null else
+ */
+Mesh* readMeshFromObjFileDirectory (string file_name)
+{
+    return readMeshFromObjFile(":/obj/"+ file_name + ".obj");
+}
+
+/**
+ * @brief readMeshFromObjFile Loads a Mesh from an .obj file
+ * @param file_name name and path of obj file
  * @return Mesh object from obj. file if successful, null else
  */
 Mesh* readMeshFromObjFile (string file_name)
 {
-    QFile* file = new QFile((":/obj/"+ file_name + ".obj").c_str());
+    QFile* file = new QFile(file_name.c_str());
     if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
         return 0;
 
