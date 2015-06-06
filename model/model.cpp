@@ -5,6 +5,32 @@ Model::Model()
 
 }
 
+float Model::spinability(float w_1, float w_2, float* volume)
+{
+    float M = volume[0];
+
+    QVector3D c;
+    c.setX(1/M*volume[1]);
+    c.setY(1/M*volume[2]);
+    c.setZ(1/M*volume[3]);
+
+    QMatrix3x3 I = QMatrix3x3({{volume[8] + volume[9], -volume[4], -volume[6]},
+                   {-volume[4], volume[7] + volume[9], -volume[5]},
+                   {-volume[6], -volume[5], volume[7] + volume[8]}});
+
+    return 0;
+}
+
+Model::initialize(Mesh mesh, float density = 1.07)
+{
+    mesh_volumne = calculateVolumne(mesh,density);
+}
+
+float Model::calculateMass(float* volumne)
+{
+    return volumne[0];
+}
+
 float* Model::calculateVolumne(Mesh mesh, float p)
 {
     float[] s = new float[10];

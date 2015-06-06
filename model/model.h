@@ -6,14 +6,17 @@
 class Model
 {
 private:
-    float mesh_volumne;
-    float inner_volumne;
+    float density;
+    float* mesh_volumne;
 
 public:
     Model();
+    initialize(Mesh mesh);
 
 private:
-    float* calculateVolumne(Mesh mesh);
+    float spinability(float w_1, float w_2, float* volume);
+    float calculateMass();
+    float* calculateVolumne(Mesh mesh, float density);
 
 };
 
