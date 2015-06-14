@@ -18,16 +18,16 @@ SOURCES += main.cpp\
     view/utility/shader.cpp \
     view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
-    model.cpp \
-    model/model.cpp
+    view/utility/kdtree.cpp \
+    view/utility/octree.cpp
 
 HEADERS  += view/mainwindow.h \
     view/glwidget.h \
     view/utility/shader.h \
     view/utility/mesh.h \
     view/utility/meshreader.h \
-    model.h \
-    model/model.h
+    view/utility/kdtree.h \
+    view/utility/octree.h
 
 FORMS    += view/mainwindow.ui
 

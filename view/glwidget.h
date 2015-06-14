@@ -13,7 +13,7 @@
 #include "utility/mesh.h"
 #include "utility/meshreader.h"
 #include "utility/shader.h"
-
+#include "utility/octree.h"
 
 class GLWidget : public QGLWidget
 {
@@ -34,6 +34,8 @@ private:
     QVector4D direction_light;
 
     Mesh* object;
+    Octree* octree;
+
     Mesh* grid;
     Mesh* rot_axis;
 

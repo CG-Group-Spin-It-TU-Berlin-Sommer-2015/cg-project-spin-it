@@ -55,9 +55,9 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     object = readMeshFromObjFileDirectory("cube");
-    object->setKDTree();
-    object->setOctreeInteriors(0,0,0,1);
-    octreeNode* root = object->getOctreeRoot();
+
+    octree =  new Octree();
+    octree->setOctreeInteriors(0,0,0,2,object);
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
@@ -145,8 +145,11 @@ void GLWidget::paintGL()
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
-    shader->setUniformValue("color", QColor(115, 115, 85));
-    object->render(shader, GL_TRIANGLES);
+    //shader->setUniformValue("color", QColor(115, 115, 85));
+    //object->render(shader, GL_TRIANGLES);
+
+    shader->setUniformValue("color", QColor(Qt::black));
+    octree->render(shader);
 
     model_matrix.setToIdentity();
     GLfloat lowest_y = 0.0;
@@ -263,7 +266,6 @@ void GLWidget::loadNewMesh()
     }
 
     this->object = object;
-    this->object->setKDTree();
 
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
