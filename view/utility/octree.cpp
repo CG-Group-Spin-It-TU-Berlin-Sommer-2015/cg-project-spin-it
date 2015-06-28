@@ -24,6 +24,8 @@ Octree::Octree()
     this->leafVector = NULL;
 
     this->freeIndices = NULL;
+
+    this->isDirty = true;
 }
 
 void Octree::setOctreeInteriors(GLint maxDepth, Mesh* m){
@@ -372,17 +374,23 @@ inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLi
         i2 = ivd[obj.index+2]*3;
 
         // get points
-        p0.setX( gvd[i0+0]);p0.setY( gvd[i0+0]);p0.setZ( gvd[i0+0]);
-        p1.setX( gvd[i1+1]);p1.setY( gvd[i1+1]);p1.setZ( gvd[i1+1]);
-        p2.setX( gvd[i2+2]);p2.setY( gvd[i2+2]);p2.setZ( gvd[i2+2]);
+        p0.setX( gvd[i0+0]);p0.setY( gvd[i0+1]);p0.setZ( gvd[i0+2]);
+        p1.setX( gvd[i1+0]);p1.setY( gvd[i1+1]);p1.setZ( gvd[i1+2]);
+        p2.setX( gvd[i2+0]);p2.setY( gvd[i2+1]);p2.setZ( gvd[i2+2]);
 
         // test whether both cubes do not intersect each other
         diff = p0-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
         diff = p1-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
         diff = p2-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
 
     }
 
@@ -401,14 +409,22 @@ inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLi
 
         // test whether both cubes do not intersect each other
         diff = p0-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
         diff = p1-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
         diff = p2-middle;
-        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){return true;}
+        if(fabs(diff.x())<distance && fabs(diff.y())<distance && fabs(diff.z())<distance){
+            return true;
+        }
 
         /*test intersection of cube and triangle*/
-        if(triangleCutsCube(middle,halfLength,p0,p1,p2)){return true;}
+        if(triangleCutsCube(middle,halfLength,p0,p1,p2)){
+            return true;
+        }
 
     }
 
@@ -426,10 +442,14 @@ GLint Octree::setOctreeInteriorsHelper(
         GLint maxDepth)
 {
 
+    if(maxDepth<depth){
+        int i=0;
+    }
+
     /*test all tri objects for intersection or whether max depth is reached*/
     bool cut = testIntersection2(triObjects,triObjectIndices,x,y,z,length);
 
-    if(!cut || maxDepth<depth){
+    if(!cut || maxDepth<depth){      
 
         octreeNode obj;
 
@@ -603,29 +623,69 @@ void Octree::setBorder(GLint maxDepth)
 {
 
     GLint axisSize = 2<<(maxDepth-1);
+    GLint axisSizeS = axisSize-1;
     GLint planeSize = pow(axisSize,2);
 
-    /* set the border cells which are all outer cells */
+    int startIndex = 0;
+    int endIndex = axisSizeS;
+
+    octreeNode node;
+
     for(int i=0;i<axisSize;i++)
     {
         for(int j=0;j<axisSize;j++)
         {
-            for(int k=0;k<axisSize;k++)
-            {
-                if(k!=0 && j!=0 && i!=0)
-                {
-                    continue;
-                }
 
-                octreeNode node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+k));
-                if(!node.cut)
-                {
-                    node.interior = false;
-                    node.set = true;
-                }
+            node = this->allNodes->at(this->leafVector->at(planeSize*startIndex+axisSize*i+j));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*startIndex+axisSize*i+j)] = node;
             }
+
+
+            node = this->allNodes->at(this->leafVector->at(planeSize*endIndex+axisSize*i+j));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*endIndex+axisSize*i+j)] = node;
+            }
+
+            node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*startIndex+j));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*startIndex+j)] = node;
+            }
+            node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*endIndex+j));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*endIndex+j)] = node;
+            }
+
+            node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+startIndex));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+startIndex)] = node;
+            }
+            node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+endIndex));
+            if(!node.cut)
+            {
+                node.interior = false;
+                node.set = true;
+                this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+endIndex)] = node;
+            }
+
         }
     }
+
 
 }
 
@@ -662,6 +722,8 @@ void Octree::traverseLeafVector(GLint maxDepth)
                     octreeNode node4 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+(k-1)));
                     octreeNode node5 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+(k+1)));
 
+
+
                     /* if there is one outer neighbor cell then this one is also an outer cell */
                     if( (node0.set && !node0.interior) ||
                         (node1.set && !node1.interior) ||
@@ -672,6 +734,9 @@ void Octree::traverseLeafVector(GLint maxDepth)
                     {
                          currentNode.set = true;
                          currentNode.interior = false;
+
+                         this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+k)] = currentNode;
+
                          loopIsDirty = true;
                     }
                 }
@@ -681,12 +746,14 @@ void Octree::traverseLeafVector(GLint maxDepth)
     }
     while(loopIsDirty);
 
+    axisSizeS = axisSize;
+
     /* set all nodes which are not set already as interior cells */
-    for(int i=1;i<axisSizeS;i++)
+    for(int i=0;i<axisSizeS;i++)
     {
-        for(int j=1;j<axisSizeS;j++)
+        for(int j=0;j<axisSizeS;j++)
         {
-            for(int k=1;k<axisSizeS;k++)
+            for(int k=0;k<axisSizeS;k++)
             {
 
                 octreeNode currentNode = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+k));
@@ -695,6 +762,8 @@ void Octree::traverseLeafVector(GLint maxDepth)
 
                 currentNode.set = true;
                 currentNode.interior = true;
+
+                this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+k)] = currentNode;
 
                 this->interiorNodesIndices->push_back(currentNode.index);
             }
@@ -880,7 +949,6 @@ void Octree::render(QGLShaderProgram* shader)
 
     GLint stride = sizeof(GLfloat) * (3);
 
-    /*
     vbo->bind();
     shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
     shader->enableAttributeArray("geometry");
@@ -891,7 +959,6 @@ void Octree::render(QGLShaderProgram* shader)
     ibo->release();
 
     shader->disableAttributeArray("geometry");
-    */
 
 }
 
