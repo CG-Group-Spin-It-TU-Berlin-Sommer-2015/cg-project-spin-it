@@ -28,33 +28,38 @@ Octree::Octree()
     this->isDirty = true;
 }
 
-void Octree::setOctreeInteriors(GLint maxDepth, Mesh* m){
+void Octree::setOctreeInteriors(GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh){
     setOctreeInteriors(
-      this->mesh->getMean().x(),
-      this->mesh->getMean().y(),
-      this->mesh->getMean().z(),
+      outerMesh->getMean().x(),
+      outerMesh->getMean().y(),
+      outerMesh->getMean().z(),
       maxDepth,
-      m);
+      outerMesh,
+      innerMesh);
 }
 
-void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, Mesh* m){
+void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh){
 
-    this->mesh = m;
+    this->outerMesh = outerMesh;
+    this->innerMesh = innerMesh;
 
-    QVector<GLfloat>* geometry = this->mesh->getGeometry();
-    QVector<GLshort>* indices = this->mesh->getIndices();
+    GLfloat* gvd_o = this->outerMesh->getGeometry()->data();
+    GLshort* ivd_o = this->outerMesh->getIndices()->data();
 
-    GLfloat* gvd = geometry->data();
-    GLshort* ivd = indices->data();
+    int length_o = this->outerMesh->getIndices()->length();
 
-    int length = indices->length();
+    GLfloat* gvd_i = this->innerMesh->getGeometry()->data();
+    GLshort* ivd_i = this->innerMesh->getIndices()->data();
+
+    int length_i = this->innerMesh->getIndices()->length();
 
     QVector<triObject> triObjects;
     triObjects.clear();
-    triObjects.reserve(length);
+    triObjects.reserve(length_i);
+
     QVector<GLint> triObjectIndices;
     triObjectIndices.clear();
-    triObjectIndices.reserve(length);
+    triObjectIndices.reserve(length_i);
 
     if(this->allNodes != NULL)
     {
@@ -72,34 +77,34 @@ void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, M
     GLdouble max_v = 0;
     GLdouble max_g = 0;
 
-    for (GLint i=0;i<length;i+=3)
+    for (GLint i=0;i<length_i;i+=3)
     {
 
         // get average of the triangle
-        xaverage = gvd[ivd[i]*3+0];
-        yaverage = gvd[ivd[i]*3+1];
-        zaverage = gvd[ivd[i]*3+2];
-        xaverage += gvd[ivd[i+1]*3+0];
-        yaverage += gvd[ivd[i+1]*3+1];
-        zaverage += gvd[ivd[i+1]*3+2];
-        xaverage += gvd[ivd[i+2]*3+0];
-        yaverage += gvd[ivd[i+2]*3+1];
-        zaverage += gvd[ivd[i+2]*3+2];
+        xaverage = gvd_i[ivd_i[i]*3+0];
+        yaverage = gvd_i[ivd_i[i]*3+1];
+        zaverage = gvd_i[ivd_i[i]*3+2];
+        xaverage += gvd_i[ivd_i[i+1]*3+0];
+        yaverage += gvd_i[ivd_i[i+1]*3+1];
+        zaverage += gvd_i[ivd_i[i+1]*3+2];
+        xaverage += gvd_i[ivd_i[i+2]*3+0];
+        yaverage += gvd_i[ivd_i[i+2]*3+1];
+        zaverage += gvd_i[ivd_i[i+2]*3+2];
 
         xaverage /=3;yaverage /=3;zaverage /=3;
 
         max_v = 0;
 
         // looking for the maximal distance (average of triangle and point axis)
-        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+0]-xaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+1]-yaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+0]*3+2]-zaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+1]*3+0]-xaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+1]*3+1]-yaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+1]*3+2]-zaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+2]*3+0]-xaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+2]*3+1]-yaverage));
-        max_v = max(max_v,fabs(gvd[ivd[i+2]*3+2]-zaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+0]*3+0]-xaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+0]*3+1]-yaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+0]*3+2]-zaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+1]*3+0]-xaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+1]*3+1]-yaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+1]*3+2]-zaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+2]*3+0]-xaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+2]*3+1]-yaverage));
+        max_v = max(max_v,fabs(gvd_i[ivd_i[i+2]*3+2]-zaverage));
 
         // set object for the triangle
         triObject obj;
@@ -113,16 +118,21 @@ void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, M
         triObjects.push_back(obj);
         triObjectIndices.push_back(i/3);
 
+    }
+
+    for (GLint i=0;i<length_o;i+=3)
+    {
+
         // looking for the maximal distance (average object and point axis)
-        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+0]-x));
-        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+1]-y));
-        max_g = max(max_g,fabs(gvd[ivd[i+0]*3+2]-z));
-        max_g = max(max_g,fabs(gvd[ivd[i+1]*3+0]-x));
-        max_g = max(max_g,fabs(gvd[ivd[i+1]*3+1]-y));
-        max_g = max(max_g,fabs(gvd[ivd[i+1]*3+2]-z));
-        max_g = max(max_g,fabs(gvd[ivd[i+2]*3+0]-x));
-        max_g = max(max_g,fabs(gvd[ivd[i+2]*3+1]-y));
-        max_g = max(max_g,fabs(gvd[ivd[i+2]*3+2]-z));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+0]*3+0]-x));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+0]*3+1]-y));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+0]*3+2]-z));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+1]*3+0]-x));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+1]*3+1]-y));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+1]*3+2]-z));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+2]*3+0]-x));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+2]*3+1]-y));
+        max_g = max(max_g,fabs(gvd_o[ivd_o[i+2]*3+2]-z));
 
     }
 
@@ -135,6 +145,8 @@ void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, M
     setLeafVector(maxDepth);
     setBorder(maxDepth);
     traverseLeafVector(maxDepth);
+
+    getVoidSurface(maxDepth);
 
     return;
 }
@@ -345,11 +357,8 @@ inline bool Octree::triangleCutsCube(QVector3D q,GLfloat halfLength,QVector3D p0
 
 inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLint>* triObjectIndices,GLfloat x,GLfloat y,GLfloat z,GLfloat length){
 
-    QVector<GLfloat>* geometry = this->mesh->getGeometry();
-    QVector<GLshort>* indices = this->mesh->getIndices();
-
-    GLfloat* gvd = geometry->data();
-    GLshort* ivd = indices->data();
+    GLfloat* gvd = this->innerMesh->getGeometry()->data();
+    GLshort* ivd = this->outerMesh->getIndices()->data();
 
     int length2 = triObjectIndices->length();
 
@@ -772,6 +781,166 @@ void Octree::traverseLeafVector(GLint maxDepth)
 
 }
 
+GLint inline Octree::handleHashItem(GLint vertexIndex,QVector3D point)
+{
+
+    if (geometryMap->contains(vertexIndex))
+    {
+        return geometryMap->value(vertexIndex).index;
+    }
+
+    hashItem item;
+
+    item.vertex = point;
+    item.index = geometryMap->size();
+
+    geometryMap->insert(vertexIndex, item);
+
+    return item.index;
+
+}
+
+void Octree::addSurface(octreeNode inner,GLint code,GLint i,GLint j,GLint k,GLint axisSize,GLint planeSize)
+{
+
+    GLint index0;
+    GLint index1;
+    GLint index2;
+    GLint index3;
+
+    QVector3D vec;
+
+    switch(code){
+
+    case 0:
+
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,vec);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,vec);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,vec);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,vec);
+
+        indices->push_back(index0);
+        indices->push_back(index1);
+        indices->push_back(index2);
+        indices->push_back(index1);
+        indices->push_back(index3);
+        indices->push_back(index2);
+
+        break;
+
+    case 1:
+
+        /*
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        */
+
+        break;
+
+    case 2:
+
+        /*
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        */
+
+        break;
+
+    case 3:
+
+        /*
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        */
+
+        break;
+
+    case 4:
+
+        /*
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        */
+
+        break;
+
+    case 5:
+
+        /*
+        index0 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index1 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index2 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        index3 = handleHashItem(planeSize*i+axisSize*j+k,NULL);
+        */
+
+        break;
+    }
+
+    /*
+    indices->push_back(index0);
+    indices->push_back(index1);
+    indices->push_back(index2);
+    indices->push_back(index1);
+    indices->push_back(index3);
+    indices->push_back(index2);
+    */
+
+}
+
+void Octree::getVoidSurface(GLint maxDepth)
+{
+
+    GLint axisSize = 2<<(maxDepth-1);
+    GLint planeSize = pow(axisSize,2);
+
+    GLint verticesAxisSize = 2<<(maxDepth-1)+1;
+    GLint verticesPlaneSize = pow(axisSize,2);
+
+    geometry = new QVector<GLfloat>();
+    geometryMap = new QHash<GLint, hashItem>();
+    indices = new QVector<GLshort>();
+
+    /* set all nodes which are not set already as interior cells */
+    for(int i=1;i<axisSize-1;i++)
+    {
+        for(int j=1;j<axisSize-1;j++)
+        {
+            for(int k=1;k<axisSize-1;k++)
+            {
+
+                octreeNode currentNode = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+k));
+
+                if(!currentNode.interior){continue;}
+
+                /* the neighbor cell */
+                octreeNode node0 = this->allNodes->at(this->leafVector->at(planeSize*(i-1)+axisSize*j+k));
+                octreeNode node1 = this->allNodes->at(this->leafVector->at(planeSize*(i+1)+axisSize*j+k));
+                octreeNode node2 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*(j-1)+k));
+                octreeNode node3 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*(j+1)+k));
+                octreeNode node4 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+(k-1)));
+                octreeNode node5 = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+(k+1)));
+
+                if(!node0.interior){addSurface(currentNode,0,i,j,k,verticesAxisSize,verticesPlaneSize);}
+                if(!node1.interior){addSurface(currentNode,1,i,j,k,verticesAxisSize,verticesPlaneSize);}
+                if(!node2.interior){addSurface(currentNode,2,i,j,k,verticesAxisSize,verticesPlaneSize);}
+                if(!node3.interior){addSurface(currentNode,3,i,j,k,verticesAxisSize,verticesPlaneSize);}
+                if(!node4.interior){addSurface(currentNode,4,i,j,k,verticesAxisSize,verticesPlaneSize);}
+                if(!node5.interior){addSurface(currentNode,5,i,j,k,verticesAxisSize,verticesPlaneSize);}
+
+            }
+        }
+    }
+
+}
+
 octreeNode* Octree::getOctreeRoot()
 {
     return &(allNodes->last());
@@ -960,70 +1129,4 @@ void Octree::render(QGLShaderProgram* shader)
 
     shader->disableAttributeArray("geometry");
 
-}
-
-bool Octree::test()
-{
-    return true;
-}
-
-bool Octree::test_tc()
-{
-
-    GLfloat hl;
-    QVector3D q,p0,p1,p2;
-    bool test = true;
-
-    hl = 0.25;
-
-    q.setX(-0.25);
-    q.setY(-0.25);
-    q.setZ(-0.25);
-
-    p0.setX(+1);
-    p0.setY(+1);
-    p0.setZ(+1);
-
-    p1.setX(-1);
-    p1.setY(+1);
-    p1.setZ(+1);
-
-    p2.setX(-1);
-    p2.setY(-1);
-    p2.setZ(+1);
-
-    test &= triangleCutsCube(q,hl,p0,p1,p2) == false;
-
-    return test;
-}
-
-bool Octree::test_tp()
-{
-
-    GLfloat hl = 1;
-    QVector3D p,n0,n1;
-    bool test = true;
-
-    p.setX(+0);p.setY(+0);p.setZ(+2);
-    n0.setX(+1);n0.setY(+0);n0.setZ(-4);
-    n1.setX(-1);n1.setY(+0);n1.setZ(-4);
-
-    test &= triangleCutsPlane(hl,p,n0,n1) == true;
-
-    return test;
-}
-
-bool Octree::test_ls()
-{
-
-    QVector3D p0,p1;
-    GLfloat hl;
-    bool test = true;
-
-    hl = 1;
-    p0.setX(-2);p0.setY(-2);
-    p1.setX(-1.5);p1.setY(-1.5);
-    test &= lineCutsSquare(hl,p0,p1) == false;
-
-    return test;
 }

@@ -150,5 +150,39 @@ QVector3D Mesh::getMean()
     return mean;
 }
 
+Mesh* Mesh::copy()
+{
 
+    QVector<GLfloat>* geometryCopy = new QVector<GLfloat>(*geometry);
+    QVector<GLfloat>* normalCopy = new QVector<GLfloat>(*normals);
+    QVector<GLshort>* indicesCopy = new QVector<GLshort>(*indices);
 
+    return new Mesh(geometryCopy,normalCopy,indicesCopy);
+
+}
+
+void Mesh::tranlateInNormalDirection(GLfloat magnitude)
+{
+
+    for (int i = 0; i < geometry->size() / 3; i++) {
+
+        QVector3D vertex;
+        vertex.setX(geometry->at(3*i + 0));
+        vertex.setY(geometry->at(3*i + 1));
+        vertex.setZ(geometry->at(3*i + 2));
+
+        QVector3D normal;
+        normal.setX(normals->at(3*i + 0));
+        normal.setY(normals->at(3*i + 1));
+        normal.setZ(normals->at(3*i + 2));
+
+        vertex = vertex + normal*magnitude;
+
+        geometry->replace(3 * i + 0, vertex.x());
+        geometry->replace(3 * i + 1, vertex.y());
+        geometry->replace(3 * i + 2, vertex.z());
+    }
+
+    this->isDirty = true;
+
+}

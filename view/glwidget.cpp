@@ -4,6 +4,10 @@ GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {   
 
+    showOuterSurface = true;
+    showInnerSurface = false;
+    showGrid = false;
+
 }
 
 GLWidget::~GLWidget()
@@ -54,10 +58,12 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
-    object = readMeshFromObjFileDirectory("cube");
+    object = readMeshFromObjFileDirectory("monkey");
+    objectShell = object->copy();
+    objectShell->tranlateInNormalDirection(-0.015);
 
     octree =  new Octree();
-    octree->setOctreeInteriors(0,0,0,2,object);
+    octree->setOctreeInteriors(0,0,0,5,object,objectShell);
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
@@ -142,14 +148,27 @@ void GLWidget::paintGL()
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
+
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
-    //shader->setUniformValue("color", QColor(115, 115, 85));
-    //object->render(shader, GL_TRIANGLES);
+    if(showOuterSurface)
+    {
+        shader->setUniformValue("color", QColor(115, 115, 85));
+        object->render(shader, GL_TRIANGLES);
+    }
 
-    shader->setUniformValue("color", QColor(Qt::black));
-    octree->render(shader);
+    if(showInnerSurface)
+    {
+        shader->setUniformValue("color", QColor(115, 115, 85));
+        objectShell->render(shader, GL_TRIANGLES);
+    }
+
+    if(showGrid)
+    {
+        shader->setUniformValue("color", QColor(Qt::black));
+        octree->render(shader);
+    }
 
     model_matrix.setToIdentity();
     GLfloat lowest_y = 0.0;
@@ -170,7 +189,6 @@ void GLWidget::paintGL()
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
     shader->setUniformValue("color", QColor(Qt::black));
     grid->render(shader, GL_LINES);
-
 
     shader->release();
 }
@@ -276,3 +294,32 @@ void GLWidget::loadNewMesh()
     this->repaint();
 }
 
+void GLWidget::showOnlyOuterSurface()
+{
+
+    showOuterSurface = true;
+    showInnerSurface = false;
+    showGrid = false;
+
+    this->repaint();
+}
+
+void GLWidget::showOnlyInnerSurface()
+{
+
+    showOuterSurface = false;
+    showInnerSurface = true;
+    showGrid = false;
+
+    this->repaint();
+}
+
+void GLWidget::showOnlyOctreeGrid()
+{
+
+    showOuterSurface = false;
+    showInnerSurface = false;
+    showGrid = true;
+
+    this->repaint();
+}

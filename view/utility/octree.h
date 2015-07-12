@@ -8,6 +8,11 @@
 #include <QMatrix4x4>
 #include "mesh.h"
 
+struct hashItem{
+    QVector3D vertex;
+    GLint index;
+};
+
 struct octreeNode {
 
   GLint index;
@@ -56,8 +61,8 @@ class Octree
 public:
     Octree();
 
-    void setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth,Mesh* m);
-    void setOctreeInteriors(GLint maxDepth,Mesh* m);
+    void setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth,Mesh* outerMesh,Mesh* innerMesh);
+    void setOctreeInteriors(GLint maxDepth,Mesh* outerMesh,Mesh* innerMesh);
 
     octreeNode* getOctreeRoot();
 
@@ -65,12 +70,8 @@ public:
     QVector<GLint>* interiorNodesIndices;
     QVector<GLint>* leafVector;
 
-    Mesh* mesh;
-
-    bool test();
-    bool test_tc();
-    bool test_tp();
-    bool test_ls();
+    Mesh* outerMesh;
+    Mesh* innerMesh;
 
     void merge(octreeNode* parent);
     void split(octreeNode* node);
@@ -93,10 +94,18 @@ private:
 
     QVector<GLint>* freeIndices;
 
+    GLint handleHashItem(GLint vertexIndex,QVector3D point);
+    void addSurface(octreeNode inner,GLint code,GLint i,GLint j,GLint k,GLint axisSize,GLint planeSize);
+    void getVoidSurface(GLint maxDepth);
+
     void setLeafVectorHelper(GLint maxDepth, GLint currentDepth, GLint index, GLint x, GLint y, GLint z);
     void setLeafVector(GLint maxDepth);
     void setBorder(GLint maxDepth);
     void traverseLeafVector(GLint maxDepth);
+
+    QVector<GLfloat>* geometry;
+    QHash<GLint, hashItem>* geometryMap;
+    QVector<GLshort>* indices;
 
     GLint setOctreeInteriorsHelper(
             GLfloat length,

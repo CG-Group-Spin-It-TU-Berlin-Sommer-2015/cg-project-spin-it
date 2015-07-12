@@ -13,7 +13,7 @@ public:
     Model();
 
 private:
-    float* calculateVolumne(Mesh mesh);
+    float* calculateVolumne(Mesh mesh, float p);
 
 };
 
