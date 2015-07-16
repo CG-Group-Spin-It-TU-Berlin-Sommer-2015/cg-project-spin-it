@@ -4,11 +4,13 @@ using namespace std;
 
 Octree::Octree()
 {
+    /* rotations matrices */
     rotx.setToIdentity();
     rotx.rotate(90,1,0,0);
     roty.setToIdentity();
     roty.rotate(90,0,1,0);
 
+    /* unit vectors */
     xvec.setX(1);
     xvec.setY(0);
     xvec.setZ(0);
@@ -19,16 +21,20 @@ Octree::Octree()
     zvec.setY(0);
     zvec.setZ(1);
 
+    /* */
     this->allNodes = NULL;
-    this->interiorNodesIndices = NULL;
+    this->interiorLeafIndices = NULL;
     this->leafVector = NULL;
 
-    this->freeIndices = NULL;
+    this->freeIndicesBufferForAllNodes = new QVector<GLint>();
+    this->freeIndicesBufferForInteriorLeafIndices = new QVector<GLint>();
 
     this->isDirty = true;
+    this->rootIndex = -1;
 }
 
-void Octree::setOctreeInteriors(GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh){
+void Octree::setOctreeInteriors(GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh)
+{
     setOctreeInteriors(
       outerMesh->getMean().x(),
       outerMesh->getMean().y(),
@@ -38,19 +44,25 @@ void Octree::setOctreeInteriors(GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh
       innerMesh);
 }
 
-void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, Mesh* outerMesh, Mesh* innerMesh){
+void Octree::setOctreeInteriors(
+        GLfloat x,
+        GLfloat y,
+        GLfloat z,
+        GLint maxDepth,
+        Mesh* outerMesh,
+        Mesh* innerMesh)
+{
+
+    this->maxDepth = maxDepth;
 
     this->outerMesh = outerMesh;
     this->innerMesh = innerMesh;
 
     GLfloat* gvd_o = this->outerMesh->getGeometry()->data();
     GLshort* ivd_o = this->outerMesh->getIndices()->data();
-
     int length_o = this->outerMesh->getIndices()->length();
-
     GLfloat* gvd_i = this->innerMesh->getGeometry()->data();
     GLshort* ivd_i = this->innerMesh->getIndices()->data();
-
     int length_i = this->innerMesh->getIndices()->length();
 
     QVector<triObject> triObjects;
@@ -65,13 +77,13 @@ void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, M
     {
         delete this->allNodes;
     }
-    if(this->interiorNodesIndices != NULL)
+    if(this->interiorLeafIndices != NULL)
     {
-        delete this->interiorNodesIndices;
+        delete this->interiorLeafIndices;
     }
 
     this->allNodes = new QVector<octreeNode>();
-    this->interiorNodesIndices = new QVector<GLint>();
+    this->interiorLeafIndices = new QVector<GLint>();
 
     GLfloat xaverage, yaverage, zaverage;
     GLdouble max_v = 0;
@@ -146,12 +158,31 @@ void Octree::setOctreeInteriors(GLfloat x,GLfloat y,GLfloat z, GLint maxDepth, M
     setBorder(maxDepth);
     traverseLeafVector(maxDepth);
 
-    getVoidSurface(maxDepth);
+    this->rootIndex = this->allNodes->length()-1;
 
     return;
 }
 
-inline void Octree::testIntersection(QVector<triObject>* triObjects,QVector<GLint>* newTriObjectIndices,QVector<GLint>* oldTriObjectIndices,GLfloat x,GLfloat y,GLfloat z,GLfloat length){
+/**
+ * @brief Octree::testIntersection test whether the provided triangles and the provided cube intersect each other
+ * @param triObjects triangle objects which are needed for intersection test
+ * @param newTriObjectIndices filtered list which of indices of triangle objects
+ * (for performance purposes)
+ * @param oldTriObjectIndices all indices of regarded triangle objects
+ * @param x x-coordinate of the specific cube point
+ * @param y y- ...
+ * @param z z- ...
+ * @param length edge length of the cube
+ */
+inline void Octree::testIntersection(
+        QVector<triObject>* triObjects,
+        QVector<GLint>* newTriObjectIndices,
+        QVector<GLint>* oldTriObjectIndices,
+        GLfloat x,
+        GLfloat y,
+        GLfloat z,
+        GLfloat length)
+{
 
     int length2 = oldTriObjectIndices->length();
 
@@ -185,7 +216,15 @@ inline void Octree::testIntersection(QVector<triObject>* triObjects,QVector<GLin
 
 }
 
-inline bool Octree::lineCutsSquare(GLfloat halfLength, QVector3D p0, QVector3D p1){
+/**
+ * @brief Octree::lineIntersectsSquare test whether the provided line and the provided square intersect each other
+ * @param halfLength the half lenght of the edge of the square
+ * @param p0 the first point of the line
+ * @param p1 the second point of the line
+ * @return true if the line and the square intersect each other else false
+ */
+inline bool Octree::lineIntersectsSquare(GLfloat halfLength, QVector3D p0, QVector3D p1)
+{
 
     QVector3D diff = p1-p0;
 
@@ -193,7 +232,8 @@ inline bool Octree::lineCutsSquare(GLfloat halfLength, QVector3D p0, QVector3D p
     if(fabs(p0.x())<=halfLength && fabs(p0.y())<=halfLength){return true;}
     if(fabs(p1.x())<=halfLength && fabs(p1.y())<=halfLength){return true;}
 
-    /* lambda is the scale factor for the line
+    /*
+     * lambda is the scale factor for the line
      * if between 0 and 1 then intersection exists
      */
     GLfloat lambda;
@@ -239,7 +279,20 @@ inline bool Octree::lineCutsSquare(GLfloat halfLength, QVector3D p0, QVector3D p
     return false;
 }
 
-inline bool Octree::triangleCutsPlane(GLfloat halfLength, QVector3D p, QVector3D n0, QVector3D n1){
+/**
+ * @brief Octree::triangleIntersectsPlane test whether the provided triangle and the provided plane intersect each other
+ * @param halfLength the half lenght of the edge of the square
+ * @param p first point of the triangle
+ * @param n0 vector between first and second point of the triangle
+ * @param n1 vector between first and third point of the triangle
+ * @return true if the line and the square intersect each other
+ */
+inline bool Octree::triangleIntersectsPlane(
+        GLfloat halfLength,
+        QVector3D p,
+        QVector3D n0,
+        QVector3D n1)
+{
 
     bool c0 = false;
     bool c1 = false;
@@ -249,11 +302,11 @@ inline bool Octree::triangleCutsPlane(GLfloat halfLength, QVector3D p, QVector3D
     if(n0.z()==0){
         if(p.z()==0){
             if(n1.z()==0){
-                return lineCutsSquare(halfLength,p+n0,p) ||
-                       lineCutsSquare(halfLength,p+n1,p) ||
-                       lineCutsSquare(halfLength,p+n1,p+n0);
+                return lineIntersectsSquare(halfLength,p+n0,p) ||
+                       lineIntersectsSquare(halfLength,p+n1,p) ||
+                       lineIntersectsSquare(halfLength,p+n1,p+n0);
             }
-            else{return lineCutsSquare(halfLength,p+n0,p);}
+            else{return lineIntersectsSquare(halfLength,p+n0,p);}
         }
     }
     else{
@@ -268,7 +321,7 @@ inline bool Octree::triangleCutsPlane(GLfloat halfLength, QVector3D p, QVector3D
 
     if(n1.z()==0)
     {
-        if(p.z()==0){return lineCutsSquare(halfLength,p+n1,p);}
+        if(p.z()==0){return lineIntersectsSquare(halfLength,p+n1,p);}
     }
     else{
 
@@ -297,14 +350,29 @@ inline bool Octree::triangleCutsPlane(GLfloat halfLength, QVector3D p, QVector3D
     }
 
     // test intersection points for square test
-    if(c0&&c1){return lineCutsSquare(halfLength,cv0,cv1);}
-    if(c0&&c2){return lineCutsSquare(halfLength,cv0,cv2);}
-    if(c1&&c2){return lineCutsSquare(halfLength,cv1,cv2);}
+    if(c0&&c1){return lineIntersectsSquare(halfLength,cv0,cv1);}
+    if(c0&&c2){return lineIntersectsSquare(halfLength,cv0,cv2);}
+    if(c1&&c2){return lineIntersectsSquare(halfLength,cv1,cv2);}
 
     return false;
 }
 
-inline bool Octree::triangleCutsCube(QVector3D q,GLfloat halfLength,QVector3D p0,QVector3D p1,QVector3D p2){
+/**
+ * @brief Octree::triangleIntersectsCube test whether the provided triangle and the provided cube intersect each other
+ * @param q middle point of the cube
+ * @param halfLength half length of the edge the cube
+ * @param p0 first point of the triangle
+ * @param p1 second point of the triangle
+ * @param p2 third point of the triangle
+ * @return true if the triangle and the cube intersect each other else false
+ */
+inline bool Octree::triangleIntersectsCube(
+        QVector3D q,
+        GLfloat halfLength,
+        QVector3D p0,
+        QVector3D p1,
+        QVector3D p2)
+{
 
     QVector3D n0,n1,n0_1,n0_2,n1_1,n1_2;
     QVector3D vec0,vec1,vec2;
@@ -321,15 +389,15 @@ inline bool Octree::triangleCutsCube(QVector3D q,GLfloat halfLength,QVector3D p0
     vec2 = ((p0-q)+this->zvec*halfLength); // pos z plane
 
     // test x-plane (negative)
-    bool t1 = triangleCutsPlane(halfLength,vec0,n0_1,n1_1);
+    bool t1 = triangleIntersectsPlane(halfLength,vec0,n0_1,n1_1);
     if(t1){return true;}
 
     // test y-plane (negative)
-    bool t2 = triangleCutsPlane(halfLength,vec1,n0_2,n1_2);
+    bool t2 = triangleIntersectsPlane(halfLength,vec1,n0_2,n1_2);
     if(t2){return true;}
 
     // test z-plane (negative)
-    bool t3 = triangleCutsPlane(halfLength,vec2,n0,n1);
+    bool t3 = triangleIntersectsPlane(halfLength,vec2,n0,n1);
     if(t3){return true;}
 
     // neg x plane
@@ -340,22 +408,38 @@ inline bool Octree::triangleCutsCube(QVector3D q,GLfloat halfLength,QVector3D p0
     vec2 = ((p0-q)-this->zvec*halfLength);
 
     // test x-plane (positive)
-    bool t4 = triangleCutsPlane(halfLength,vec0,n0_1,n1_1);
+    bool t4 = triangleIntersectsPlane(halfLength,vec0,n0_1,n1_1);
     if(t4){return true;}
 
     // test y-plane (positive)
-    bool t5 = triangleCutsPlane(halfLength,vec1,n0_2,n1_2);
+    bool t5 = triangleIntersectsPlane(halfLength,vec1,n0_2,n1_2);
     if(t5){return true;}
 
     // test z-plane (positive)
-    bool t6 = triangleCutsPlane(halfLength,vec2,n0,n1);
+    bool t6 = triangleIntersectsPlane(halfLength,vec2,n0,n1);
     if(t6){return true;}
 
     return false;
 }
 
-
-inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLint>* triObjectIndices,GLfloat x,GLfloat y,GLfloat z,GLfloat length){
+/**
+ * @brief Octree::testIntersection2 test intersection (2)
+ * @param triObjects all triangle object
+ * @param triObjectIndices indices for all triangle object which are needed for testing intersection
+ * @param x x-coordinate of the specific point of the cube
+ * @param y y- ...
+ * @param z z- ...
+ * @param length edge length of the cube
+ * @return true if the cube and any triangle intersect each other else false
+ */
+inline bool Octree::testIntersection2(
+        QVector<triObject>* triObjects,
+        QVector<GLint>* triObjectIndices,
+        GLfloat x,
+        GLfloat y,
+        GLfloat z,
+        GLfloat length)
+{
 
     GLfloat* gvd = this->innerMesh->getGeometry()->data();
     GLshort* ivd = this->outerMesh->getIndices()->data();
@@ -431,7 +515,7 @@ inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLi
         }
 
         /*test intersection of cube and triangle*/
-        if(triangleCutsCube(middle,halfLength,p0,p1,p2)){
+        if(triangleIntersectsCube(middle,halfLength,p0,p1,p2)){
             return true;
         }
 
@@ -440,6 +524,18 @@ inline bool Octree::testIntersection2(QVector<triObject>* triObjects,QVector<GLi
     return false;
 }
 
+/**
+ * @brief Octree::setOctreeInteriorsHelper helper method
+ * @param length length of the current considered cube
+ * @param x x-coordinate of the specific point
+ * @param y y- ...
+ * @param z z- ...
+ * @param triObjects all triangle object
+ * @param triObjectIndices indices for all triangle object which are needed for testing intersection
+ * @param depth current depth
+ * @param maxDepth maximum depth
+ * @return the index of the created node in allNoded
+ */
 GLint Octree::setOctreeInteriorsHelper(
         GLfloat length,
         GLfloat x,
@@ -456,9 +552,9 @@ GLint Octree::setOctreeInteriorsHelper(
     }
 
     /*test all tri objects for intersection or whether max depth is reached*/
-    bool cut = testIntersection2(triObjects,triObjectIndices,x,y,z,length);
+    bool intersect = testIntersection2(triObjects,triObjectIndices,x,y,z,length);
 
-    if(!cut || maxDepth<depth){      
+    if(!intersect || maxDepth<depth){
 
         octreeNode obj;
 
@@ -482,8 +578,11 @@ GLint Octree::setOctreeInteriorsHelper(
 
         obj.parentIndex = -1;
 
-        obj.cut = cut;
+        obj.nodeDepth = depth;
+
+        obj.intersect = intersect;
         obj.index = allNodes->length();
+        obj.interiorIndex = -1;
         obj.interior = false;
         obj.set = false;
 
@@ -542,15 +641,17 @@ GLint Octree::setOctreeInteriorsHelper(
     obj.childIndex6=setOctreeInteriorsHelper(newLength,x+newLength,y+newLength,z,triObjects,triObjectIndices,newDepth,maxDepth);
     obj.childIndex7=setOctreeInteriorsHelper(newLength,x+newLength,y+newLength,z+newLength,triObjects,triObjectIndices,newDepth,maxDepth);
 
-    obj.cut = true;
+    obj.nodeDepth = depth;
+
+    obj.intersect = true;
     obj.index = allNodes->length();
+    obj.interiorIndex = -1;
     obj.interior = false;
     obj.set = false;
 
     allNodes->push_back(obj);
 
     GLint index = obj.index;
-
 
     /* set parent index for sub cubes */
     allNodes->data()[obj.childIndex0].parentIndex = index;
@@ -567,7 +668,22 @@ GLint Octree::setOctreeInteriorsHelper(
 
 }
 
-void Octree::setLeafVectorHelper(GLint maxDepth, GLint currentDepth, GLint index, GLint x, GLint y, GLint z)
+/**
+ * @brief Octree::setLeafVectorHelper helper method
+ * @param maxDepth maximum depth
+ * @param currentDepth current depth
+ * @param index index of the node
+ * @param x x-coordinate of cube (index)
+ * @param y y- ...
+ * @param z z- ...
+ */
+void Octree::setLeafVectorHelper(
+        GLint maxDepth,
+        GLint currentDepth,
+        GLint index,
+        GLint x,
+        GLint y,
+        GLint z)
 {
     octreeNode node = this->allNodes->at(index);
 
@@ -628,6 +744,10 @@ void Octree::setLeafVector(GLint maxDepth)
 
 }
 
+/**
+ * @brief Octree::setBorder mark border cubes which do not intersect the surface
+ * @param maxDepth maximum depth which will be considered
+ */
 void Octree::setBorder(GLint maxDepth)
 {
 
@@ -640,22 +760,23 @@ void Octree::setBorder(GLint maxDepth)
 
     octreeNode node;
 
+    // travers over all leaf cubes
     for(int i=0;i<axisSize;i++)
     {
         for(int j=0;j<axisSize;j++)
         {
 
+            /* if cube does not intersect then cube is marked as border cube */
+
             node = this->allNodes->at(this->leafVector->at(planeSize*startIndex+axisSize*i+j));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
                 this->allNodes->data()[this->leafVector->at(planeSize*startIndex+axisSize*i+j)] = node;
             }
-
-
             node = this->allNodes->at(this->leafVector->at(planeSize*endIndex+axisSize*i+j));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
@@ -663,14 +784,14 @@ void Octree::setBorder(GLint maxDepth)
             }
 
             node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*startIndex+j));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
                 this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*startIndex+j)] = node;
             }
             node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*endIndex+j));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
@@ -678,14 +799,14 @@ void Octree::setBorder(GLint maxDepth)
             }
 
             node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+startIndex));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
                 this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+startIndex)] = node;
             }
             node = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+endIndex));
-            if(!node.cut)
+            if(!node.intersect)
             {
                 node.interior = false;
                 node.set = true;
@@ -698,6 +819,10 @@ void Octree::setBorder(GLint maxDepth)
 
 }
 
+/**
+ * @brief Octree::traverseLeafVector mark all border cubes recursively
+ * @param maxDepth maximum depth which will be considered
+ */
 void Octree::traverseLeafVector(GLint maxDepth)
 {
 
@@ -721,7 +846,7 @@ void Octree::traverseLeafVector(GLint maxDepth)
 
                     octreeNode currentNode = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+k));
 
-                    if(currentNode.cut || currentNode.set){continue;}
+                    if(currentNode.intersect || currentNode.set){continue;}
 
                     /* the neighbor cell */
                     octreeNode node0 = this->allNodes->at(this->leafVector->at(planeSize*(i-1)+axisSize*j+k));
@@ -767,20 +892,27 @@ void Octree::traverseLeafVector(GLint maxDepth)
 
                 octreeNode currentNode = this->allNodes->at(this->leafVector->at(planeSize*i+axisSize*j+k));
 
-                if(currentNode.cut || currentNode.set){continue;}
+                if(currentNode.intersect || currentNode.set){continue;}
 
                 currentNode.set = true;
                 currentNode.interior = true;
+                currentNode.interiorIndex = this->interiorLeafIndices->length();
 
                 this->allNodes->data()[this->leafVector->at(planeSize*i+axisSize*j+k)] = currentNode;
 
-                this->interiorNodesIndices->push_back(currentNode.index);
+                this->interiorLeafIndices->push_back(currentNode.index);
             }
         }
     }
 
 }
 
+/**
+ * @brief Octree::handleHashItem handle hash item to avoid setting an existing point
+ * @param vertexIndex index of leaf cube
+ * @param point point which will be stored
+ * @return the index of the point in the hash map
+ */
 GLint inline Octree::handleHashItem(GLint vertexIndex,QVector3D point)
 {
 
@@ -800,7 +932,157 @@ GLint inline Octree::handleHashItem(GLint vertexIndex,QVector3D point)
 
 }
 
-void Octree::addSurface(octreeNode inner,GLint code,GLint i,GLint j,GLint k,GLint axisSize,GLint planeSize)
+bool Octree::allChildrenAreLeaves(GLint nodeIndex)
+{
+    if(nodeIndex<0)
+    {
+        return false;
+    }
+
+    octreeNode* node = this->getOctreeNode(nodeIndex);
+
+    return
+            isLeaf(node->childIndex0) &&
+            isLeaf(node->childIndex1) &&
+            isLeaf(node->childIndex2) &&
+            isLeaf(node->childIndex3) &&
+            isLeaf(node->childIndex4) &&
+            isLeaf(node->childIndex5) &&
+            isLeaf(node->childIndex6) &&
+            isLeaf(node->childIndex7);
+}
+
+bool inline Octree::isLeaf(GLint nodeIndex)
+{
+    if(nodeIndex<0)
+    {
+        return false;
+    }
+
+    octreeNode* node = this->getOctreeNode(nodeIndex);
+
+    return node->childIndex0<0;
+}
+
+
+GLint Octree::getRootID()
+{
+    return this->rootIndex;
+}
+
+void Octree::getAllInnerNodeIDsOfDepth(QVector<GLint>* vec,GLint depth)
+{
+    if(this->rootIndex<0)
+    {
+        return;
+    }
+
+    octreeNode* node = this->getOctreeNode(this->rootIndex);
+
+    if(node->nodeDepth == depth && (node->intersect || node->interior) )
+    {
+        vec->push_back(node->index);
+        return;
+    }
+
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex0);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex1);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex2);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex3);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex4);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex5);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex6);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex7);
+}
+
+void Octree::getAllInnerNodeLeafIDs(QVector<GLint>* vec)
+{
+    getAllInnerNodeLeafIDsOfNode(vec,this->rootIndex);
+}
+
+void Octree::getAllInnerNodeLeafIDsOfNode(QVector<GLint>* vec,GLint nodeIndex)
+{
+
+    if(nodeIndex<0)
+    {
+        return;
+    }
+
+    octreeNode* node = this->getOctreeNode(nodeIndex);
+
+    if(node->interior && isLeaf(node->index))
+    {
+        vec->push_back(nodeIndex);
+    }
+
+    /* */
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex0);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex1);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex2);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex3);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex4);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex5);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex6);
+    getAllInnerNodeLeafIDsOfNode(vec,node->childIndex7);
+
+}
+
+/**
+ * @brief Octree::getAllInnerNodeIDsOfDepthHelper helper method
+ * @param vec container for collected indices
+ * @param depth searching depth
+ * @param nodeIndex index of current considered node
+ */
+void Octree::getAllInnerNodeIDsOfDepthHelper(QVector<GLint>* vec,GLint depth,GLint nodeIndex)
+{
+
+    if(nodeIndex<0){
+        return;
+    }
+
+    octreeNode* node = this->getOctreeNode(nodeIndex);
+
+    if(node->nodeDepth == depth && (node->intersect || node->interior) )
+    {
+        vec->push_back(nodeIndex);
+        return;
+    }
+
+    /* */
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex0);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex1);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex2);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex3);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex4);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex5);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex6);
+    getAllInnerNodeIDsOfDepthHelper(vec,depth,node->childIndex7);
+
+}
+
+octreeNode* Octree::getOctreeNode(GLint index)
+{
+    return &this->allNodes->data()[index];
+}
+
+/**
+ * @brief Octree::addSurface TODO
+ * @param inner
+ * @param code
+ * @param i
+ * @param j
+ * @param k
+ * @param axisSize
+ * @param planeSize
+ */
+void Octree::addSurface(
+        octreeNode inner,
+        GLint code,
+        GLint i,
+        GLint j,
+        GLint k,
+        GLint axisSize,
+        GLint planeSize)
 {
 
     GLint index0;
@@ -808,6 +1090,7 @@ void Octree::addSurface(octreeNode inner,GLint code,GLint i,GLint j,GLint k,GLin
     GLint index2;
     GLint index3;
 
+    /* TODO get correct point */
     QVector3D vec;
 
     switch(code){
@@ -895,13 +1178,13 @@ void Octree::addSurface(octreeNode inner,GLint code,GLint i,GLint j,GLint k,GLin
 
 }
 
-void Octree::getVoidSurface(GLint maxDepth)
+void Octree::setVoidSurface()
 {
 
     GLint axisSize = 2<<(maxDepth-1);
     GLint planeSize = pow(axisSize,2);
 
-    GLint verticesAxisSize = 2<<(maxDepth-1)+1;
+    GLint verticesAxisSize = (2<<(maxDepth-1))+1;
     GLint verticesPlaneSize = pow(axisSize,2);
 
     geometry = new QVector<GLfloat>();
@@ -941,33 +1224,93 @@ void Octree::getVoidSurface(GLint maxDepth)
 
 }
 
-octreeNode* Octree::getOctreeRoot()
-{
-    return &(allNodes->last());
-}
-
 void Octree::merge(octreeNode* parent)
 {
 
-    /* set the indices as free for avoiding too many empty holes*/
-    this->freeIndices->push_back(parent->childIndex0);
-    this->freeIndices->push_back(parent->childIndex1);
-    this->freeIndices->push_back(parent->childIndex2);
-    this->freeIndices->push_back(parent->childIndex3);
+    if(!this->allChildrenAreLeaves(parent->index))
+    {
+        return;
+    }
 
-    this->freeIndices->push_back(parent->childIndex4);
-    this->freeIndices->push_back(parent->childIndex5);
-    this->freeIndices->push_back(parent->childIndex6);
-    this->freeIndices->push_back(parent->childIndex7);
+    /* set the indices as free for avoiding too many empty holes*/
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex0);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex1);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex2);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex3);
+
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex4);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex5);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex6);
+    this->freeIndicesBufferForAllNodes->push_back(parent->childIndex7);
+
+    /* ---------------------------- */
+
+    octreeNode node;
+
+    /* the children will be removed from interiorNodeLeafIndices*/
+    node = this->allNodes->data()[parent->childIndex0];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex1];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex2];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex3];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex4];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex5];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex6];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
+
+    node = this->allNodes->data()[parent->childIndex7];
+    this->interiorLeafIndices->data()[node.interiorIndex] = -1;
+    this->freeIndicesBufferForInteriorLeafIndices->push_back(node.interiorIndex);
 
     /* delete the references */
     parent->childIndex0=-1;parent->childIndex1=-1;parent->childIndex2=-1;parent->childIndex3=-1;
     parent->childIndex4=-1;parent->childIndex5=-1;parent->childIndex6=-1;parent->childIndex7=-1;
 
+    if(this->freeIndicesBufferForInteriorLeafIndices != NULL && !this->freeIndicesBufferForInteriorLeafIndices->empty())
+    {
+       parent->interiorIndex = this->freeIndicesBufferForInteriorLeafIndices->last();
+       this->freeIndicesBufferForInteriorLeafIndices->pop_back();
+       this->interiorLeafIndices->data()[parent->interiorIndex] = parent->index;
+    }
+    else
+    {
+       parent->interiorIndex = this->interiorLeafIndices->length();
+       this->interiorLeafIndices->push_back((parent->index));
+    }
+
+}
+
+void Octree::merge(GLint parentIndex)
+{
+    octreeNode parent = this->allNodes->data()[parentIndex];
+    merge(&parent);
+    this->allNodes->data()[parentIndex] = parent;
 }
 
 void Octree::split(octreeNode* node)
 {
+
+    if(!this->isLeaf(node->index)){
+        return;
+    }
 
     GLfloat newLength = (node->p0-node->p1).length()/2;
 
@@ -976,16 +1319,26 @@ void Octree::split(octreeNode* node)
     GLfloat y = node->p0.y();
     GLfloat z = node->p0.z();
 
-    /* create sub cubes */
-    node->childIndex0=createNode(newLength,x,y,z);
-    node->childIndex1=createNode(newLength,x,y,z+newLength);
-    node->childIndex2=createNode(newLength,x,y+newLength,z);
-    node->childIndex3=createNode(newLength,x,y+newLength,z+newLength);
+    GLint newDepth = node->nodeDepth+1;
 
-    node->childIndex4=createNode(newLength,x+newLength,y,z);
-    node->childIndex5=createNode(newLength,x+newLength,y,z+newLength);
-    node->childIndex6=createNode(newLength,x+newLength,y+newLength,z);
-    node->childIndex7=createNode(newLength,x+newLength,y+newLength,z+newLength);
+    bool addToInterios = node->interior;
+
+    /* create sub cubes */
+    node->childIndex0=createNode(newLength,x,y,z,newDepth,addToInterios);
+    node->childIndex1=createNode(newLength,x,y,z+newLength,newDepth,addToInterios);
+    node->childIndex2=createNode(newLength,x,y+newLength,z,newDepth,addToInterios);
+    node->childIndex3=createNode(newLength,x,y+newLength,z+newLength,newDepth,addToInterios);
+    node->childIndex4=createNode(newLength,x+newLength,y,z,newDepth,addToInterios);
+    node->childIndex5=createNode(newLength,x+newLength,y,z+newLength,newDepth,addToInterios);
+    node->childIndex6=createNode(newLength,x+newLength,y+newLength,z,newDepth,addToInterios);
+    node->childIndex7=createNode(newLength,x+newLength,y+newLength,z+newLength,newDepth,addToInterios);
+
+    if(node->interior)
+    {
+        this->interiorLeafIndices->data()[node->interiorIndex] = -1;
+        this->freeIndicesBufferForInteriorLeafIndices->push_back(node->interiorIndex);
+        node->interiorIndex = -1;
+    }
 
     GLint index = node->index;
 
@@ -1002,7 +1355,30 @@ void Octree::split(octreeNode* node)
 
 }
 
-GLint Octree::createNode(GLfloat length, GLfloat x, GLfloat y, GLfloat z)
+void Octree::split(GLint nodeIndex)
+{
+    octreeNode node = this->allNodes->data()[nodeIndex];
+    split(&node);
+    this->allNodes->data()[nodeIndex] = node;
+}
+
+/**
+ * @brief Octree::createNode helper method for creating and adding a new octree node (cube)
+ * @param length edge length of the cube
+ * @param x x-coordinate of the basic vertex
+ * @param y y-coordinate ...
+ * @param z z-coordinate ...
+ * @param nodeDepth depth of the node in the octree
+ * @param addToInteriors if true the node will be added to interiorNodeLeafIndices
+ * @return index of the created octree node (cube)
+ */
+GLint Octree::createNode(
+        GLfloat length,
+        GLfloat x,
+        GLfloat y,
+        GLfloat z,
+        GLint nodeDepth,
+        bool addToInteriors)
 {
 
     octreeNode obj;
@@ -1012,7 +1388,6 @@ GLint Octree::createNode(GLfloat length, GLfloat x, GLfloat y, GLfloat z)
     obj.p1.setX(x);obj.p1.setY(y);obj.p1.setZ(z+length);
     obj.p2.setX(x);obj.p2.setY(y+length);obj.p2.setZ(z);
     obj.p3.setX(x);obj.p3.setY(y+length);obj.p3.setZ(z+length);
-
     obj.p4.setX(x+length);obj.p4.setY(y);obj.p4.setZ(z);
     obj.p5.setX(x+length);obj.p5.setY(y);obj.p5.setZ(z+length);
     obj.p6.setX(x+length);obj.p6.setY(y+length);obj.p6.setZ(z);
@@ -1024,20 +1399,43 @@ GLint Octree::createNode(GLfloat length, GLfloat x, GLfloat y, GLfloat z)
 
     obj.parentIndex = -1;
 
-    obj.cut = false;
-    obj.index = this->allNodes->length();
+    obj.nodeDepth = nodeDepth;
 
-    if(this->freeIndices != NULL && !this->freeIndices->empty())
+    obj.intersect = false;
+
+    obj.interior = addToInteriors;
+
+    /* add node in the data structures (avoid waste of storage by using voids in the vectors) */
+    if(this->freeIndicesBufferForAllNodes != NULL && !this->freeIndicesBufferForAllNodes->empty())
     {
-        obj.index = this->freeIndices->last();
-        this->freeIndices->last();
+        obj.index = this->freeIndicesBufferForAllNodes->last();
+        this->freeIndicesBufferForAllNodes->pop_back();
         this->allNodes->data()[obj.index] = obj;
     }
-    else{
-
+    else
+    {
         obj.index = this->allNodes->length();
         this->allNodes->push_back(obj);
     }
+
+    /* add to interiors if parent is an interior */
+    if(addToInteriors)
+    {
+        if(this->freeIndicesBufferForInteriorLeafIndices != NULL && !this->freeIndicesBufferForInteriorLeafIndices->empty())
+        {
+            obj.interiorIndex = this->freeIndicesBufferForInteriorLeafIndices->last();
+            this->freeIndicesBufferForInteriorLeafIndices->pop_back();
+            this->interiorLeafIndices->data()[obj.interiorIndex] = obj.index;
+        }
+        else
+        {
+            obj.interiorIndex = this->interiorLeafIndices->length();
+            this->interiorLeafIndices->push_back((obj.index));
+        }
+    }
+
+    /* is needed because of the interior index */
+    this->allNodes->data()[obj.index] = obj;
 
     GLint index = obj.index;
 
@@ -1047,14 +1445,15 @@ GLint Octree::createNode(GLfloat length, GLfloat x, GLfloat y, GLfloat z)
 void Octree::render(QGLShaderProgram* shader)
 {
 
-    if(this->interiorNodesIndices == NULL || this->interiorNodesIndices->length()<1){
+    if(this->interiorLeafIndices == NULL || this->interiorLeafIndices->length()<1){
         return;
     }
 
     GLenum primitive = GL_LINES;
 
-    QVector<GLint>* indices = this->interiorNodesIndices;
+    QVector<GLint>* indices = this->interiorLeafIndices;
 
+    /* if needed needed variables are set for painting */
     if (isDirty) {
         QVector<GLfloat> buffer;
 
@@ -1064,6 +1463,11 @@ void Octree::render(QGLShaderProgram* shader)
         GLint index = 0;
 
         for (int i = 0; i < indices->length(); i++) {
+
+            if(indices->at(i)<0)
+            {
+                continue;
+            }
 
             octreeNode node = this->allNodes->at(indices->at(i));
 
@@ -1097,6 +1501,7 @@ void Octree::render(QGLShaderProgram* shader)
             index +=8;
         }
 
+        /* create vertex buffer */
         vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         vbo->create();
         vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -1105,6 +1510,7 @@ void Octree::render(QGLShaderProgram* shader)
         vbo->write(0, buffer.constData(), buffer.size() * sizeof(GLfloat));
         vbo->release();
 
+        /* create index buffer */
         ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         ibo->create();
         ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -1118,11 +1524,13 @@ void Octree::render(QGLShaderProgram* shader)
 
     GLint stride = sizeof(GLfloat) * (3);
 
+    /* use vertex buffer */
     vbo->bind();
     shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
     shader->enableAttributeArray("geometry");
     vbo->release();
 
+    /* use index buffer */
     ibo->bind();
     glDrawElements(primitive, cubeLineIndices.length(), GL_UNSIGNED_INT, (void*) 0);
     ibo->release();

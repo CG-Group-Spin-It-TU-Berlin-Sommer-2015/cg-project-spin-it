@@ -63,7 +63,20 @@ void GLWidget::initializeGL()
     objectShell->tranlateInNormalDirection(-0.015);
 
     octree =  new Octree();
-    octree->setOctreeInteriors(0,0,0,5,object,objectShell);
+    octree->setOctreeInteriors(0,0,0,3,object,objectShell);
+
+    QVector<GLint> vec1;
+    octree->getAllInnerNodeLeafIDs(&vec1);
+    QVector<GLint> vec2;
+    octree->getAllInnerNodeIDsOfDepth(&vec2,2);
+
+    GLint nodeIndex = vec1.at(0);
+
+    octree->split(nodeIndex);
+    octree->merge(nodeIndex);
+
+    /* test call */
+    //octree->getVoidSurface();
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
@@ -294,6 +307,9 @@ void GLWidget::loadNewMesh()
     this->repaint();
 }
 
+/* ----------------------------------------------- */
+/* slots for controlling painting of the different models */
+
 void GLWidget::showOnlyOuterSurface()
 {
 
@@ -323,3 +339,5 @@ void GLWidget::showOnlyOctreeGrid()
 
     this->repaint();
 }
+
+/* ----------------------------------------------- */
