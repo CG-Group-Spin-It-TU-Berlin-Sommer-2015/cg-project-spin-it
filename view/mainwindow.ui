@@ -131,6 +131,57 @@
       <string>Load Mesh</string>
      </property>
     </widget>
+    <widget class="QRadioButton" name="ShowOuterButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>200</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Show outer Surface</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string notr="true">FilterShowButtonGroup</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="ShowInnerButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>200</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Show inner Surface</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string notr="true">FilterShowButtonGroup</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="ShowGridButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>200</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Show Octree Grid</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string notr="true">FilterShowButtonGroup</string>
+     </attribute>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -174,6 +225,9 @@
    <container>1</container>
    <slots>
     <slot>loadNewMesh()</slot>
+    <slot>showOnlyOuterSurface()</slot>
+    <slot>showOnlyInnerSurface()</slot>
+    <slot>showOnlyOctreeGrid()</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -195,5 +249,56 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>ShowOuterButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>showOnlyOuterSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>769</x>
+     <y>58</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ShowInnerButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>showOnlyInnerSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>769</x>
+     <y>88</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ShowGridButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>showOnlyOctreeGrid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>769</x>
+     <y>118</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="FilterShowButtonGroup"/>
+ </buttongroups>
 </ui>

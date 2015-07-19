@@ -16,7 +16,7 @@ public:
 private:
     float spinability(float w_1, float w_2, float* volume);
     float calculateMass(float* volumne);
-    float* calculateVolumne(Mesh mesh, float density);
+    float* calculateVolumne(Mesh mesh, float p);
 
 };
 
