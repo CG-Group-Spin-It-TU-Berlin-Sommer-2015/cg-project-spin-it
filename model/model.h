@@ -11,11 +11,11 @@ private:
 
 public:
     Model();
-    initialize(Mesh mesh);
+    void initialize(Mesh mesh, float density);
 
 private:
     float spinability(float w_1, float w_2, float* volume);
-    float calculateMass();
+    float calculateMass(float* volumne);
     float* calculateVolumne(Mesh mesh, float density);
 
 };

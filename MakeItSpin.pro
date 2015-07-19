@@ -18,7 +18,6 @@ SOURCES += main.cpp\
     view/utility/shader.cpp \
     view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
-    model.cpp \
     model/model.cpp
 
 HEADERS  += view/mainwindow.h \
@@ -26,7 +25,6 @@ HEADERS  += view/mainwindow.h \
     view/utility/shader.h \
     view/utility/mesh.h \
     view/utility/meshreader.h \
-    model.h \
     model/model.h
 
 FORMS    += view/mainwindow.ui
