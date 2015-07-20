@@ -1,23 +1,28 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <stdio.h>
+
 #include "view/utility/mesh.h"
+
+using namespace std;
 
 class Model
 {
+public:
+    static float p;
+    static QVector3D cp;
+
 private:
-    float density;
-    float* mesh_volumne;
+    static float* mesh_volumne;
 
 public:
-    Model();
-    void initialize(Mesh mesh, float density);
+    static void initialize(Mesh* mesh);
 
 private:
-    float spinability(float w_1, float w_2, float* volume);
-    float calculateMass(float* volumne);
-    float* calculateVolumne(Mesh mesh, float p);
-
+    static float spinability(float w_1, float w_2, float* volume);
+    static float calculateMass(float* volumne);
+    static float* calculateVolumne(Mesh* mesh, float p);
 };
 
 #endif // MODEL_H

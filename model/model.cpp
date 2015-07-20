@@ -1,11 +1,11 @@
 #include "model.h"
 
-Model::Model()
-{
+float Model::p = 1.07;
+QVector3D Model::cp = null;
 
-}
+float* Model::mesh_volumne = 0;
 
-float Model::spinability(float w_1, float w_2, float* volume)
+float Model::spinability(float w_i, float w_c, float* volume)
 {
     float M = volume[0];
 
@@ -14,16 +14,24 @@ float Model::spinability(float w_1, float w_2, float* volume)
     c.setY(1/M*volume[2]);
     c.setZ(1/M*volume[3]);
 
-    /*QMatrix3x3 I = QMatrix3x3(volume[8] + volume[9], -volume[4], -volume[6],
-                   -volume[4], volume[7] + volume[9], -volume[5],
-                   -volume[6], -volume[5], volume[7] + volume[8]);*/
+    float I[3][3] = {{volume[8] + volume[9], -volume[4], -volume[6]},
+                   {-volume[4], volume[7] + volume[9], -volume[5]},
+                   {-volume[6], -volume[5], volume[7] + volume[8]}};
 
-    return 0;
+    f_yoyo = w_i * ((I[1][1]/I[3][3])*(I[1][1]/I[3][3]) + (I[2][2]/I[3][3])*(I[2][2]/I[3][3]));
+    f_top  = w_c * ((c-cp).length()*M)*((c-cp).length()*M) + f_yoyo;
+
+    return f_top;
 }
 
-void Model::initialize(Mesh mesh, float density = 1.07)
+void Model::initialize(Mesh* mesh)
 {
-    mesh_volumne = calculateVolumne(mesh,density);
+    mesh_volumne = calculateVolumne(mesh, p);
+    cout << "Volumnes:" << endl;
+    for (int i = 0; i < 10; i++) {
+        cout << mesh_volumne[i] << endl;
+    }
+    Model::spinability(0,0,mesh_volumne);
 }
 
 float Model::calculateMass(float* volumne)
@@ -31,11 +39,14 @@ float Model::calculateMass(float* volumne)
     return volumne[0];
 }
 
-float* Model::calculateVolumne(Mesh mesh, float p)
+float* Model::calculateVolumne(Mesh* mesh, float p)
 {
     float* s = new float[10];
-    QVector<float>* geometry = mesh.getGeometry();
-    QVector<short>* indices = mesh.getIndices();
+    for (int i = 0; i < 10; i++) {
+        s[i] = 0;
+    }
+    QVector<float>* geometry = mesh->getGeometry();
+    QVector<short>* indices = mesh->getIndices();
 
     for (int i = 0; i < indices->size(); i += 3) {
         QVector3D a;
@@ -82,15 +93,15 @@ float* Model::calculateVolumne(Mesh mesh, float p)
         s[9] += si.z();
     }
 
-    s[0] *= 1/6;
+    s[0] *= (float) 1/6;
     for (int i = 1; i <= 3; i++) {
-        s[i] *= 1/24;
+        s[i] *= (float) 1/24;
     }
     for (int i = 4; i <= 6; i++) {
-        s[i] *= 1/120;
+        s[i] *= (float) 1/120;
     }
     for (int i = 7; i <= 9; i++) {
-        s[i] *= 1/60;
+        s[i] *= (float) 1/60;
     }
 
     for (int i = 0; i < 10; i++) {

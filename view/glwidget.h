@@ -10,6 +10,7 @@
 #include <QString>
 #include <QFileDialog>
 
+#include "model/model.h"
 #include "utility/mesh.h"
 #include "utility/meshreader.h"
 #include "utility/shader.h"

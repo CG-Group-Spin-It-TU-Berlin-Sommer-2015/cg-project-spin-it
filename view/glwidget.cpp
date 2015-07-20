@@ -59,6 +59,8 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     object = readMeshFromObjFileDirectory("monkey");
+    Model::initialize(object);
+
     objectShell = object->copy();
     objectShell->tranlateInNormalDirection(-0.015);
 
