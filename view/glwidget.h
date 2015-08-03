@@ -15,6 +15,7 @@
 #include "utility/meshreader.h"
 #include "utility/shader.h"
 #include "utility/octree.h"
+#include "utility/octree2.h"
 
 class GLWidget : public QGLWidget
 {
@@ -36,7 +37,7 @@ private:
 
     Mesh* object;
     Mesh* objectShell;
-    Octree* octree;
+    Octree2 octree2;
 
     Mesh* grid;
     Mesh* rot_axis;

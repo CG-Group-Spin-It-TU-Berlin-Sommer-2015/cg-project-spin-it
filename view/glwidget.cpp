@@ -59,32 +59,38 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     object = readMeshFromObjFileDirectory("monkey");
-    Model::initialize(object);
 
-    objectShell = object->copy();
-    objectShell->tranlateInNormalDirection(-0.015);
+    octree2.setMesh(object);
+    octree2.setStartDepth(5);
+    octree2.setMaxDepth(5);
+    octree2.quantizeSurface();
+    octree2.setupVectors();
 
-    octree =  new Octree();
-    octree->setOctreeInteriors(0,0,0,3,object,objectShell);
+    objectShell = octree2.getPointMesh();
+    octree2.setupOctree();
+    octree2.setShellNodeIndices();
+    octree2.setOuterNodes();
+    octree2.setInnerNodes();
+    octree2.setInnerNodeIndices();
+    octree2.adjustMaxDepth();
+    octree2.increaseShell(0);
 
-    QVector<GLint> vec1;
-    octree->getAllInnerNodeLeafIDs(&vec1);
-    QVector<GLint> vec2;
-    octree->getAllInnerNodeIDsOfDepth(&vec2,2);
+    octree2.setShellNodeIndices();
+    octree2.setInnerNodeIndices();
 
-    GLint nodeIndex = vec1.at(0);
+    /*
+    octree2.split(37);
+    octree2.merge(37);
+    */
 
-    octree->split(nodeIndex);
-    octree->merge(nodeIndex);
-
-    /* test call */
-    //octree->getVoidSurface();
+    octree2.createInnerSurface();
+    objectShell = octree2.getMesh();
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
-    QVector<GLshort>* indices = new QVector<GLshort>();
+    QVector<GLint>* indices = new QVector<GLint>();
 
     int idx = 0;
     for (float x = -3; x <= 3; x += 0.5) {
@@ -163,6 +169,7 @@ void GLWidget::paintGL()
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
+    //model_matrix.scale(10.0);
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -182,7 +189,7 @@ void GLWidget::paintGL()
     if(showGrid)
     {
         shader->setUniformValue("color", QColor(Qt::black));
-        octree->render(shader);
+        octree2.render(shader);
     }
 
     model_matrix.setToIdentity();

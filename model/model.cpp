@@ -1,7 +1,7 @@
 #include "model.h"
 
 float Model::p = 1.07;
-QVector3D Model::cp = null;
+QVector3D Model::cp;
 
 float* Model::mesh_volumne = 0;
 
@@ -18,8 +18,8 @@ float Model::spinability(float w_i, float w_c, float* volume)
                    {-volume[4], volume[7] + volume[9], -volume[5]},
                    {-volume[6], -volume[5], volume[7] + volume[8]}};
 
-    f_yoyo = w_i * ((I[1][1]/I[3][3])*(I[1][1]/I[3][3]) + (I[2][2]/I[3][3])*(I[2][2]/I[3][3]));
-    f_top  = w_c * ((c-cp).length()*M)*((c-cp).length()*M) + f_yoyo;
+    float f_yoyo = w_i * ((I[1][1]/I[3][3])*(I[1][1]/I[3][3]) + (I[2][2]/I[3][3])*(I[2][2]/I[3][3]));
+    float f_top  = w_c * ((c-cp).length()*M)*((c-cp).length()*M) + f_yoyo;
 
     return f_top;
 }
@@ -46,7 +46,7 @@ float* Model::calculateVolumne(Mesh* mesh, float p)
         s[i] = 0;
     }
     QVector<float>* geometry = mesh->getGeometry();
-    QVector<short>* indices = mesh->getIndices();
+    QVector<int>* indices = mesh->getIndices();
 
     for (int i = 0; i < indices->size(); i += 3) {
         QVector3D a;

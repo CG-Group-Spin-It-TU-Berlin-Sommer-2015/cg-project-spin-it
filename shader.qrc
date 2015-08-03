@@ -8,5 +8,6 @@
         <file>cube.obj</file>
         <file>monkey.obj</file>
         <file>rot_axis.obj</file>
+        <file>bunny.obj</file>
     </qresource>
 </RCC>

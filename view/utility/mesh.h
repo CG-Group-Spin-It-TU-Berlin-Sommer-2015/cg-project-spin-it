@@ -17,15 +17,15 @@ private:
 
     QVector<GLfloat>* geometry;
     QVector<GLfloat>* normals;
-    QVector<GLshort>* indices;
+    QVector<GLint>* indices;
 
 public:
-    Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices);
-    Mesh(QVector<GLfloat>* geometry, QVector<GLfloat>* normals, QVector<GLshort>* indices);
+    Mesh(QVector<GLfloat>* geometry, QVector<GLint>* indices);
+    Mesh(QVector<GLfloat>* geometry, QVector<GLfloat>* normals, QVector<GLint>* indices);
     ~Mesh();
     QVector<GLfloat>* getGeometry();
     QVector<GLfloat>* getNormals();
-    QVector<GLshort>* getIndices();
+    QVector<GLint>* getIndices();
 
 
     void render(QGLShaderProgram* shader, GLenum primitive);

@@ -20,7 +20,9 @@ SOURCES += main.cpp \
     view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
     view/utility/kdtree.cpp \
-    view/utility/octree.cpp
+    view/utility/octree.cpp \
+    view/utility/octree2.cpp \
+    view/utility/meshwriter.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -29,7 +31,9 @@ HEADERS  += view/mainwindow.h \
     view/utility/mesh.h \
     view/utility/meshreader.h \
     view/utility/kdtree.h \
-    view/utility/octree.h
+    view/utility/octree.h \
+    view/utility/octree2.h \
+    view/utility/meshwriter.h
 
 FORMS    += view/mainwindow.ui
 
@@ -40,3 +44,10 @@ OTHER_FILES += \
 RESOURCES += \
     shader.qrc
 
+
+#unix:!macx: LIBS += -Lusr/lib/ -lpcl_octree
+
+#INCLUDEPATH += /usr/include/eigen3
+
+#INCLUDEPATH += /usr/include/pcl-1.7
+#DEPENDPATH += /usr/include/pcl-1.7

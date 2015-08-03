@@ -24,7 +24,7 @@ Mesh* readMeshFromObjFile (string file_name)
         return 0;
 
     QVector<float>* geometry = new QVector<float>;
-    QVector<short>* indices = new QVector<short>;
+    QVector<int>* indices = new QVector<int>;
 
     QTextStream* in = new QTextStream(file);
     while (!in->atEnd()) {
@@ -36,9 +36,9 @@ Mesh* readMeshFromObjFile (string file_name)
             geometry->push_back(token.at(3).toFloat());
         }
         if (strcmp(token.at(0).toStdString().c_str(), "f") == 0) {
-            indices->push_back(token.at(1).toShort() - 1);
-            indices->push_back(token.at(2).toShort() - 1);
-            indices->push_back(token.at(3).toShort() - 1);
+            indices->push_back(token.at(1).toInt() - 1);
+            indices->push_back(token.at(2).toInt() - 1);
+            indices->push_back(token.at(3).toInt() - 1);
         }
     }
     file->close();

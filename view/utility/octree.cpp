@@ -59,10 +59,10 @@ void Octree::setOctreeInteriors(
     this->innerMesh = innerMesh;
 
     GLfloat* gvd_o = this->outerMesh->getGeometry()->data();
-    GLshort* ivd_o = this->outerMesh->getIndices()->data();
+    GLint* ivd_o = this->outerMesh->getIndices()->data();
     int length_o = this->outerMesh->getIndices()->length();
     GLfloat* gvd_i = this->innerMesh->getGeometry()->data();
-    GLshort* ivd_i = this->innerMesh->getIndices()->data();
+    GLint* ivd_i = this->innerMesh->getIndices()->data();
     int length_i = this->innerMesh->getIndices()->length();
 
     QVector<triObject> triObjects;
@@ -442,7 +442,7 @@ inline bool Octree::testIntersection2(
 {
 
     GLfloat* gvd = this->innerMesh->getGeometry()->data();
-    GLshort* ivd = this->outerMesh->getIndices()->data();
+    GLint* ivd = this->outerMesh->getIndices()->data();
 
     int length2 = triObjectIndices->length();
 
@@ -455,7 +455,7 @@ inline bool Octree::testIntersection2(
     middle.setY(y+halfLength);
     middle.setZ(z+halfLength);
 
-    GLshort i0,i1,i2;
+    GLint i0,i1,i2;
     QVector3D p0,p1,p2,diff;
 
     for (GLint i=0;i<length2;i++)
@@ -1189,7 +1189,7 @@ void Octree::setVoidSurface()
 
     geometry = new QVector<GLfloat>();
     geometryMap = new QHash<GLint, hashItem>();
-    indices = new QVector<GLshort>();
+    indices = new QVector<GLint>();
 
     /* set all nodes which are not set already as interior cells */
     for(int i=1;i<axisSize-1;i++)

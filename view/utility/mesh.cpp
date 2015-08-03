@@ -5,7 +5,7 @@ using namespace std;
 const int GEOMETRY_DATA_SIZE    = 3;
 const int NORMAL_DATA_SIZE      = 3;
 
-Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLshort>* indices)
+Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLint>* indices)
 {
     this->geometry = geometry;
     this->indices = indices;
@@ -63,7 +63,7 @@ Mesh::~Mesh()
     indices->clear();
 }
 
-Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat> *normals, QVector<GLshort> *indices)
+Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat> *normals, QVector<GLint> *indices)
 {
     this->geometry = geometry;
     this->normals = normals;
@@ -81,7 +81,7 @@ QVector<GLfloat>* Mesh::getNormals()
     return normals;
 }
 
-QVector<GLshort>* Mesh::getIndices()
+QVector<GLint>* Mesh::getIndices()
 {
     return indices;
 }
@@ -113,8 +113,8 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
         ibo->create();
         ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
         ibo->bind();
-        ibo->allocate(indices->size() * sizeof(GLshort));
-        ibo->write(0, indices->constData(), indices->size() * sizeof(GLshort));
+        ibo->allocate(indices->size() * sizeof(GLint));
+        ibo->write(0, indices->constData(), indices->size() * sizeof(GLint));
         ibo->release();
 
         isDirty = false;
@@ -130,7 +130,7 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     vbo->release();
 
     ibo->bind();
-    glDrawElements(primitive, indices->length(), GL_UNSIGNED_SHORT, (void*) 0);
+    glDrawElements(primitive, indices->length(), GL_UNSIGNED_INT, (void*) 0);
     ibo->release();
 
     shader->disableAttributeArray("geometry");
@@ -155,7 +155,7 @@ Mesh* Mesh::copy()
 
     QVector<GLfloat>* geometryCopy = new QVector<GLfloat>(*geometry);
     QVector<GLfloat>* normalCopy = new QVector<GLfloat>(*normals);
-    QVector<GLshort>* indicesCopy = new QVector<GLshort>(*indices);
+    QVector<GLint>* indicesCopy = new QVector<GLint>(*indices);
 
     return new Mesh(geometryCopy,normalCopy,indicesCopy);
 

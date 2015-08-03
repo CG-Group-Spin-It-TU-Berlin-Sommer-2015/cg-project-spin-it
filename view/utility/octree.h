@@ -220,7 +220,7 @@ private:
 
     QVector<GLfloat>* geometry;
     QHash<GLint, hashItem>* geometryMap;
-    QVector<GLshort>* indices;
+    QVector<GLint>* indices;
 
     /* */
     void setLeafVectorHelper(
