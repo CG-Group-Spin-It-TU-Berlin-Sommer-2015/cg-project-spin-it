@@ -53,7 +53,7 @@ float* Model::calculateVolumne(Mesh* mesh, float p)
         QVector3D c;
         c.setX(geometry->at(3 * indices->at(i + 2)));
         c.setY(geometry->at(3 * indices->at(i + 2) + 1));
-        c.setY(geometry->at(3 * indices->at(i + 2) + 2));
+        c.setZ(geometry->at(3 * indices->at(i + 2) + 2));
 
         QVector3D n;
         n.setX(normals->at(i));
