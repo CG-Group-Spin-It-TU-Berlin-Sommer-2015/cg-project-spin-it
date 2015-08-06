@@ -23,8 +23,8 @@ Mesh* readMeshFromObjFile (string file_name)
     if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
         return 0;
 
-    QVector<float>* geometry = new QVector<float>;
-    QVector<int>* indices = new QVector<int>;
+    QVector<float>* geometry = new QVector<float>();
+    QVector<int>* indices = new QVector<int>();
 
     QTextStream* in = new QTextStream(file);
     while (!in->atEnd()) {

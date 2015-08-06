@@ -16,7 +16,8 @@ private:
     QOpenGLBuffer* ibo;
 
     QVector<GLfloat>* geometry;
-    QVector<GLfloat>* normals;
+    QVector<GLfloat>* vertex_normals;
+    QVector<GLfloat>* surface_normals;
     QVector<GLint>* indices;
 
 public:
@@ -24,7 +25,8 @@ public:
     Mesh(QVector<GLfloat>* geometry, QVector<GLfloat>* normals, QVector<GLint>* indices);
     ~Mesh();
     QVector<GLfloat>* getGeometry();
-    QVector<GLfloat>* getNormals();
+    QVector<GLfloat>* getSurfaceNormals();
+    QVector<GLfloat>* getVertexNormals();
     QVector<GLint>* getIndices();
 
 

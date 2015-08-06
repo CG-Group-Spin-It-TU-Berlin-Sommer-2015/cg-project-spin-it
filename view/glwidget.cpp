@@ -58,33 +58,34 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
-    object = readMeshFromObjFileDirectory("monkey");
+    object = readMeshFromObjFileDirectory("cube");
+    Model::initialize(object);
 
-    octree2.setMesh(object);
-    octree2.setStartDepth(5);
-    octree2.setMaxDepth(5);
-    octree2.quantizeSurface();
-    octree2.setupVectors();
+//    octree2.setMesh(object);
+//    octree2.setStartDepth(5);
+//    octree2.setMaxDepth(5);
+//    octree2.quantizeSurface();
+//    octree2.setupVectors();
 
-    objectShell = octree2.getPointMesh();
-    octree2.setupOctree();
-    octree2.setShellNodeIndices();
-    octree2.setOuterNodes();
-    octree2.setInnerNodes();
-    octree2.setInnerNodeIndices();
-    octree2.adjustMaxDepth();
-    octree2.increaseShell(0);
+//    objectShell = octree2.getPointMesh();
+//    octree2.setupOctree();
+//    octree2.setShellNodeIndices();
+//    octree2.setOuterNodes();
+//    octree2.setInnerNodes();
+//    octree2.setInnerNodeIndices();
+//    octree2.adjustMaxDepth();
+//    octree2.increaseShell(0);
 
-    octree2.setShellNodeIndices();
-    octree2.setInnerNodeIndices();
+//    octree2.setShellNodeIndices();
+//    octree2.setInnerNodeIndices();
 
-    /*
-    octree2.split(37);
-    octree2.merge(37);
-    */
+//    /*
+//    octree2.split(37);
+//    octree2.merge(37);
+//    */
 
-    octree2.createInnerSurface();
-    objectShell = octree2.getMesh();
+//    octree2.createInnerSurface();
+//    objectShell = octree2.getMesh();
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 

@@ -14,15 +14,17 @@ public:
     static QVector3D cp;
 
 private:
+    static Mesh* mesh;
     static float* mesh_volumne;
 
 public:
-    static void initialize(Mesh* mesh);
+    static void initialize(Mesh *mesh);
+    static void hollow();
 
 private:
-    static float spinability(float w_1, float w_2, float* volume);
-    static float calculateMass(float* volumne);
     static float* calculateVolumne(Mesh* mesh, float p);
+    static float* slqp(float* b);
+    static float spinability(float w_1, float w_2, float* volume);
 };
 
 #endif // MODEL_H

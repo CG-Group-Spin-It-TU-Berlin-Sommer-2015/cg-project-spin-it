@@ -1,32 +1,21 @@
 #include "model.h"
 
-float Model::p = 1.07;
+float Model::p = 1.00;
 QVector3D Model::cp;
 
+Mesh* Model::mesh = 0;
 float* Model::mesh_volumne = 0;
 
-float Model::spinability(float w_i, float w_c, float* volume)
-{
-    float M = volume[0];
-
-    QVector3D c;
-    c.setX(1/M*volume[1]);
-    c.setY(1/M*volume[2]);
-    c.setZ(1/M*volume[3]);
-
-    float I[3][3] = {{volume[8] + volume[9], -volume[4], -volume[6]},
-                   {-volume[4], volume[7] + volume[9], -volume[5]},
-                   {-volume[6], -volume[5], volume[7] + volume[8]}};
-
-    float f_yoyo = w_i * ((I[1][1]/I[3][3])*(I[1][1]/I[3][3]) + (I[2][2]/I[3][3])*(I[2][2]/I[3][3]));
-    float f_top  = w_c * ((c-cp).length()*M)*((c-cp).length()*M) + f_yoyo;
-
-    return f_top;
-}
 
 void Model::initialize(Mesh* mesh)
 {
-    mesh_volumne = calculateVolumne(mesh, p);
+    Model::mesh = mesh;
+    Model::hollow();
+}
+
+void Model::hollow()
+{
+    mesh_volumne = calculateVolumne(Model::mesh, p);
     cout << "Volumnes:" << endl;
     for (int i = 0; i < 10; i++) {
         cout << mesh_volumne[i] << endl;
@@ -34,11 +23,12 @@ void Model::initialize(Mesh* mesh)
     Model::spinability(0,0,mesh_volumne);
 }
 
-float Model::calculateMass(float* volumne)
-{
-    return volumne[0];
-}
-
+/**
+ * @brief Model::calculateVolumne calculates volumne integrals of an object
+ * @param mesh triangulated surface of object
+ * @param p density of object
+ * @return
+ */
 float* Model::calculateVolumne(Mesh* mesh, float p)
 {
     float* s = new float[10];
@@ -46,6 +36,7 @@ float* Model::calculateVolumne(Mesh* mesh, float p)
         s[i] = 0;
     }
     QVector<float>* geometry = mesh->getGeometry();
+    QVector<float>* normals = mesh->getSurfaceNormals();
     QVector<int>* indices = mesh->getIndices();
 
     for (int i = 0; i < indices->size(); i += 3) {
@@ -64,9 +55,10 @@ float* Model::calculateVolumne(Mesh* mesh, float p)
         c.setY(geometry->at(3 * indices->at(i + 2) + 1));
         c.setY(geometry->at(3 * indices->at(i + 2) + 2));
 
-        QVector3D u = b - a;
-        QVector3D v = c - a;
-        QVector3D n = QVector3D::crossProduct(u, v);
+        QVector3D n;
+        n.setX(normals->at(i));
+        n.setY(normals->at(i + 1));
+        n.setZ(normals->at(i + 2));
 
         QVector3D h1 = a + b + c;
         QVector3D h2 = a*a + b*(a + b);
@@ -109,5 +101,41 @@ float* Model::calculateVolumne(Mesh* mesh, float p)
     }
 
     return s;
+}
+
+/**
+ * @brief Model::slqp Sequentiel Linear quadratic programming
+ * @param b startvector
+ * @return
+ */
+float *Model::slqp(float *b)
+{
+
+}
+
+/**
+ * @brief Model::spinability measures the spinability of an object
+ * @param w_i weight of yoyo optimization
+ * @param w_c weight of top optimization
+ * @param volume volume integrals
+ * @return value of objective function
+ */
+float Model::spinability(float w_i, float w_c, float* volume)
+{
+    float M = volume[0];
+
+    QVector3D c;
+    c.setX(1/M*volume[1]);
+    c.setY(1/M*volume[2]);
+    c.setZ(1/M*volume[3]);
+
+    float I[3][3] = {{volume[8] + volume[9], -volume[4], -volume[6]},
+                   {-volume[4], volume[7] + volume[9], -volume[5]},
+                   {-volume[6], -volume[5], volume[7] + volume[8]}};
+
+    float f_yoyo = w_i * ((I[1][1]/I[3][3])*(I[1][1]/I[3][3]) + (I[2][2]/I[3][3])*(I[2][2]/I[3][3]));
+    float f_top  = w_c * ((c-cp).length()*M)*((c-cp).length()*M) + f_yoyo;
+
+    return f_top;
 }
 
