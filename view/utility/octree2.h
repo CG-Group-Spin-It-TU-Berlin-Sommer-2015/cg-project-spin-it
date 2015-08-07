@@ -144,7 +144,7 @@ public:
     void setInnerNodeIndices();
     void setShellNodeIndices();
 
-    void getInnerCubes(QVector<cubeObject> vec);
+    void getInnerCubes(QVector<cubeObject>* vec);
 
 private:
 

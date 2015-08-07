@@ -59,11 +59,13 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     object = readMeshFromObjFileDirectory("test");
-    Model::initialize(object);
+    //Model::initialize(object);
+
+    GLint depth = 5;
 
     octree2.setMesh(object);
-    octree2.setStartDepth(5);
-    octree2.setMaxDepth(5);
+    octree2.setStartDepth(depth);
+    octree2.setMaxDepth(depth);
     octree2.quantizeSurface();
     octree2.setupVectors();
 
@@ -74,7 +76,7 @@ void GLWidget::initializeGL()
     octree2.setInnerNodes();
     octree2.setInnerNodeIndices();
     octree2.adjustMaxDepth();
-    octree2.increaseShell(1);
+    octree2.increaseShell(0);
 
     octree2.setShellNodeIndices();
     octree2.setInnerNodeIndices();
@@ -87,9 +89,11 @@ void GLWidget::initializeGL()
     octree2.createInnerSurface();
     objectShell = octree2.getMesh();
 
-    //Mesh* mergedMesh = mergeMeshes(object,objectShell);
-    writeMeshFromObjFile("test.obj",objectShell);
+    QVector<cubeObject> vec;
+    octree2.getInnerCubes(&vec);
 
+    //Mesh* mergedMesh = mergeMeshes(object,objectShell);
+    //writeMeshFromObjFile("test.obj",objectShell);
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
