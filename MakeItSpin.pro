@@ -20,10 +20,10 @@ SOURCES += main.cpp \
     view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
     view/utility/kdtree.cpp \
-    view/utility/octree.cpp \
-    view/utility/octree2.cpp \
     view/utility/meshwriter.cpp \
-    view/utility/simplemeshmerger.cpp
+    view/utility/simplemeshmerger.cpp \
+    view/utility/basicoctree.cpp \
+    view/utility/extendedoctree.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -32,10 +32,10 @@ HEADERS  += view/mainwindow.h \
     view/utility/mesh.h \
     view/utility/meshreader.h \
     view/utility/kdtree.h \
-    view/utility/octree.h \
-    view/utility/octree2.h \
     view/utility/meshwriter.h \
-    view/utility/simplemeshmerger.h
+    view/utility/simplemeshmerger.h \
+    view/utility/basicoctree.h \
+    view/utility/extendedoctree.h
 
 FORMS    += view/mainwindow.ui
 
