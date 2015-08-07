@@ -13,6 +13,8 @@
 #include "model/model.h"
 #include "utility/mesh.h"
 #include "utility/meshreader.h"
+#include "utility/meshwriter.h"
+#include "utility/simplemeshmerger.h"
 #include "utility/shader.h"
 #include "utility/octree.h"
 #include "utility/octree2.h"

@@ -647,6 +647,8 @@ GLint inline Octree2::handleHashItem(GLint vertexIndex,QVector3D point)
 
 }
 
+//QVector<Mesh*> getQ
+
 bool inline Octree2::addTriangle(GLint x, GLint y, GLint z)
 {
     return this->getLeafNodeByCoordinate(x,y,z)->shellNode;
@@ -664,6 +666,8 @@ void Octree2::createTriangle(GLint x, GLint y, GLint z, GLint code)
     GLint index3 = -1;
 
     QVector3D vec;
+
+    bool flip = false;
 
     switch(code){
 
@@ -688,6 +692,8 @@ void Octree2::createTriangle(GLint x, GLint y, GLint z, GLint code)
         vec.setY(y+1);
         vec.setZ(z);
         index3 = handleHashItem(pl*vec.x()+al*vec.y()+vec.z(),vec);
+
+        flip = true;
 
         break;
 
@@ -736,6 +742,8 @@ void Octree2::createTriangle(GLint x, GLint y, GLint z, GLint code)
         vec.setY(y);
         vec.setZ(z);
         index3 = handleHashItem(pl*vec.x()+al*vec.y()+vec.z(),vec);
+
+        flip = true;
 
         break;
 
@@ -809,16 +817,36 @@ void Octree2::createTriangle(GLint x, GLint y, GLint z, GLint code)
         vec.setZ(z);
         index3 = handleHashItem(pl*vec.x()+al*vec.y()+vec.z(),vec);
 
+        flip = true;
+
         break;
     }
 
-    indices.push_back(index0);
-    indices.push_back(index1);
-    indices.push_back(index2);
+    if(flip)
+    {
 
-    indices.push_back(index0);
-    indices.push_back(index2);
-    indices.push_back(index3);
+        indices.push_back(index2);
+        indices.push_back(index1);
+        indices.push_back(index0);
+
+        indices.push_back(index3);
+        indices.push_back(index2);
+        indices.push_back(index0);
+
+    }
+    else
+    {
+
+        indices.push_back(index0);
+        indices.push_back(index1);
+        indices.push_back(index2);
+
+        indices.push_back(index0);
+        indices.push_back(index2);
+        indices.push_back(index3);
+
+    }
+
 
     return;
 }
@@ -1109,6 +1137,230 @@ void Octree2::setInnerNodes()
 
 }
 
+void Octree2::getInnerCubes(QVector<cubeObject> vec)
+{
+
+    QVector<GLint> innerNodeIndices;
+
+    octreeNode2* nodePointer;
+
+    this->getInnerCubes(innerNodeIndices);
+
+    QVector<GLfloat>* geometry;
+    QVector<GLint>* indices;
+    //QVector<GLfloat>* normals;
+
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[indices->at(i)];
+
+        geometry = new QVector<GLfloat>();
+        geometry->reserve(8*3);
+        indices = new QVector<GLint>();
+        indices->reserve(12*3);
+        //normals = new QVector<GLfloat>();
+        //normals->reserve(12);
+
+
+
+    }
+
+}
+
+void Octree2::splitAndMerge(GLfloat epsilon)
+{
+
+    GLfloat oneMinusEpsilon = 1-epsilon;
+
+    octreeNode2* nodePointer;
+
+    QVector<GLint> innerLeafIndices;
+    getInnerLeaves(&innerLeafIndices);
+
+    for(int i=0;i<innerLeafIndices.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
+
+        if( false /* epsilon < nodePointer->beta && nodePointer < oneMinusEpsilon */)
+        {
+            this->split(innerLeafIndices.at(i));
+
+            nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
+
+            if(!nodePointer->leaf)
+            {
+                this->octreeNodes.data()[nodePointer->childIndex0].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex1].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex2].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex3].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex4].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex5].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex6].beta = nodePointer->beta;
+                this->octreeNodes.data()[nodePointer->childIndex7].beta = nodePointer->beta;
+            }
+        }
+
+    }
+
+    QVector<GLint> innerLeafSetNodeIndices;
+    getInnerNodesOfLeafSet(&innerLeafSetNodeIndices);
+
+    bool merge = false;
+    GLfloat beta;
+
+    GLfloat b0,b1,b2,b3,b4,b5,b6,b7;
+
+    for(int i=0;i<innerLeafSetNodeIndices.length();i++)
+    {
+
+        merge = false;
+
+        nodePointer = &this->octreeNodes.data()[innerLeafSetNodeIndices.at(i)];
+
+        b0 = this->octreeNodes.data()[nodePointer->childIndex0].beta;
+        b1 = this->octreeNodes.data()[nodePointer->childIndex1].beta;
+        b2 = this->octreeNodes.data()[nodePointer->childIndex2].beta;
+        b3 = this->octreeNodes.data()[nodePointer->childIndex3].beta;
+        b4 = this->octreeNodes.data()[nodePointer->childIndex4].beta;
+        b5 = this->octreeNodes.data()[nodePointer->childIndex5].beta;
+        b6 = this->octreeNodes.data()[nodePointer->childIndex6].beta;
+        b7 = this->octreeNodes.data()[nodePointer->childIndex7].beta;
+
+        // all betas of inner leaves are greater than 1-epsilon
+        if( false
+        /*
+        (b0 > oneMinusEpsilon) &&
+        (b1 > oneMinusEpsilon) &&
+        (b2 > oneMinusEpsilon) &&
+        (b3 > oneMinusEpsilon) &&
+        (b4 > oneMinusEpsilon) &&
+        (b5 > oneMinusEpsilon) &&
+        (b6 > oneMinusEpsilon) &&
+        (b7 > oneMinusEpsilon)
+        */ ){
+
+            beta = 1.f;
+            merge = true;
+        }
+        else
+        // all betas of inner leaves are small than epsilon
+        if( false
+        /*
+        (b0 < oneMinusEpsilon) &&
+        (b1 < oneMinusEpsilon) &&
+        (b2 < oneMinusEpsilon) &&
+        (b3 < oneMinusEpsilon) &&
+        (b4 < oneMinusEpsilon) &&
+        (b5 < oneMinusEpsilon) &&
+        (b6 < oneMinusEpsilon) &&
+        (b7 < oneMinusEpsilon)
+        */ ){
+
+            beta = 0.f;
+            merge = true;
+        }
+
+        if( merge )
+        {
+            this->merge(innerLeafSetNodeIndices.at(i));
+
+            nodePointer = &this->octreeNodes.data()[innerLeafSetNodeIndices.at(i)];
+            nodePointer->beta = beta;
+        }
+
+    }
+
+
+}
+
+void Octree2::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
+{
+
+    octreeNode2* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[indices->at(i)];
+        if(nodePointer->nodeDepth>=depth)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
+void Octree2::getInnerNodesForNode(GLint index,QVector<GLint>* indices)
+{
+
+    octreeNode2* nodePointer = &this->octreeNodes.data()[index];
+
+    if(nodePointer->leaf)
+    {
+
+        if(nodePointer->inside && nodePointer->isSet)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+        return;
+    }
+
+    getInnerNodesForNode(nodePointer->childIndex0,indices);
+    getInnerNodesForNode(nodePointer->childIndex1,indices);
+    getInnerNodesForNode(nodePointer->childIndex2,indices);
+    getInnerNodesForNode(nodePointer->childIndex3,indices);
+
+    getInnerNodesForNode(nodePointer->childIndex4,indices);
+    getInnerNodesForNode(nodePointer->childIndex5,indices);
+    getInnerNodesForNode(nodePointer->childIndex6,indices);
+    getInnerNodesForNode(nodePointer->childIndex7,indices);
+
+}
+
+void Octree2::getInnerNodesOfLeafSet(QVector<GLint>* indices)
+{
+
+    octreeNode2* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[indices->at(i)];
+        if(nodePointer->inside && nodePointer->isSet && !nodePointer->leaf)
+        {
+            if(allChildrenAreLeaves(nodePointer->index))
+            {
+                indices->push_back(nodePointer->index);
+            }
+
+        }
+
+    }
+
+}
+
+void Octree2::getInnerLeaves(QVector<GLint>* indices)
+{
+
+    octreeNode2* nodePointer;
+
+    for(int i=0;i<indices->length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[indices->at(i)];
+        if(nodePointer->inside && nodePointer->isSet && nodePointer->leaf)
+        {
+           indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
 bool compare (const QVector3D & a, const QVector3D & b)
 {
   if(a.x()<b.x()){return true;}
@@ -1190,7 +1442,6 @@ void Octree2::setupOctree(){
 
     this->voxels.clear();
 
-    return;
 }
 
 Mesh* Octree2::getPointMesh()

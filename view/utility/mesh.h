@@ -32,9 +32,6 @@ public:
 
     void render(QGLShaderProgram* shader, GLenum primitive);
 
-    Mesh* copy();
-    void tranlateInNormalDirection(GLfloat magnitude);
-
     QVector3D getMean();
 };
 

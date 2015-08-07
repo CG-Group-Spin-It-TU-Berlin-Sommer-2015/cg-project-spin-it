@@ -40,6 +40,8 @@ struct octreeNode2 {
 
       isSet = false;
       invalid = false;
+
+      beta = 0.5f;
   }
 
   GLint index;
@@ -84,7 +86,16 @@ struct octreeNode2 {
 
   bool invalid;
 
+  float beta;
+
 } ;
+
+struct cubeObject{
+
+    Mesh* mesh;
+    float beta;
+
+};
 
 struct hashItem2{
     QVector3D vertex;
@@ -133,6 +144,8 @@ public:
     void setInnerNodeIndices();
     void setShellNodeIndices();
 
+    void getInnerCubes(QVector<cubeObject> vec);
+
 private:
 
     bool allChildrenAreLeaves(GLint nodeIndex);
@@ -147,6 +160,13 @@ private:
     QVector<GLfloat> geometry;
     QHash<GLint, hashItem2> geometryMap;
     QVector<GLint> indices;
+
+    void splitAndMerge(GLfloat epsilon);
+
+    void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
+    void getInnerNodesForNode(GLint index,QVector<GLint>* indices);
+    void getInnerNodesOfLeafSet(QVector<GLint>* indices);
+    void getInnerLeaves(QVector<GLint>* indices);
 
     octreeNode2* getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z, GLint startNodeIndex);
 

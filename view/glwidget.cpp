@@ -74,7 +74,7 @@ void GLWidget::initializeGL()
     octree2.setInnerNodes();
     octree2.setInnerNodeIndices();
     octree2.adjustMaxDepth();
-    octree2.increaseShell(0);
+    octree2.increaseShell(1);
 
     octree2.setShellNodeIndices();
     octree2.setInnerNodeIndices();
@@ -86,6 +86,10 @@ void GLWidget::initializeGL()
 
     octree2.createInnerSurface();
     objectShell = octree2.getMesh();
+
+    //Mesh* mergedMesh = mergeMeshes(object,objectShell);
+    writeMeshFromObjFile("test.obj",objectShell);
+
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 

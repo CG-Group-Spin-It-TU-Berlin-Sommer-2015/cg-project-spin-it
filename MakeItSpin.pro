@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     view/utility/kdtree.cpp \
     view/utility/octree.cpp \
     view/utility/octree2.cpp \
-    view/utility/meshwriter.cpp
+    view/utility/meshwriter.cpp \
+    view/utility/simplemeshmerger.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -33,7 +34,8 @@ HEADERS  += view/mainwindow.h \
     view/utility/kdtree.h \
     view/utility/octree.h \
     view/utility/octree2.h \
-    view/utility/meshwriter.h
+    view/utility/meshwriter.h \
+    view/utility/simplemeshmerger.h
 
 FORMS    += view/mainwindow.ui
 
