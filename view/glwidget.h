@@ -16,8 +16,8 @@
 #include "utility/meshwriter.h"
 #include "utility/simplemeshmerger.h"
 #include "utility/shader.h"
-#include "utility/octree.h"
-#include "utility/octree2.h"
+#include "utility/basicoctree.h"
+#include "utility/extendedoctree.h"
 
 class GLWidget : public QGLWidget
 {
@@ -39,7 +39,7 @@ private:
 
     Mesh* object;
     Mesh* objectShell;
-    Octree2 octree2;
+    ExtendedOctree octree2;
 
     Mesh* grid;
     Mesh* rot_axis;

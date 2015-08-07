@@ -89,7 +89,7 @@ void GLWidget::initializeGL()
     octree2.createInnerSurface();
     objectShell = octree2.getMesh();
 
-    QVector<cubeObject> vec;
+    QVector<octree::cubeObject> vec;
     octree2.getInnerCubes(&vec);
 
     //Mesh* mergedMesh = mergeMeshes(object,objectShell);
