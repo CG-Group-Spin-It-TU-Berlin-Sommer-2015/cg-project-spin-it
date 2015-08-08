@@ -58,44 +58,74 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
+    rot_axis = readMeshFromObjFileDirectory("rot_axis");
+
     object = readMeshFromObjFileDirectory("test");
     //Model::initialize(object);
 
+
+    // test octree
+
     GLint depth = 5;
+    octree.setMesh(object);
+    octree.setStartDepth(depth);
+    octree.setMaxDepth(depth);
+    octree.quantizeSurface();
+    octree.setupVectors();
 
-    octree2.setMesh(object);
-    octree2.setStartDepth(depth);
-    octree2.setMaxDepth(depth);
-    octree2.quantizeSurface();
-    octree2.setupVectors();
+    objectShell = octree.getPointMesh();
+    octree.setupOctree();
+    octree.setShellNodeIndices();
+    octree.setOuterNodes();
+    octree.setInnerNodes();
+    octree.setInnerNodeIndices();
+    octree.adjustMaxDepth();
+    octree.increaseShell(1);
 
-    objectShell = octree2.getPointMesh();
-    octree2.setupOctree();
-    octree2.setShellNodeIndices();
-    octree2.setOuterNodes();
-    octree2.setInnerNodes();
-    octree2.setInnerNodeIndices();
-    octree2.adjustMaxDepth();
-    octree2.increaseShell(0);
+    octree.setShellNodeIndices();
+    octree.setInnerNodeIndices();
 
-    octree2.setShellNodeIndices();
-    octree2.setInnerNodeIndices();
+    octree.createInnerSurface();
+    objectShell = octree.getMesh();
 
+    QVector<octree::cubeObject> cubeVector;
+
+    GLfloat epsilon = 0.05f;
+
+    while( false /* true until theshold is reached */)
+    {
+
+        // get the inner cubes of the octree
+        octree.getInnerCubes(&cubeVector);
+
+        // optimination ( store new betas by updating betas of cubeVector )
+
+        // delete meshes
+        for(int i=0;i<cubeVector.length();i++)
+        {
+           delete cubeVector.data()[i].mesh;
+        }
+
+        // set new betas and clrea cubeVector
+        octree.setBetasForCubes(&cubeVector);
+        cubeVector.clear();
+
+        // do split and merge
+        octree.splitAndMerge(epsilon);
+    }
+
+    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
+    octree.setVoids();
+
+    // write the final mesh into a file
     /*
-    octree2.split(37);
-    octree2.merge(37);
+    octree.createInnerSurface();
+    Mesh* objectShell_flipped = octree.getMesh(true);
+    Mesh* merge1 = booleanUnion(object,rot_axis);
+    Mesh* merge2 = mergeMeshes(merge1,objectShell_flipped);
+    writeMeshFromObjFile("test.obj",merge2);
     */
 
-    octree2.createInnerSurface();
-    objectShell = octree2.getMesh();
-
-    QVector<octree::cubeObject> vec;
-    octree2.getInnerCubes(&vec);
-
-    //Mesh* mergedMesh = mergeMeshes(object,objectShell);
-    //writeMeshFromObjFile("test.obj",objectShell);
-
-    rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -198,7 +228,7 @@ void GLWidget::paintGL()
     if(showGrid)
     {
         shader->setUniformValue("color", QColor(Qt::black));
-        octree2.render(shader);
+        octree.render(shader);
     }
 
     model_matrix.setToIdentity();

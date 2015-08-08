@@ -15,6 +15,7 @@
 #include "utility/meshreader.h"
 #include "utility/meshwriter.h"
 #include "utility/simplemeshmerger.h"
+#include "utility/extendedmeshmerger.h"
 #include "utility/shader.h"
 #include "utility/basicoctree.h"
 #include "utility/extendedoctree.h"
@@ -39,7 +40,7 @@ private:
 
     Mesh* object;
     Mesh* objectShell;
-    ExtendedOctree octree2;
+    ExtendedOctree octree;
 
     Mesh* grid;
     Mesh* rot_axis;

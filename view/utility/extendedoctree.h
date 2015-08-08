@@ -39,6 +39,8 @@ public:
 
     bool allChildrenAreLeaves(GLint nodeIndex);
 
+    void setVoids();
+
 private:
 
     void handleShellNeighbor(GLint x, GLint y, GLint z, QVector<GLint>* backVec);

@@ -190,34 +190,32 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
         b7 = this->octreeNodes.data()[nodePointer->childIndex7].beta;
 
         // all betas of inner leaves are greater than 1-epsilon
-        if( false
-        /*
-        (b0 > oneMinusEpsilon) &&
-        (b1 > oneMinusEpsilon) &&
-        (b2 > oneMinusEpsilon) &&
-        (b3 > oneMinusEpsilon) &&
-        (b4 > oneMinusEpsilon) &&
-        (b5 > oneMinusEpsilon) &&
-        (b6 > oneMinusEpsilon) &&
-        (b7 > oneMinusEpsilon)
-        */ ){
+        if(
+            (b0 > oneMinusEpsilon) &&
+            (b1 > oneMinusEpsilon) &&
+            (b2 > oneMinusEpsilon) &&
+            (b3 > oneMinusEpsilon) &&
+            (b4 > oneMinusEpsilon) &&
+            (b5 > oneMinusEpsilon) &&
+            (b6 > oneMinusEpsilon) &&
+            (b7 > oneMinusEpsilon))
+        {
 
             beta = 1.f;
             merge = true;
         }
         else
         // all betas of inner leaves are small than epsilon
-        if( false
-        /*
-        (b0 < oneMinusEpsilon) &&
-        (b1 < oneMinusEpsilon) &&
-        (b2 < oneMinusEpsilon) &&
-        (b3 < oneMinusEpsilon) &&
-        (b4 < oneMinusEpsilon) &&
-        (b5 < oneMinusEpsilon) &&
-        (b6 < oneMinusEpsilon) &&
-        (b7 < oneMinusEpsilon)
-        */ ){
+        if(
+            (b0 < oneMinusEpsilon) &&
+            (b1 < oneMinusEpsilon) &&
+            (b2 < oneMinusEpsilon) &&
+            (b3 < oneMinusEpsilon) &&
+            (b4 < oneMinusEpsilon) &&
+            (b5 < oneMinusEpsilon) &&
+            (b6 < oneMinusEpsilon) &&
+            (b7 < oneMinusEpsilon))
+        {
 
             beta = 0.f;
             merge = true;
@@ -572,4 +570,24 @@ void ExtendedOctree::increaseShell(GLint loopAmount)
     }
 
     return;
+}
+
+void ExtendedOctree::setVoids()
+{
+
+    QVector<GLint> innerNodeIndices;
+
+    octreeNode* nodePointer;
+
+    this->getInnerLeaves(&innerNodeIndices);
+
+    for(int i=0;i<innerNodeIndices.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[innerNodeIndices.data()[i]];
+
+        nodePointer->beta = nodePointer->beta>0.5? 1.f : 0.f;
+
+    }
+
 }

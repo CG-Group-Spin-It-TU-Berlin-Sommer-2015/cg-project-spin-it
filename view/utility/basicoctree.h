@@ -43,7 +43,11 @@ struct octreeNode {
       isSet = false;
       invalid = false;
 
-      beta = 0.5f;
+      // random float between 0 and 1
+      beta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+      isVoid = true;
+
   }
 
   void setPoints(GLfloat x,GLfloat y,GLfloat z,GLfloat cell_length)
@@ -104,6 +108,7 @@ struct octreeNode {
 
   float beta;
 
+  bool isVoid;
 } ;
 
 struct hashItem{
@@ -145,8 +150,8 @@ public:
 
     void createInnerSurface();
 
-    Mesh* getMesh();
-    Mesh* getPointMesh();  
+    Mesh* getMesh(bool flip = false);
+    Mesh* getPointMesh();
 
     void setInnerNodeIndices();
     void setShellNodeIndices();

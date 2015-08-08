@@ -327,7 +327,9 @@ GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 
 bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 {
-    return this->getLeafNodeByCoordinate(x,y,z)->shellNode;
+    octreeNode* nodePointer = this->getLeafNodeByCoordinate(x,y,z);
+
+    return nodePointer->shellNode || (nodePointer->isSet && nodePointer->inside && !nodePointer->isVoid);
 }
 
 void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
@@ -510,6 +512,11 @@ void BasicOctree::createInnerSurface()
     for(int i=0;i<length;i++)
     {
         octreeNode* nodePointer = &this->octreeNodes.data()[innerNodeIndices.at(i)];
+
+        if(!nodePointer->isVoid)
+        {
+            continue;
+        }
 
         GLint length2 = nodePointer->cell_length;
 
@@ -940,7 +947,7 @@ void BasicOctree::adjustMaxDepth()
 
 }
 
-Mesh* BasicOctree::getMesh()
+Mesh* BasicOctree::getMesh(bool flip)
 {
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
@@ -949,13 +956,26 @@ Mesh* BasicOctree::getMesh()
     geometry->reserve(this->geometry.length());
     indices->reserve(this->indices.length());
 
-    for (int i=0;i<this->geometry.length();++i)
+    for (int i=0;i<this->geometry.length();i++)
     {
-        geometry->push_back(this->geometry.at(i));
+       geometry->push_back(this->geometry.at(i));
     }
-    for (int i=0;i<this->indices.length();++i)
+
+    if(flip)
     {
-        indices->push_back(this->indices.at(i));
+        for (int i=0;i<this->indices.length();i+=3)
+        {
+            indices->push_back(this->indices.at(i+2));
+            indices->push_back(this->indices.at(i+1));
+            indices->push_back(this->indices.at(i+0));
+        }
+    }
+    else
+    {
+        for (int i=0;i<this->indices.length();i++)
+        {
+            indices->push_back(this->indices.at(i));
+        }
     }
 
     Mesh* mesh = new Mesh(geometry,indices);
