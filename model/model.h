@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 
 #include "view/utility/mesh.h"
+#include "view/utility/extendedoctree.h"
 
 using namespace Eigen;
 using namespace std;

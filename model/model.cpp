@@ -13,7 +13,31 @@ float* Model::mesh_volume = 0;
 void Model::initialize(Mesh* mesh)
 {
     Model::mesh = mesh;
+
+    GLint depth = 5;
+    octree.setMesh(object);
+    octree.setStartDepth(depth);
+    octree.setMaxDepth(depth);
+    octree.quantizeSurface();
+    octree.setupVectors();
+
+
+    objectShell = octree.getPointMesh();
+    octree.setupOctree();
+    octree.setShellNodeIndices();
+    octree.setOuterNodes();
+    octree.setInnerNodes();
+    octree.setInnerNodeIndices();
+    octree.adjustMaxDepth();
+    octree.increaseShell(1);
+
+    octree.setShellNodeIndices();
+    octree.setInnerNodeIndices();
+
+    octree.createInnerSurface();
+
     Model::hollow();
+
 }
 
 void Model::hollow()
@@ -25,15 +49,56 @@ void Model::hollow()
         cout << mesh_volume[i] << endl;
     }
 
+    objectShell = octree.getMesh();
+
+    QVector<octree::cubeObject> cubeVector;
+
+    GLfloat epsilon = 0.05f;
+
+    while( false /* true until theshold is reached */)
+    {
+
+        // get the inner cubes of the octree
+        octree.getInnerCubes(&cubeVector);
+
+        // optimination ( store new betas by updating betas of cubeVector )
+
+        // delete meshes
+        for(int i=0;i<cubeVector.length();i++)
+        {
+           delete cubeVector.data()[i].mesh;
+        }
+
+        // set new betas and clrea cubeVector
+        octree.setBetasForCubes(&cubeVector);
+        cubeVector.clear();
+
+        // do split and merge
+        octree.splitAndMerge(epsilon);
+    }
+
+    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
+    octree.setVoids();
+
+    VectorXf b(cubeVector.size());
+    MatrixXf S(cubeVector.size(), 10);
+    for (int i = 0; i < cubeVector.size(); i++) {
+        b(i) = cubeVector.at(i).beta;
+        float* s = calculateVolume(cubeVector.at(i).mesh, p);
+        for (int j = 0; j < 10; j++) {
+            S(i,j) = s[j];
+        }
+    }
+
     //move center to (0,0,0)
-    QVector3D c;
-    c.setX(1/mesh_volume[0]*mesh_volume[1]);
-    c.setY(1/mesh_volume[0]*mesh_volume[2]);
-    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
+//    QVector3D c;
+//    c.setX(1/mesh_volume[0]*mesh_volume[1]);
+//    c.setY(1/mesh_volume[0]*mesh_volume[2]);
+//    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
 
     cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
 
-    QVector<GLfloat>* tmp = new QVector<GLfloat>();
+    /*QVector<GLfloat>* tmp =/ new QVector<GLfloat>();
     for (int i = 0; i < geometry->size(); i++) {
         tmp->push_back(0);
     }
@@ -56,13 +121,9 @@ void Model::hollow()
     c.setZ(1/mesh_volume[0]*mesh_volume[3]);
 
     cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
-    cout << "Done" << endl;
-    VectorXf b(3);
-    b(0) = 1;
-    b(1) = 1;
-    b(2) = 1;
-    MatrixXf S(3,10);
-    optimize(b,S);
+    cout << "Done" << endl;*/
+    b = optimize(b,S);
+
 }
 
 /**
