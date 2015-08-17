@@ -8,12 +8,12 @@ ExtendedOctree::ExtendedOctree()
 
 }
 
-void ExtendedOctree::setBetasForCubes(QVector<cubeObject>* vec)
+void ExtendedOctree::updateBetas()
 {
 
-    for(int i=0;i<vec->length();i++)
+    for(int i=0;i<cubeVector.length();i++)
     {
-        cubeObject* obj = &vec->data()[i];
+        cubeObject* obj = &cubeVector.data()[i];
 
         (&octreeNodes.data()[obj->index])->beta = obj->beta;
 
@@ -21,8 +21,15 @@ void ExtendedOctree::setBetasForCubes(QVector<cubeObject>* vec)
 
 }
 
-void ExtendedOctree::getInnerCubes(QVector<cubeObject>* vec)
+QVector<cubeObject>* ExtendedOctree::getInnerCubes()
 {
+
+    for(int i=0;i<cubeVector.length();i++)
+    {
+        delete cubeVector.data()[i].mesh;
+    }
+
+    cubeVector.clear();
 
     QVector<GLint> innerNodeIndices;
 
@@ -121,13 +128,12 @@ void ExtendedOctree::getInnerCubes(QVector<cubeObject>* vec)
         obj.beta = nodePointer->beta;
         obj.index = nodePointer->index;
 
-        vec->push_back(obj);
+        cubeVector.push_back(obj);
 
     }
 
+    return &cubeVector;
 }
-
-
 
 bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
 {
@@ -146,7 +152,7 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
 
         nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
 
-        if( epsilon < nodePointer->beta && nodePointer < oneMinusEpsilon )
+        if( epsilon < nodePointer->beta && nodePointer->beta < oneMinusEpsilon )
         {
             this->split(innerLeafIndices.at(i));
 

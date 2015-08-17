@@ -903,7 +903,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 
 void BasicOctree::setStartDepth(GLint depth){
 
-    GLint minDepthLimit = 3;
+    GLint minDepthLimit = 2;
     GLint maxDepthLimit = 9;
 
     depth = depth<maxDepthLimit?depth:maxDepthLimit;
@@ -915,7 +915,7 @@ void BasicOctree::setStartDepth(GLint depth){
 
 void BasicOctree::setMaxDepth(GLint depth){
 
-    GLint minDepthLimit = 3;
+    GLint minDepthLimit = 2;
     GLint maxDepthLimit = 9;
 
     depth = depth<maxDepthLimit?depth:maxDepthLimit;

@@ -175,7 +175,7 @@ void GLWidget::paintGL()
     if(showInnerSurface)
     {
         shader->setUniformValue("color", QColor(115, 115, 85));
-        objectShell->render(shader, GL_TRIANGLES);
+        //objectShell->render(shader, GL_TRIANGLES);
     }
 
     if(showGrid)

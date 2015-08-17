@@ -21,8 +21,8 @@ class ExtendedOctree : public BasicOctree
 public:
     ExtendedOctree();
 
-    void setBetasForCubes(QVector<octree::cubeObject>* vec);
-    void getInnerCubes(QVector<octree::cubeObject>* vec);
+    void updateBetas();
+    QVector<octree::cubeObject>* getInnerCubes();
 
     void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
     void getInnerNodesForNode(GLint index,QVector<GLint>* indices);
@@ -43,6 +43,8 @@ public:
     void setVoids();
 
 private:
+
+    QVector<octree::cubeObject> cubeVector;
 
     void handleShellNeighbor(GLint x, GLint y, GLint z, QVector<GLint>* backVec);
 

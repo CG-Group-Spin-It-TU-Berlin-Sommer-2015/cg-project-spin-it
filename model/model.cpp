@@ -16,11 +16,11 @@ void Model::initialize(Mesh* mesh)
 {
     Model::mesh = mesh;
 
-    GLint depth = 5;
+    GLint depth = 3;
     Model::octree = new ExtendedOctree();
     octree->setMesh(mesh);
     octree->setStartDepth(depth);
-    octree->setMaxDepth(depth);
+    octree->setMaxDepth(depth+1);
     octree->quantizeSurface();
     octree->setupVectors();
 
@@ -30,7 +30,7 @@ void Model::initialize(Mesh* mesh)
     octree->setInnerNodes();
     octree->setInnerNodeIndices();
     octree->adjustMaxDepth();
-    octree->increaseShell(1);
+    octree->increaseShell(0);
 
     octree->setShellNodeIndices();
     octree->setInnerNodeIndices();
@@ -50,20 +50,20 @@ void Model::hollow()
         cout << mesh_volume[i] << endl;
     }
 
-    //objectShell = octree.getMesh();
-
-    QVector<octree::cubeObject> cubeVector;
+    QVector<octree::cubeObject>* cubeVector = NULL;
 
     bool not_converged = true;
-    while (not_converged) {
-        // get the inner cubes of the octree
-        octree->getInnerCubes(&cubeVector);
+    while (not_converged)
+    {
 
-        VectorXf b(cubeVector.size());
-        MatrixXf S(cubeVector.size(), 10);
-        for (int i = 0; i < cubeVector.size(); i++) {
-            b(i) = cubeVector.at(i).beta;
-            float* s = calculateVolume(cubeVector.at(i).mesh, p);
+        // get the inner cubes of the octree
+        cubeVector = octree->getInnerCubes();
+
+        VectorXf b(cubeVector->size());
+        MatrixXf S(cubeVector->size(), 10);
+        for (int i = 0; i < cubeVector->size(); i++) {
+            b(i) = cubeVector->at(i).beta;
+            float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
             }
@@ -101,17 +101,17 @@ void Model::hollow()
 
         cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
         cout << "Done" << endl;*/
-        b = optimize(b,S);
+
+        //b = optimize(b,S);
 
         for (int i = 0; i < b.rows(); i++) {
-            octree::cubeObject o = cubeVector.at(i);
+            octree::cubeObject o = cubeVector->at(i);
             o.beta = b(i);
-            cubeVector.replace(i, o);
+            cubeVector->replace(i, o);
         }
 
         // set new betas and clrea cubeVector
-        octree->setBetasForCubes(&cubeVector);
-        cubeVector.clear();
+        octree->updateBetas();
 
         // do split and merge
         not_converged = octree->splitAndMerge(0);
