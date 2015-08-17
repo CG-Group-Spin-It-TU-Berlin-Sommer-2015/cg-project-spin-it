@@ -23,6 +23,8 @@ private:
     static Mesh* mesh;
     static float* mesh_volume;
 
+    static ExtendedOctree octree;
+
 public:
     static void initialize(Mesh *mesh);
     static void hollow();

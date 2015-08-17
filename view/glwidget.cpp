@@ -61,7 +61,7 @@ void GLWidget::initializeGL()
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
     object = readMeshFromObjFileDirectory("test");
-    //Model::initialize(object);
+    Model::initialize(object);
 
 
     // test octree

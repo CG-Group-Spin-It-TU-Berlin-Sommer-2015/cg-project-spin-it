@@ -42,31 +42,68 @@ void Model::initialize(Mesh* mesh)
 
 void Model::hollow()
 {
-    QVector<float>* geometry = Model::mesh->getGeometry();
+    //QVector<float>* geometry = Model::mesh->getGeometry();
     mesh_volume = calculateVolume(Model::mesh, p);
     cout << "Volumnes:" << endl;
     for (int i = 0; i < 10; i++) {
         cout << mesh_volume[i] << endl;
     }
 
-    objectShell = octree.getMesh();
+    //objectShell = octree.getMesh();
 
     QVector<octree::cubeObject> cubeVector;
 
-    GLfloat epsilon = 0.05f;
-
-    while( false /* true until theshold is reached */)
-    {
-
+    bool not_converged = true;
+    while (not_converged) {
         // get the inner cubes of the octree
         octree.getInnerCubes(&cubeVector);
 
-        // optimination ( store new betas by updating betas of cubeVector )
+        VectorXf b(cubeVector.size());
+        MatrixXf S(cubeVector.size(), 10);
+        for (int i = 0; i < cubeVector.size(); i++) {
+            b(i) = cubeVector.at(i).beta;
+            float* s = calculateVolume(cubeVector.at(i).mesh, p);
+            for (int j = 0; j < 10; j++) {
+                S(i,j) = s[j];
+            }
+        }
 
-        // delete meshes
-        for(int i=0;i<cubeVector.length();i++)
-        {
-           delete cubeVector.data()[i].mesh;
+        //move center to (0,0,0)
+    //    QVector3D c;
+    //    c.setX(1/mesh_volume[0]*mesh_volume[1]);
+    //    c.setY(1/mesh_volume[0]*mesh_volume[2]);
+    //    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
+
+        cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
+
+        /*QVector<GLfloat>* tmp =/ new QVector<GLfloat>();
+        for (int i = 0; i < geometry->size(); i++) {
+            tmp->push_back(0);
+        }
+
+        Mesh* working_copy = new Mesh(tmp, Model::mesh->getSurfaceNormals(), Model::mesh->getVertexNormals(), Model::mesh->getIndices());
+        for (int i = 0; i < geometry->size(); i += 3) {
+                working_copy->getGeometry()->replace(i, geometry->at(i) - cp.x());
+                working_copy->getGeometry()->replace(i + 1, geometry->at(i + 1) - 0);
+                working_copy->getGeometry()->replace(i + 2, geometry->at(i + 2) - 0);
+        }
+
+        mesh_volume = calculateVolume(working_copy, p);
+        cout << "Volumnes:" << endl;
+        for (int i = 0; i < 10; i++) {
+            cout << mesh_volume[i] << endl;
+        }
+
+        c.setX(1/mesh_volume[0]*mesh_volume[1]);
+        c.setY(1/mesh_volume[0]*mesh_volume[2]);
+        c.setZ(1/mesh_volume[0]*mesh_volume[3]);
+
+        cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
+        cout << "Done" << endl;*/
+        b = optimize(b,S);
+
+        for (int i = 0; i < b.rows(); i++) {
+            cubeVector.at(i).beta = b(i);
         }
 
         // set new betas and clrea cubeVector
@@ -74,56 +111,11 @@ void Model::hollow()
         cubeVector.clear();
 
         // do split and merge
-        octree.splitAndMerge(epsilon);
+        not_converged = octree.splitAndMerge(0);
     }
 
     // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
     octree.setVoids();
-
-    VectorXf b(cubeVector.size());
-    MatrixXf S(cubeVector.size(), 10);
-    for (int i = 0; i < cubeVector.size(); i++) {
-        b(i) = cubeVector.at(i).beta;
-        float* s = calculateVolume(cubeVector.at(i).mesh, p);
-        for (int j = 0; j < 10; j++) {
-            S(i,j) = s[j];
-        }
-    }
-
-    //move center to (0,0,0)
-//    QVector3D c;
-//    c.setX(1/mesh_volume[0]*mesh_volume[1]);
-//    c.setY(1/mesh_volume[0]*mesh_volume[2]);
-//    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
-
-    cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
-
-    /*QVector<GLfloat>* tmp =/ new QVector<GLfloat>();
-    for (int i = 0; i < geometry->size(); i++) {
-        tmp->push_back(0);
-    }
-
-    Mesh* working_copy = new Mesh(tmp, Model::mesh->getSurfaceNormals(), Model::mesh->getVertexNormals(), Model::mesh->getIndices());
-    for (int i = 0; i < geometry->size(); i += 3) {
-            working_copy->getGeometry()->replace(i, geometry->at(i) - cp.x());
-            working_copy->getGeometry()->replace(i + 1, geometry->at(i + 1) - 0);
-            working_copy->getGeometry()->replace(i + 2, geometry->at(i + 2) - 0);
-    }
-
-    mesh_volume = calculateVolume(working_copy, p);
-    cout << "Volumnes:" << endl;
-    for (int i = 0; i < 10; i++) {
-        cout << mesh_volume[i] << endl;
-    }
-
-    c.setX(1/mesh_volume[0]*mesh_volume[1]);
-    c.setY(1/mesh_volume[0]*mesh_volume[2]);
-    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
-
-    cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
-    cout << "Done" << endl;*/
-    b = optimize(b,S);
-
 }
 
 /**

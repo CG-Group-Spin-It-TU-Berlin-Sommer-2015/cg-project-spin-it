@@ -40,7 +40,6 @@ private:
 
     Mesh* object;
     Mesh* objectShell;
-    ExtendedOctree octree;
 
     Mesh* grid;
     Mesh* rot_axis;
