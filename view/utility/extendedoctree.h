@@ -7,6 +7,7 @@ namespace octree {
 
 struct cubeObject{
 
+public:
     Mesh* mesh;
     float beta;
     GLint index;
