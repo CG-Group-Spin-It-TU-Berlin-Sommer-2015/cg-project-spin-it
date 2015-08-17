@@ -66,56 +66,9 @@ void GLWidget::initializeGL()
 
     // test octree
 
-    GLint depth = 5;
-    octree.setMesh(object);
-    octree.setStartDepth(depth);
-    octree.setMaxDepth(depth);
-    octree.quantizeSurface();
-    octree.setupVectors();
 
-    objectShell = octree.getPointMesh();
-    octree.setupOctree();
-    octree.setShellNodeIndices();
-    octree.setOuterNodes();
-    octree.setInnerNodes();
-    octree.setInnerNodeIndices();
-    octree.adjustMaxDepth();
-    octree.increaseShell(1);
 
-    octree.setShellNodeIndices();
-    octree.setInnerNodeIndices();
 
-    octree.createInnerSurface();
-    objectShell = octree.getMesh();
-
-    QVector<octree::cubeObject> cubeVector;
-
-    GLfloat epsilon = 0.05f;
-
-    while( false /* true until theshold is reached */)
-    {
-
-        // get the inner cubes of the octree
-        octree.getInnerCubes(&cubeVector);
-
-        // optimination ( store new betas by updating betas of cubeVector )
-
-        // delete meshes
-        for(int i=0;i<cubeVector.length();i++)
-        {
-           delete cubeVector.data()[i].mesh;
-        }
-
-        // set new betas and clrea cubeVector
-        octree.setBetasForCubes(&cubeVector);
-        cubeVector.clear();
-
-        // do split and merge
-        octree.splitAndMerge(epsilon);
-    }
-
-    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
-    octree.setVoids();
 
     // write the final mesh into a file
     /*
