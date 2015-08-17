@@ -129,7 +129,7 @@ void ExtendedOctree::getInnerCubes(QVector<cubeObject>* vec)
 
 
 
-void ExtendedOctree::splitAndMerge(GLfloat epsilon)
+bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
 {
 
     GLfloat oneMinusEpsilon = 1-epsilon;
@@ -139,12 +139,14 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
     QVector<GLint> innerLeafIndices;
     getInnerLeaves(&innerLeafIndices);
 
+    bool isSplited = false;
+
     for(int i=0;i<innerLeafIndices.length();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
 
-        if( false /* epsilon < nodePointer->beta && nodePointer < oneMinusEpsilon */)
+        if( epsilon < nodePointer->beta && nodePointer < oneMinusEpsilon )
         {
             this->split(innerLeafIndices.at(i));
 
@@ -160,6 +162,8 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
                 this->octreeNodes.data()[nodePointer->childIndex5].beta = nodePointer->beta;
                 this->octreeNodes.data()[nodePointer->childIndex6].beta = nodePointer->beta;
                 this->octreeNodes.data()[nodePointer->childIndex7].beta = nodePointer->beta;
+
+                isSplited = true;
             }
         }
 
@@ -168,7 +172,7 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
     QVector<GLint> innerLeafSetNodeIndices;
     getInnerNodesOfLeafSet(&innerLeafSetNodeIndices);
 
-    bool merge = false;
+    bool isMerged = false;
     GLfloat beta = 0.f;
 
     GLfloat b0,b1,b2,b3,b4,b5,b6,b7;
@@ -176,7 +180,7 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
     for(int i=0;i<innerLeafSetNodeIndices.length();i++)
     {
 
-        merge = false;
+        isMerged = false;
 
         nodePointer = &this->octreeNodes.data()[innerLeafSetNodeIndices.at(i)];
 
@@ -191,37 +195,37 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
 
         // all betas of inner leaves are greater than 1-epsilon
         if(
-            (b0 > oneMinusEpsilon) &&
-            (b1 > oneMinusEpsilon) &&
-            (b2 > oneMinusEpsilon) &&
-            (b3 > oneMinusEpsilon) &&
-            (b4 > oneMinusEpsilon) &&
-            (b5 > oneMinusEpsilon) &&
-            (b6 > oneMinusEpsilon) &&
-            (b7 > oneMinusEpsilon))
+            (b0 >= oneMinusEpsilon) &&
+            (b1 >= oneMinusEpsilon) &&
+            (b2 >= oneMinusEpsilon) &&
+            (b3 >= oneMinusEpsilon) &&
+            (b4 >= oneMinusEpsilon) &&
+            (b5 >= oneMinusEpsilon) &&
+            (b6 >= oneMinusEpsilon) &&
+            (b7 >= oneMinusEpsilon))
         {
 
             beta = 1.f;
-            merge = true;
+            isMerged = true;
         }
         else
         // all betas of inner leaves are small than epsilon
         if(
-            (b0 < oneMinusEpsilon) &&
-            (b1 < oneMinusEpsilon) &&
-            (b2 < oneMinusEpsilon) &&
-            (b3 < oneMinusEpsilon) &&
-            (b4 < oneMinusEpsilon) &&
-            (b5 < oneMinusEpsilon) &&
-            (b6 < oneMinusEpsilon) &&
-            (b7 < oneMinusEpsilon))
+            (b0 <= oneMinusEpsilon) &&
+            (b1 <= oneMinusEpsilon) &&
+            (b2 <= oneMinusEpsilon) &&
+            (b3 <= oneMinusEpsilon) &&
+            (b4 <= oneMinusEpsilon) &&
+            (b5 <= oneMinusEpsilon) &&
+            (b6 <= oneMinusEpsilon) &&
+            (b7 <= oneMinusEpsilon))
         {
 
             beta = 0.f;
-            merge = true;
+            isMerged = true;
         }
 
-        if( merge )
+        if( isMerged )
         {
             this->merge(innerLeafSetNodeIndices.at(i));
 
@@ -230,6 +234,8 @@ void ExtendedOctree::splitAndMerge(GLfloat epsilon)
         }
 
     }
+
+    return isSplited;
 
 }
 

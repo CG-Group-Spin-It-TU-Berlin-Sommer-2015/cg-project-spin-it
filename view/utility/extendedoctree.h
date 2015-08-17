@@ -28,7 +28,7 @@ public:
     void getInnerNodesOfLeafSet(QVector<GLint>* indices);
     void getInnerLeaves(QVector<GLint>* indices);
 
-    void splitAndMerge(GLfloat epsilon);
+    bool splitAndMerge(GLfloat epsilon);
 
     void split(octree::octreeNode* nodePointer);
     void split(GLint nodeIndex);
