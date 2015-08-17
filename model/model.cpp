@@ -104,7 +104,9 @@ void Model::hollow()
         b = optimize(b,S);
 
         for (int i = 0; i < b.rows(); i++) {
-            cubeVector.at(i).beta = b(i);
+            octree::cubeObject o = cubeVector.at(i);
+            o.beta = b(i);
+            cubeVector.replace(i, o);
         }
 
         // set new betas and clrea cubeVector

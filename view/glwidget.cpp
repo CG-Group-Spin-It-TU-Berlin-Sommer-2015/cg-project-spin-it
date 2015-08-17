@@ -181,7 +181,7 @@ void GLWidget::paintGL()
     if(showGrid)
     {
         shader->setUniformValue("color", QColor(Qt::black));
-        octree.render(shader);
+        //octree.render(shader);
     }
 
     model_matrix.setToIdentity();
