@@ -291,6 +291,7 @@ void GLWidget::loadNewMesh()
 {
     QString s = QFileDialog::getOpenFileName(this,tr("Open Mesh"), "../", tr("Meshes (*.obj)"));
     Mesh* object = readMeshFromObjFile(s.toStdString());
+    Model::initialize(object);
 
     if(object==0)
     {
@@ -306,6 +307,11 @@ void GLWidget::loadNewMesh()
     this->trans_z = 0;
 
     this->repaint();
+}
+
+void GLWidget::makeItSpin()
+{
+    Model::hollow();
 }
 
 /* ----------------------------------------------- */

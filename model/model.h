@@ -2,7 +2,7 @@
 #define MODEL_H
 
 #include <stdio.h>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include "view/utility/mesh.h"
 #include "view/utility/extendedoctree.h"
@@ -23,7 +23,7 @@ private:
     static Mesh* mesh;
     static float* mesh_volume;
 
-    static ExtendedOctree octree;
+    static ExtendedOctree* octree;
 
 public:
     static void initialize(Mesh *mesh);

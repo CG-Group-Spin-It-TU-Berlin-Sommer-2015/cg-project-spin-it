@@ -9,32 +9,33 @@ float Model::w_I = 1;
 Mesh* Model::mesh = 0;
 float* Model::mesh_volume = 0;
 
+ExtendedOctree* Model::octree = 0;
+
 
 void Model::initialize(Mesh* mesh)
 {
     Model::mesh = mesh;
 
     GLint depth = 5;
-    octree.setMesh(object);
-    octree.setStartDepth(depth);
-    octree.setMaxDepth(depth);
-    octree.quantizeSurface();
-    octree.setupVectors();
+    Model::octree = new ExtendedOctree();
+    octree->setMesh(mesh);
+    octree->setStartDepth(depth);
+    octree->setMaxDepth(depth);
+    octree->quantizeSurface();
+    octree->setupVectors();
 
+    octree->setupOctree();
+    octree->setShellNodeIndices();
+    octree->setOuterNodes();
+    octree->setInnerNodes();
+    octree->setInnerNodeIndices();
+    octree->adjustMaxDepth();
+    octree->increaseShell(1);
 
-    objectShell = octree.getPointMesh();
-    octree.setupOctree();
-    octree.setShellNodeIndices();
-    octree.setOuterNodes();
-    octree.setInnerNodes();
-    octree.setInnerNodeIndices();
-    octree.adjustMaxDepth();
-    octree.increaseShell(1);
+    octree->setShellNodeIndices();
+    octree->setInnerNodeIndices();
 
-    octree.setShellNodeIndices();
-    octree.setInnerNodeIndices();
-
-    octree.createInnerSurface();
+    octree->createInnerSurface();
 
     Model::hollow();
 
@@ -56,7 +57,7 @@ void Model::hollow()
     bool not_converged = true;
     while (not_converged) {
         // get the inner cubes of the octree
-        octree.getInnerCubes(&cubeVector);
+        octree->getInnerCubes(&cubeVector);
 
         VectorXf b(cubeVector.size());
         MatrixXf S(cubeVector.size(), 10);
@@ -69,10 +70,10 @@ void Model::hollow()
         }
 
         //move center to (0,0,0)
-    //    QVector3D c;
-    //    c.setX(1/mesh_volume[0]*mesh_volume[1]);
-    //    c.setY(1/mesh_volume[0]*mesh_volume[2]);
-    //    c.setZ(1/mesh_volume[0]*mesh_volume[3]);
+        QVector3D c;
+        c.setX(1/mesh_volume[0]*mesh_volume[1]);
+        c.setY(1/mesh_volume[0]*mesh_volume[2]);
+        c.setZ(1/mesh_volume[0]*mesh_volume[3]);
 
         cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
 
@@ -107,15 +108,15 @@ void Model::hollow()
         }
 
         // set new betas and clrea cubeVector
-        octree.setBetasForCubes(&cubeVector);
+        octree->setBetasForCubes(&cubeVector);
         cubeVector.clear();
 
         // do split and merge
-        not_converged = octree.splitAndMerge(0);
+        not_converged = octree->splitAndMerge(0);
     }
 
     // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
-    octree.setVoids();
+    octree->setVoids();
 }
 
 /**
@@ -224,11 +225,11 @@ MatrixXf Model::eqMatrix(VectorXf b, MatrixXf S)
 VectorXf Model::eqVector(VectorXf b, MatrixXf S)
 {
     VectorXf h(5);
-    h(0) = Matrix<float,1,1>(Model::mesh_volume[1]) - b.transpose() * S.col(1);
-    h(1) = Matrix<float,1,1>(Model::mesh_volume[2]) - b.transpose() * S.col(2);
-    h(2) = Matrix<float,1,1>(Model::mesh_volume[4]) - b.transpose() * S.col(4);
-    h(3) = Matrix<float,1,1>(Model::mesh_volume[5]) - b.transpose() * S.col(5);
-    h(4) = Matrix<float,1,1>(Model::mesh_volume[6]) - b.transpose() * S.col(6);
+    h(0) = Model::mesh_volume[1] - b.dot(S.col(1));
+    h(1) = Model::mesh_volume[2] - b.dot(S.col(2));
+    h(2) = Model::mesh_volume[4] - b.dot(S.col(4));
+    h(3) = Model::mesh_volume[5] - b.dot(S.col(5));
+    h(4) = Model::mesh_volume[6] - b.dot(S.col(6));
     return h;
 }
 
@@ -279,11 +280,11 @@ VectorXf Model::ineqVector(VectorXf b, QVector<int> J)
  */
 VectorXf Model::gradient(VectorXf b, MatrixXf S)
 {
-    VectorXf u1 = Matrix<float,1,1>(Model::mesh_volume[8]) - b.transpose() * S.col(8) + Matrix<float,1,1>(Model::mesh_volume[9]) - b.transpose() * S.col(9);
-    VectorXf u2 = Matrix<float,1,1>(Model::mesh_volume[7]) - b.transpose() * S.col(7) + Matrix<float,1,1>(Model::mesh_volume[9]) - b.transpose() * S.col(9);
-    VectorXf v = Matrix<float,1,1>(Model::mesh_volume[7]) - b.transpose() * S.col(7) + Matrix<float,1,1>(Model::mesh_volume[8]) - b.transpose() * S.col(8);
-    VectorXf grad_top = -2 * Model::w_c * (Matrix<float,1,1>(Model::mesh_volume[3]) - b.transpose() * S.col(3)) * S.col(3);
-    VectorXf grad_yoyo = -2 * Model::w_I * (((S.col(8) + S.col(9))*u1*v + (S.col(7) + S.col(9))*u2*v - (u1*u1 + u2*u2)*(S.col(7)+S.col(8))) / (v(0) * v(0) * v(0)));
+    float u1 = Model::mesh_volume[8] - b.dot(S.col(8)) + Model::mesh_volume[9] - b.dot(S.col(9));
+    float u2 = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[9] - b.dot(S.col(9));
+    float v = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[8] - b.dot(S.col(8));
+    VectorXf grad_top = -2 * Model::w_c * (Model::mesh_volume[3] - b.dot(S.col(3))) * S.col(3);
+    VectorXf grad_yoyo = -2 * Model::w_I * (((S.col(8) + S.col(9))*u1*v + (S.col(7) + S.col(9))*u2*v - (u1*u1 + u2*u2)*(S.col(7)+S.col(8))) / (v * v * v));
     VectorXf grad = grad_top + grad_yoyo;
     cout << grad << endl << endl;
     return grad;
@@ -297,23 +298,22 @@ VectorXf Model::gradient(VectorXf b, MatrixXf S)
  */
 VectorXf Model::optimize(VectorXf b, MatrixXf S)
 {
-    DiagonalMatrix<float, Dynamic, Dynamic> A;
-    A.resize(b.rows());
+    MatrixXf A(b.rows(), b.rows());
     A.setIdentity();
 
-    VectorXf d = VectorXf::Ones();
-    VectorXf lamda = -VectorXf::Ones();
-    VectorXf mu = -VectorXf::Ones();
+    VectorXf d = VectorXf::Ones(1);
+    VectorXf lambda = -VectorXf::Ones(1);
+    VectorXf mu = -VectorXf::Ones(1);
 
     float alpha = 0.1;
     float gamma = 0.01;
 
-    while (!(d == 0 && mu >= 0)) {
-        grad = gradient(b,S);
+    while (!((d.array() == 0).all() && (mu.array() >= 0).all())) {
+        VectorXf grad = gradient(b,S);
 
         //Setting up equality constraints
-        H = eqMatrix(b, S);
-        h = eqVector(b, S);
+        MatrixXf H = eqMatrix(b, S);
+        VectorXf h = eqVector(b, S);
 
         //Setting up active inequality constraints
         QVector<int> J;
@@ -330,8 +330,8 @@ VectorXf Model::optimize(VectorXf b, MatrixXf S)
             }
         }
 
-        G = ineqMatrix(b, J);
-        g = ineqVector(b, J);
+        MatrixXf G = ineqMatrix(b, J);
+        VectorXf g = ineqVector(b, J);
 
         MatrixXf L(A.rows() + H.rows() + G.rows(), A.cols() + H.cols() + G.cols());
         L.block(0, 0, A.rows(), A.cols()) = A;
@@ -348,13 +348,10 @@ VectorXf Model::optimize(VectorXf b, MatrixXf S)
 
         VectorXf x = L.fullPivHouseholderQr().solve(c);
         d = x.block(0, 0, b.rows(), 1);
-        lamda = x.block(b.rows() + 1, 0, h.rows(), 1);
+        lambda = x.block(b.rows() + 1, 0, h.rows(), 1);
         mu = x.block(b.rows() + h.rows() + 1, 0, g.rows(), 1);
-        delete L;
-        delete c;
-        delete x;
 
-        if (d == 0 && !(mu >= 0)) {
+        if ((d.array() == 0).all() && !((mu.array() >= 0).all())) {
             //Inactivity step
             int j = 0;
             float lowest = mu(0);
@@ -384,9 +381,6 @@ VectorXf Model::optimize(VectorXf b, MatrixXf S)
 
             x = L.fullPivHouseholderQr().solve(c);
             d = x.block(0, 0, b.rows(), 1);
-            delete L;
-            delete c;
-            delete x;
         }
 
 
@@ -407,7 +401,7 @@ VectorXf Model::optimize(VectorXf b, MatrixXf S)
         //BFGS Update
         VectorXf s = (b + sigma * d) - b;
         VectorXf y = gradient(b + sigma * d, S) - grad;
-        A = A - ((A*s)*(A*s).transpose())/(s.transpose()*A*s)(0,0) + y*y.transpose()/(y.dot(s))(0,0);
+        A = A - (((A*s)*(A*s).transpose())/(s.dot(A*s)) + y*y.transpose()/(y.dot(s)));
 
         b = b + sigma * d;
     }
@@ -515,18 +509,18 @@ float Model::powellG2(float sigma, VectorXf b, MatrixXf S, VectorXf d, float alp
  */
 float Model::penalty(VectorXf b, MatrixXf S, float alpha)
 {
-    float Ix = (Matrix<float,1,1>(Model::mesh_volume[8]) - b.transpose() * S.col(8)) + (Matrix<float,1,1>(Model::mesh_volume[9]) - b.transpose() * S.col(9));
-    float Iy = (Matrix<float,1,1>(Model::mesh_volume[7]) - b.transpose() * S.col(7)) + (Matrix<float,1,1>(Model::mesh_volume[9]) - b.transpose() * S.col(9));
-    float Iz = (Matrix<float,1,1>(Model::mesh_volume[7]) - b.transpose() * S.col(7)) + (Matrix<float,1,1>(Model::mesh_volume[8]) - b.transpose() * S.col(8));
-    float s1 = (Matrix<float,1,1>(Model::mesh_volume[3]) - b.transpose() * S.col(3)) * (Matrix<float,1,1>(Model::mesh_volume[3]) - b.transpose() * S.col(3));
+    float Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    float Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    float Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
+    float s1 = (Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)));
     float s2 = (Ix * Ix) / (Iz * Iz) + (Iy * Iy) / (Iz * Iz);
 
     VectorXf h(5);
-    h(0) = abs(Matrix<float,1,1>(Model::mesh_volume[1]) - b.transpose() * S.col(1));
-    h(1) = abs(Matrix<float,1,1>(Model::mesh_volume[2]) - b.transpose() * S.col(2));
-    h(2) = abs(Matrix<float,1,1>(Model::mesh_volume[4]) - b.transpose() * S.col(4));
-    h(3) = abs(Matrix<float,1,1>(Model::mesh_volume[5]) - b.transpose() * S.col(5));
-    h(4) = abs(Matrix<float,1,1>(Model::mesh_volume[6]) - b.transpose() * S.col(6));
+    h(0) = abs(Model::mesh_volume[1] - b.dot(S.col(1)));
+    h(1) = abs(Model::mesh_volume[2] - b.dot(S.col(2)));
+    h(2) = abs(Model::mesh_volume[4] - b.dot(S.col(4)));
+    h(3) = abs(Model::mesh_volume[5] - b.dot(S.col(5)));
+    h(4) = abs(Model::mesh_volume[6] - b.dot(S.col(6)));
 
     VectorXf g(2 * b.rows());
     for (int i = 0; i < g.rows(); i++) {
@@ -539,8 +533,8 @@ float Model::penalty(VectorXf b, MatrixXf S, float alpha)
         }
     }
 
-    VectorXf ones = VectorXf.Ones(h.rows());
-    return Model::w_c * s1 + Model::w_I * s2 + alpha * (ones.transpose() * h) + alpha * (ones.transpose * g);
+    VectorXf ones = VectorXf::Ones(h.rows());
+    return Model::w_c * s1 + Model::w_I * s2 + alpha * (ones.dot(h)) + alpha * (ones.dot(g));
 }
 
 /**
@@ -553,65 +547,65 @@ float Model::penalty(VectorXf b, MatrixXf S, float alpha)
  */
 float Model::penaltyDirectionalGradient(VectorXf b, MatrixXf S,  VectorXf d, float alpha)
 {
-    float result = (gradient(b,S).transpose() * d)(0);
+    float result = gradient(b,S).dot(d);
 
-    float h = Matrix<float,1,1>(Model::mesh_volume[1]) - b.transpose() * S.col(1);
+    float h = Model::mesh_volume[1] - b.dot(S.col(1));
     if (h > 0) {
-       result += alpha * (-S(1).transpose() * d);
+       result += alpha * -S.col(1).dot(d);
     } else {
         if (h < 0) {
-            result -= alpha * (-S(1).transpose() * d);
+            result -= alpha * -S.col(1).dot(d);
         } else {
             if (h == 0) {
-                result += alpha * (abs(-S(1).transpose() * d));
+                result += alpha * (abs(-S.col(1).dot(d)));
             }
         }
     }
-    h = Matrix<float,1,1>(Model::mesh_volume[2]) - b.transpose() * S.col(2);
+    h = Model::mesh_volume[2] - b.dot(S.col(2));
     if (h > 0) {
-       result += alpha * (-S(2).transpose() * d);
+       result += alpha * -S.col(2).dot(d);
     } else {
         if (h < 0) {
-            result -= alpha * (-S(2).transpose() * d);
+            result -= alpha * -S.col(2).dot(d);
         } else {
             if (h == 0) {
-                result += alpha * (abs(-S(2).transpose() * d));
+                result += alpha * (abs(-S.col(2).dot(d)));
             }
         }
     }
-    h = Matrix<float,1,1>(Model::mesh_volume[4]) - b.transpose() * S.col(4);
+    h = Model::mesh_volume[4] - b.dot(S.col(4));
     if (h > 0) {
-       result += alpha * (-S(4).transpose() * d);
+       result += alpha * (-S.col(4).dot(d));
     } else {
         if (h < 0) {
-            result -= alpha * (-S(4).transpose() * d);
+            result -= alpha * (-S.col(4).dot(d));
         } else {
             if (h == 0) {
-                result += alpha * (abs(-S(4).transpose() * d));
+                result += alpha * (abs(-S.col(4).dot(d)));
             }
         }
     }
-    h = Matrix<float,1,1>(Model::mesh_volume[5]) - b.transpose() * S.col(5);
+    h = Model::mesh_volume[5] - b.dot(S.col(5));
     if (h > 0) {
-       result += alpha * (-S(5).transpose() * d);
+       result += alpha * (-S.col(5).dot(d));
     } else {
         if (h < 0) {
-            result -= alpha * (-S(5).transpose() * d);
+            result -= alpha * (-S.col(5).dot(d));
         } else {
             if (h == 0) {
-                result += alpha * (abs(-S(5).transpose() * d));
+                result += alpha * (abs(-S.col(5).dot(d)));
             }
         }
     }
-    h = Matrix<float,1,1>(Model::mesh_volume[6]) - b.transpose() * S.col(6);
+    h = Model::mesh_volume[6] - b.dot(S.col(6));
     if (h > 0) {
-       result += alpha * (-S(6).transpose() * d);
+       result += alpha * (-S.col(6).dot(d));
     } else {
         if (h < 0) {
-            result -= alpha * (-S(6).transpose() * d);
+            result -= alpha * (-S.col(6).dot(d));
         } else {
             if (h == 0) {
-                result += alpha * (abs(-S(6).transpose() * d));
+                result += alpha * (abs(-S.col(6).dot(d)));
             }
         }
     }

@@ -24,3 +24,8 @@ void MainWindow::on_loadMeshButton_clicked()
 {
     emit
 }
+
+void MainWindow::on_hollowButton_clicked()
+{
+    emit
+}

@@ -178,7 +178,7 @@
       <attribute name="title">
        <string>Hollowing</string>
       </attribute>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="hollowButton">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -314,6 +314,22 @@
     <hint type="sourcelabel">
      <x>780</x>
      <y>301</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>hollowButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>showOnlyInnerSurface()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>783</x>
+     <y>461</y>
     </hint>
     <hint type="destinationlabel">
      <x>325</x>

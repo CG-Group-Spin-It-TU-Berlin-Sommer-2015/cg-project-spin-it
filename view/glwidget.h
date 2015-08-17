@@ -68,6 +68,7 @@ public:
 
 public slots:
     void loadNewMesh();
+    void makeItSpin();
     void showOnlyOuterSurface();
     void showOnlyInnerSurface();
     void showOnlyOctreeGrid();
