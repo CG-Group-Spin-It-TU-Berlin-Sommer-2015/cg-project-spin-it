@@ -57,6 +57,9 @@ DEPENDPATH += $$PWD/../cork/include
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a
 
+INCLUDEPATH += $$PWD/../eigen
+DEPENDPATH += $$PWD/../eigen
+
 
 unix:!macx: LIBS += -L$$PWD/../../../../usr/lib/x86_64-linux-gnu/ -lgmp
 
@@ -65,15 +68,15 @@ DEPENDPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/lib/x86_64-linux-gnu/libgmp.a
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../cork/lib/release/ -lcork
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../cork/lib/debug/ -lcork
-else:unix: LIBS += -L$$PWD/../cork/lib/ -lcork
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../cork/lib/release/ -lcork
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../cork/lib/debug/ -lcork
+#else:unix: LIBS += -L$$PWD/../cork/lib/ -lcork
 
-INCLUDEPATH += $$PWD/../cork/include
-DEPENDPATH += $$PWD/../cork/include
+#INCLUDEPATH += $$PWD/../cork/include
+#DEPENDPATH += $$PWD/../cork/include
 
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/libcork.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/libcork.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/cork.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/cork.lib
-else:unix: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a
+#win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/libcork.a
+#else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/libcork.a
+#else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/cork.lib
+#else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/cork.lib
+#else:unix: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a

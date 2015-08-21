@@ -20,10 +20,26 @@
 #include "utility/basicoctree.h"
 #include "utility/extendedoctree.h"
 
+#define TRANSLATION_TAB 0
+#define MODEL_TAB       1
+#define HOLLOWING_TAB   2
+
+#define TRANSLATION_VIEW_XY         0
+#define TRANSLATION_VIEW_Z          1
+#define ROTATION_SCALE_VIEW         2
+#define TRANSLATION_VIEW_DEFAULT    3
+
+#define TRANSLATION_XY_RATIO    40.0f
+#define TRANSLATION_Z_RATIO     30.0f
+#define SCALE_RATIO 30.0f;
+
 class GLWidget : public QGLWidget
 {
     Q_OBJECT
 private:
+
+    int viewState;
+
     QGLShaderProgram* shader;
 
     QMatrix4x4 projection_matrix;
@@ -54,13 +70,19 @@ private:
     int rot_cam_phi;
 
     GLfloat trans_x;
+    GLfloat trans_y;
     GLfloat trans_z;
+    GLfloat scale_xyz;
 
     QPoint mouse_pos;
 
     bool showOuterSurface;
     bool showInnerSurface;
     bool showGrid;
+
+    GLint startDepth;
+    GLint maximumDepth;
+    GLint shellExtensionValue;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
@@ -73,7 +95,36 @@ public slots:
     void showOnlyInnerSurface();
     void showOnlyOctreeGrid();
 
+    void setView(int index);
+    void setViewXY();
+    void setViewZ();
+    void setViewRotationScale();
+
+    void resetXY();
+    void resetZ();
+    void resetRotationScale();
+    void resetAll();
+
+    void setStartDepthValue(int);
+    void setMaximumDepthValue(int);
+
+    void setShellExtensionValue(int);
+    void calculateOctree();
+
+signals:
+    void setViewXYSignal();
+    void setStartDepthSpinBoxValue(int);
+    void setMaximumDepthSpinBoxValue(int);
+    void setShellExtensionSpinBoxValue(int);
+
+    void modelLoaded(bool);
+    void shellIsSet(bool);
+    void shellIsNotSet(bool);
+
 protected:
+
+    void setViewDefault();
+
     void initializeGL();
     void paintGL();
     void resizeGL(int width, int height);

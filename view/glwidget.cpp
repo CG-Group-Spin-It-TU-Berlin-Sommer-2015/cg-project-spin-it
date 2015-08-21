@@ -7,6 +7,7 @@ GLWidget::GLWidget(QWidget *parent)
     showOuterSurface = true;
     showInnerSurface = false;
     showGrid = false;
+    viewState = TRANSLATION_VIEW_XY;
 
 }
 
@@ -21,14 +22,25 @@ GLWidget::~GLWidget()
 
 void GLWidget::initializeGL()
 {
+
+    shellExtensionValue = 0;
+    emit setShellExtensionSpinBoxValue(shellExtensionValue);
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
     this->rot_cam_phi = 0;
-    this->trans_x = 0;
-    this->trans_z = 0;
+    this->trans_x = 0.f;
+    this->trans_y = 0.f;
+    this->trans_z = 0.f;
+    this->scale_xyz = 1.0f;
+
+    this->startDepth = 2;
+    this->maximumDepth = 2;
+    emit setStartDepthSpinBoxValue(this->startDepth);
+    emit setMaximumDepthSpinBoxValue(this->maximumDepth);
 
     qglClearColor(QColor(205, 205, 255));
 
@@ -42,7 +54,7 @@ void GLWidget::initializeGL()
     camera_position.setZ(1);
     camera_direction.setX(0);
     camera_direction.setY(0);
-    camera_direction.setY(0);
+    camera_direction.setZ(0);
 
     camera_up.setX(0);
     camera_up.setY(1);
@@ -61,14 +73,15 @@ void GLWidget::initializeGL()
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
     object = readMeshFromObjFileDirectory("test");
-    Model::initialize(object);
+    emit modelLoaded(true);
+
+
+    //Model::initialize(object);
 
 
     // test octree
 
-
-
-
+    setView(TRANSLATION_TAB);
 
     // write the final mesh into a file
     /*
@@ -118,7 +131,11 @@ void GLWidget::paintGL()
 
     view_matrix.setToIdentity();
     view_matrix.lookAt(camera_position, camera_direction, camera_up);
-    view_matrix.rotate(rot_cam_phi, 0.0, 1.0, 0.0);
+
+    if(this->viewState == TRANSLATION_VIEW_DEFAULT)
+    {
+        view_matrix.rotate(rot_cam_phi, 0.0, 1.0, 0.0);
+    }
 
     direction_light.setX(camera_direction.normalized().x() - camera_position.normalized().x());
     direction_light.setY(camera_direction.normalized().y() - camera_position.normalized().y());
@@ -131,6 +148,8 @@ void GLWidget::paintGL()
 
     model_matrix.setToIdentity();
     GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
+
+    /*
     for (int i = 0; i < object->getGeometry()->size(); i += 3) {
         if (object->getGeometry()->at(i) > x_max) {
             x_max = object->getGeometry()->at(i);
@@ -153,15 +172,26 @@ void GLWidget::paintGL()
             z_min = object->getGeometry()->at(i + 2);
         }
     }
+    */
 
-    model_matrix.translate(trans_x,0,-trans_z);
+    x_min = 0;
+    x_max = 0;
+    y_min = 0;
+    y_max = 0;
+    z_min = 0;
+    z_max = 0;
+
+
+    model_matrix.translate(-trans_x,trans_y,trans_z);
 
     model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
 
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
-    //model_matrix.scale(10.0);
+    QMatrix4x4 model_matrix_temp = model_matrix;
+
+    model_matrix.scale(scale_xyz);
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -171,6 +201,11 @@ void GLWidget::paintGL()
         shader->setUniformValue("color", QColor(115, 115, 85));
         object->render(shader, GL_TRIANGLES);
     }
+
+    model_matrix = model_matrix_temp;
+
+    shader->setUniformValue("nMatrix", view_matrix * model_matrix);
+    shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
     if(showInnerSurface)
     {
@@ -218,26 +253,44 @@ void GLWidget::resizeGL(int width, int height)
 void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 {
     if (left_pressed) {
-        if (mouse_pos.x() > ev->pos().x()) {
-            rot_obj_phi += (mouse_pos.x() - ev->pos().x());
-        }
-        if (mouse_pos.x() < ev->pos().x()) {
-            rot_obj_phi -= (ev->pos().x() - mouse_pos.x());
-        }
-        rot_obj_phi %= 360;
 
-        if (mouse_pos.y() > ev->pos().y()) {
-            rot_obj_psy += (mouse_pos.y() - ev->pos().y());
-        }
-        if (mouse_pos.y() < ev->pos().y()) {
-            rot_obj_psy -= (ev->pos().y() - mouse_pos.y());
-        }
-        rot_obj_psy %= 360;
+        if(this->viewState != TRANSLATION_VIEW_DEFAULT)
+        {
+            if(this->viewState == TRANSLATION_VIEW_XY){
+                this->trans_x += (mouse_pos.x() - ev->pos().x())/TRANSLATION_XY_RATIO;
+                this->trans_z += (mouse_pos.y() - ev->pos().y())/TRANSLATION_XY_RATIO;
+            }
+            else
+            if(this->viewState == TRANSLATION_VIEW_Z)
+            {
+                this->trans_y += (mouse_pos.y() - ev->pos().y())/TRANSLATION_Z_RATIO;
+            }
+            else
+            if(this->viewState == ROTATION_SCALE_VIEW)
+            {
+               if (mouse_pos.x() > ev->pos().x()) {
+                   rot_obj_phi += (mouse_pos.x() - ev->pos().x());
+               }
+               if (mouse_pos.x() < ev->pos().x()) {
+                   rot_obj_phi -= (ev->pos().x() - mouse_pos.x());
+               }
+               rot_obj_phi %= 360;
 
-        mouse_pos = ev->pos();
-        this->updateGL();
-    }
-    if (right_pressed) {
+               if (mouse_pos.y() > ev->pos().y()) {
+                   rot_obj_psy += (mouse_pos.y() - ev->pos().y());
+               }
+               if (mouse_pos.y() < ev->pos().y()) {
+                   rot_obj_psy -= (ev->pos().y() - mouse_pos.y());
+               }
+               rot_obj_psy %= 360;
+
+            }
+
+            mouse_pos = ev->pos();
+            this->updateGL();
+            return;
+        }
+
         if (mouse_pos.x() > ev->pos().x()) {
             rot_cam_phi += (mouse_pos.x() - ev->pos().x());
         }
@@ -248,6 +301,31 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 
         mouse_pos = ev->pos();
         this->updateGL();
+        return;
+
+    }
+    if (right_pressed) {
+
+        if(this->viewState == ROTATION_SCALE_VIEW)
+        {
+            scale_xyz += (ev->pos().y() - mouse_pos.y())/SCALE_RATIO;
+            scale_xyz = scale_xyz > 0.1f ? scale_xyz:0.1f;
+            scale_xyz = scale_xyz < 3.0f ? scale_xyz:3.0f;
+
+            mouse_pos = ev->pos();
+            this->updateGL();
+            return;
+        }
+
+        if(this->viewState != TRANSLATION_VIEW_DEFAULT)
+        {
+            mouse_pos = ev->pos();
+            return;
+        }
+
+        mouse_pos = ev->pos();
+        return;
+
     }
     if (middle_pressed) {
 
@@ -324,7 +402,8 @@ void GLWidget::showOnlyOuterSurface()
     showInnerSurface = false;
     showGrid = false;
 
-    this->repaint();
+    this->updateGL();
+
 }
 
 void GLWidget::showOnlyInnerSurface()
@@ -334,7 +413,8 @@ void GLWidget::showOnlyInnerSurface()
     showInnerSurface = true;
     showGrid = false;
 
-    this->repaint();
+    this->updateGL();
+
 }
 
 void GLWidget::showOnlyOctreeGrid()
@@ -344,7 +424,169 @@ void GLWidget::showOnlyOctreeGrid()
     showInnerSurface = false;
     showGrid = true;
 
-    this->repaint();
+    this->updateGL();
+
 }
 
 /* ----------------------------------------------- */
+
+void GLWidget::setView(int index)
+{
+
+    switch(index)
+    {
+        case TRANSLATION_TAB:
+            emit this->setViewXYSignal();
+        break;
+        case MODEL_TAB:
+            this->setViewDefault();
+        break;
+        case HOLLOWING_TAB:
+            this->setViewDefault();
+        break;
+
+    }
+
+}
+
+void GLWidget::setViewXY()
+{
+
+    camera_position.setX(0);
+    camera_position.setY(-1);
+    camera_position.setZ(0);
+    camera_direction.setX(0);
+    camera_direction.setY(0);
+    camera_direction.setZ(0);
+
+    camera_up.setX(0);
+    camera_up.setY(0);
+    camera_up.setZ(1);
+
+    this->viewState = TRANSLATION_VIEW_XY;
+
+    this->updateGL();
+
+}
+
+void GLWidget::setViewZ()
+{
+    camera_position.setX(0);
+    camera_position.setY(0);
+    camera_position.setZ(1);
+    camera_direction.setX(0);
+    camera_direction.setY(0);
+    camera_direction.setZ(0);
+
+    camera_up.setX(0);
+    camera_up.setY(1);
+    camera_up.setZ(0);
+
+    this->viewState = TRANSLATION_VIEW_Z;
+
+    this->updateGL();
+
+}
+
+void GLWidget::setViewRotationScale()
+{
+    camera_position.setX(1);
+    camera_position.setY(-0.75);
+    camera_position.setZ(1);
+    camera_direction.setX(0);
+    camera_direction.setY(0);
+    camera_direction.setZ(0);
+
+    camera_up.setX(0);
+    camera_up.setY(1);
+    camera_up.setZ(0);
+
+    this->viewState = ROTATION_SCALE_VIEW;
+
+    this->updateGL();
+
+}
+
+void GLWidget::setViewDefault()
+{
+    camera_position.setX(1);
+    camera_position.setY(-0.75);
+    camera_position.setZ(1);
+    camera_direction.setX(0);
+    camera_direction.setY(0);
+    camera_direction.setZ(0);
+
+    camera_up.setX(0);
+    camera_up.setY(1);
+    camera_up.setZ(0);
+
+    this->viewState = TRANSLATION_VIEW_DEFAULT;
+
+    this->updateGL();
+
+}
+
+void GLWidget::resetXY()
+{
+    this->trans_x = 0;
+    this->trans_z = 0;
+    this->updateGL();
+}
+
+void GLWidget::resetZ()
+{
+    this->trans_y = 0;
+    this->updateGL();
+}
+
+void GLWidget::resetRotationScale()
+{
+    this->rot_obj_phi = 0;
+    this->rot_obj_psy = 0;
+    this->scale_xyz = 1;
+    this->updateGL();
+}
+
+void GLWidget::resetAll()
+{
+
+    this->trans_x = 0;
+    this->trans_y = 0;
+    this->trans_z = 0;
+    this->rot_obj_phi = 0;
+    this->rot_obj_psy = 0;
+    this->scale_xyz = 1;
+    this->updateGL();
+}
+
+void GLWidget::setStartDepthValue(int value)
+{
+
+    this->startDepth = value;
+    if(this->maximumDepth<this->startDepth)
+    {
+       this->maximumDepth = this->startDepth;
+       emit setMaximumDepthSpinBoxValue(this->maximumDepth);
+    }
+
+}
+
+void GLWidget::setMaximumDepthValue(int value)
+{
+    this->maximumDepth = value;
+    if(this->maximumDepth<this->startDepth)
+    {
+       this->startDepth = this->maximumDepth;
+       emit setStartDepthSpinBoxValue(this->startDepth);
+    }
+}
+
+void GLWidget::setShellExtensionValue(int value)
+{
+    this->shellExtensionValue = value;
+}
+
+void GLWidget::calculateOctree()
+{
+
+}
