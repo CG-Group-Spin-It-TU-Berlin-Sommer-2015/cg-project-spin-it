@@ -9,6 +9,9 @@ GLWidget::GLWidget(QWidget *parent)
     showGrid = false;
     viewState = TRANSLATION_VIEW_XY;
 
+    saveAsTop = true;
+    object = NULL;
+
 }
 
 GLWidget::~GLWidget()
@@ -20,27 +23,38 @@ GLWidget::~GLWidget()
     delete rot_axis;
 }
 
-void GLWidget::initializeGL()
+void GLWidget::resetGLWidget()
 {
-
-    shellExtensionValue = 0;
-    emit setShellExtensionSpinBoxValue(shellExtensionValue);
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
 
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
     this->rot_cam_phi = 0;
+
     this->trans_x = 0.f;
     this->trans_y = 0.f;
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
-    this->startDepth = 2;
-    this->maximumDepth = 2;
+    this->startDepth = 3;
+    this->maximumDepth = 4;
     emit setStartDepthSpinBoxValue(this->startDepth);
     emit setMaximumDepthSpinBoxValue(this->maximumDepth);
+
+    shellExtensionValue = 0;
+    emit setShellExtensionSpinBoxValue(shellExtensionValue);
+
+    emit shellIsNotSet();
+    emit shellIsNotSet(true);
+
+}
+
+void GLWidget::initializeGL()
+{
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    resetGLWidget();
 
     qglClearColor(QColor(205, 205, 255));
 
@@ -72,26 +86,11 @@ void GLWidget::initializeGL()
 
     rot_axis = readMeshFromObjFileDirectory("rot_axis");
 
-    object = readMeshFromObjFileDirectory("test");
-    emit modelLoaded(true);
+    last_object_model_matrix.setToIdentity();
 
-
+    //object = readMeshFromObjFileDirectory("test");
+    //emit modelLoaded(true);
     //Model::initialize(object);
-
-
-    // test octree
-
-    setView(TRANSLATION_TAB);
-
-    // write the final mesh into a file
-    /*
-    octree.createInnerSurface();
-    Mesh* objectShell_flipped = octree.getMesh(true);
-    Mesh* merge1 = booleanUnion(object,rot_axis);
-    Mesh* merge2 = mergeMeshes(merge1,objectShell_flipped);
-    writeMeshFromObjFile("test.obj",merge2);
-    */
-
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -181,7 +180,6 @@ void GLWidget::paintGL()
     z_min = 0;
     z_max = 0;
 
-
     model_matrix.translate(-trans_x,trans_y,trans_z);
 
     model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
@@ -189,34 +187,34 @@ void GLWidget::paintGL()
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
-    QMatrix4x4 model_matrix_temp = model_matrix;
-
     model_matrix.scale(scale_xyz);
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
-    if(showOuterSurface)
+    if(showOuterSurface && object != NULL)
     {
         shader->setUniformValue("color", QColor(115, 115, 85));
         object->render(shader, GL_TRIANGLES);
     }
 
-    model_matrix = model_matrix_temp;
+    last_object_model_matrix = model_matrix;
+
+    model_matrix.setToIdentity();
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
-    if(showInnerSurface)
+    if(showInnerSurface && Model::shellMesh != NULL)
     {
         shader->setUniformValue("color", QColor(115, 115, 85));
-        //objectShell->render(shader, GL_TRIANGLES);
+        Model::shellMesh->render(shader, GL_TRIANGLES);
     }
 
-    if(showGrid)
+    if(showGrid && Model::shellMesh != NULL)
     {
         shader->setUniformValue("color", QColor(Qt::black));
-        //octree.render(shader);
+        Model::octree->render(shader);
     }
 
     model_matrix.setToIdentity();
@@ -368,23 +366,27 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 void GLWidget::loadNewMesh()
 {
     QString s = QFileDialog::getOpenFileName(this,tr("Open Mesh"), "../", tr("Meshes (*.obj)"));
-    Mesh* object = readMeshFromObjFile(s.toStdString());
-    Model::initialize(object);
+    Mesh* newObject = readMeshFromObjFile(s.toStdString());
 
-    if(object==0)
+    //Model::initialize(object);
+
+    if(newObject==NULL)
     {
         return;
     }
 
-    this->object = object;
+    if(object!=NULL)
+    {
+        delete object;
+    }
 
-    this->rot_obj_phi = 0;
-    this->rot_obj_psy = 0;
-    this->rot_cam_phi = 0;
-    this->trans_x = 0;
-    this->trans_z = 0;
+    object = newObject;
 
-    this->repaint();
+    resetGLWidget();
+
+    emit modelLoaded(true);
+
+    this->updateGL();
 }
 
 void GLWidget::makeItSpin()
@@ -588,5 +590,53 @@ void GLWidget::setShellExtensionValue(int value)
 
 void GLWidget::calculateOctree()
 {
+
+    Model::initializeOctree(
+                this->object,
+                this->startDepth,
+                this->maximumDepth,
+                this->shellExtensionValue,
+                this->last_object_model_matrix);
+
+    emit shellIsSet(true);
+
+    this->updateGL();
+}
+
+void GLWidget::saveMesh()
+{
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Mesh"),"spinIt.obj",tr("Meshes (*.obj)"));
+
+    if(fileName.isEmpty())
+    {
+        return;
+    }
+
+    if(saveAsTop)
+    {
+        saveMeshAsTop(fileName);
+    }
+    else
+    {
+        saveMeshAsYoyo(fileName);
+    }
+
+}
+
+void GLWidget::saveMeshAsTop(QString fileName)
+{
+
+    Mesh* merge1 = booleanUnion(Model::modifiedMesh,rot_axis);
+    Mesh* merge2 = mergeMeshes(merge1,Model::octree->getMesh(true));
+    writeMeshFromObjFile(fileName.toStdString(),merge2);
+
+}
+
+void GLWidget::saveMeshAsYoyo(QString fileName)
+{
+
+    Mesh* merge = mergeMeshes(Model::modifiedMesh,Model::octree->getMesh(true));
+    writeMeshFromObjFile(fileName.toStdString(),merge);
 
 }

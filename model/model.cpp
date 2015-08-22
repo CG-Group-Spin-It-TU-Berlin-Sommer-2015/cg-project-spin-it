@@ -11,6 +11,87 @@ float* Model::mesh_volume = 0;
 
 ExtendedOctree* Model::octree = 0;
 
+Mesh* Model::modifiedMesh = NULL;
+Mesh* Model::shellMesh = NULL;
+
+void Model::initializeOctree(
+        Mesh* originalMesh,
+        GLint startDepth,
+        GLint maximumDepth,
+        GLint shellExtensionValue,
+        QMatrix4x4 modelMatrix)
+{
+
+    QVector<GLfloat>* originalMeshGeometry = originalMesh->getGeometry();
+
+    QVector4D vec,tempVec;
+    vec.setW(1);
+
+    QVector<GLfloat>* newGeometry = new QVector<GLfloat>();
+    for (int i = 0; i < originalMeshGeometry->size(); i+=3) {
+
+        vec.setX(originalMeshGeometry->at(i+0));
+        vec.setY(originalMeshGeometry->at(i+1));
+        vec.setZ(originalMeshGeometry->at(i+2));
+
+        tempVec = modelMatrix*vec;
+
+        newGeometry->push_back(tempVec.x());
+        newGeometry->push_back(tempVec.y());
+        newGeometry->push_back(tempVec.z());
+    }
+
+    QVector<GLint>* originalMeshIndices = originalMesh->getIndices();
+
+    QVector<GLint>* newIndices = new QVector<GLint>();
+    for (int i = 0; i < originalMeshIndices->size(); i++) {
+        newIndices->push_back(originalMeshIndices->at(i));
+    }
+
+    Mesh* newModifiedMesh = new Mesh(newGeometry,newIndices);
+
+    if(modifiedMesh != NULL)
+    {
+        delete modifiedMesh;
+    }
+
+    modifiedMesh = newModifiedMesh;
+
+    if(octree == NULL)
+    {
+        octree = new ExtendedOctree();
+    }
+
+    octree->setMesh(modifiedMesh);
+    octree->setStartDepth(startDepth);
+    octree->setMaxDepth(maximumDepth);
+    octree->quantizeSurface();
+    octree->setupVectors();
+
+    octree->setupOctree();
+    octree->setShellNodeIndices();
+    octree->setOuterNodes();
+    octree->setInnerNodes();
+    octree->setInnerNodeIndices();
+    octree->adjustMaxDepth();
+    octree->increaseShell(shellExtensionValue);
+
+    octree->setShellNodeIndices();
+    octree->setInnerNodeIndices();
+
+    octree->createInnerSurface();
+
+    Mesh* newShellMesh = octree->getMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
+
+    return;
+}
 
 void Model::initialize(Mesh* mesh)
 {

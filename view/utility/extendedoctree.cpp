@@ -505,6 +505,7 @@ void ExtendedOctree::merge(GLint nodeIndex)
 void inline ExtendedOctree::handleShellNeighbor(GLint x, GLint y, GLint z, QVector<GLint>* backVec)
 {
 
+
     octreeNode* nodePointer = this->getLeafNodeByCoordinate(x,y,z);
 
     if(nodePointer == NULL)
@@ -530,43 +531,57 @@ void inline ExtendedOctree::handleShellNeighbor(GLint x, GLint y, GLint z, QVect
 
 }
 
-void ExtendedOctree::increaseShell(GLint loopAmount)
+void ExtendedOctree::increaseShell(GLint loopNumber)
 {
 
     octreeNode node;
 
+    // buffers
     QVector<GLint> tempVec1;
     QVector<GLint> tempVec2;
-
     QVector<GLint>* frontVec = &tempVec1;
     QVector<GLint>* backVec = &tempVec2;
 
+    // set front vector
     for(int i=0;i<this->shellNodeIndices.length();i++)
     {
         node = this->octreeNodes.data()[this->shellNodeIndices.data()[i]];
         frontVec->push_back(node.index);
     }
 
-    for(int i=0;i<loopAmount;i++)
+    for(int i=0;i<loopNumber;i++)
     {
 
-       for (int i=0;i<frontVec->size();i++)
+       for (int j=0;j<frontVec->size();j++)
        {
 
-            node = this->octreeNodes.data()[frontVec->data()[i]];
+            // current shell node
+            node = this->octreeNodes.data()[frontVec->data()[j]];
             GLint x = node.x;
             GLint y = node.y;
             GLint z = node.z;
+            GLint cell_length = node.cell_length;
 
-            handleShellNeighbor(x,y,z+1,backVec);
-            handleShellNeighbor(x,y,z-1,backVec);
-            handleShellNeighbor(x,y+1,z,backVec);
-            handleShellNeighbor(x,y-1,z,backVec);
-            handleShellNeighbor(x+1,y,z,backVec);
-            handleShellNeighbor(x-1,y,z,backVec);
+            // check neigbors
+
+            for(int k=0;k<cell_length;k++)
+            {
+                for(int l=0;l<cell_length;l++)
+                {
+
+                    handleShellNeighbor(x+k,            y+l,            z+cell_length,  backVec);
+                    handleShellNeighbor(x+k,            y+l,            z-1,            backVec);
+                    handleShellNeighbor(x+k,            y+cell_length,  z+l,            backVec);
+                    handleShellNeighbor(x+k,            y-1,            z+l,            backVec);
+                    handleShellNeighbor(x+cell_length,  y+k,            z+l,            backVec);
+                    handleShellNeighbor(x-1,            y+k,            z+l,            backVec);
+
+                }
+            }
 
        }
 
+       // change front and back buffer
        frontVec->clear();
 
        if(tempVec1.size()>0){

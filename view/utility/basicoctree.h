@@ -182,7 +182,7 @@ private:
     QOpenGLBuffer* ibo;
     QVector<int> cubeLineIndices;
 
-    QVector<GLfloat> raw_voxels;
+    QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
     Mesh* mesh;
 

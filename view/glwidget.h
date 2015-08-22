@@ -44,6 +44,7 @@ private:
 
     QMatrix4x4 projection_matrix;
     QMatrix4x4 model_matrix;
+    QMatrix4x4 last_object_model_matrix;
     QMatrix4x4 view_matrix;
 
     QVector3D camera_position;
@@ -76,6 +77,8 @@ private:
 
     QPoint mouse_pos;
 
+    bool saveAsTop;
+
     bool showOuterSurface;
     bool showInnerSurface;
     bool showGrid;
@@ -87,6 +90,8 @@ private:
 public:
     explicit GLWidget(QWidget *parent = 0);
     ~GLWidget();
+
+
 
 public slots:
     void loadNewMesh();
@@ -110,6 +115,7 @@ public slots:
 
     void setShellExtensionValue(int);
     void calculateOctree();
+    void saveMesh();
 
 signals:
     void setViewXYSignal();
@@ -120,6 +126,7 @@ signals:
     void modelLoaded(bool);
     void shellIsSet(bool);
     void shellIsNotSet(bool);
+    void shellIsNotSet();
 
 protected:
 
@@ -132,6 +139,11 @@ protected:
     void mouseMoveEvent(QMouseEvent* ev);
     void mousePressEvent(QMouseEvent* ev);
     void mouseReleaseEvent(QMouseEvent* ev);
+
+    void saveMeshAsTop(QString fileName);
+    void saveMeshAsYoyo(QString fileName);
+
+    void resetGLWidget();
 
 };
 

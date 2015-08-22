@@ -69,15 +69,23 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector
     this->vertex_normals = vertex_normals;
     this->surface_normals = new QVector<GLfloat>();
     this->indices = indices;
+
     this->isDirty = true;
 }
 
 Mesh::~Mesh()
 {
     geometry->clear();
+    delete geometry;
+
     vertex_normals->clear();
+    delete vertex_normals;
+
     surface_normals->clear();
+    delete surface_normals;
+
     indices->clear();
+    delete indices;
 }
 
 QVector<GLfloat>* Mesh::getGeometry()

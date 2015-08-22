@@ -68,8 +68,8 @@ void BasicOctree::quantizeSurface()
 
     this->max_g = max_g;
 
-    this->raw_voxels.clear();
-    this->raw_voxels.reserve( length*pow(4,2) );
+    this->rawVoxels.clear();
+    this->rawVoxels.reserve( length*pow(4,2) );
 
     QVector<GLfloat> triangleBuffer1;
     QVector<GLfloat> triangleBuffer2;
@@ -147,15 +147,15 @@ void BasicOctree::quantizeSurface()
 
             if(max_v<0.5f)
             {
-                this->raw_voxels.push_back(p1.x());
-                this->raw_voxels.push_back(p1.y());
-                this->raw_voxels.push_back(p1.z());
-                this->raw_voxels.push_back(p2.x());
-                this->raw_voxels.push_back(p2.y());
-                this->raw_voxels.push_back(p2.z());
-                this->raw_voxels.push_back(p3.x());
-                this->raw_voxels.push_back(p3.y());
-                this->raw_voxels.push_back(p3.z());
+                this->rawVoxels.push_back(p1.x());
+                this->rawVoxels.push_back(p1.y());
+                this->rawVoxels.push_back(p1.z());
+                this->rawVoxels.push_back(p2.x());
+                this->rawVoxels.push_back(p2.y());
+                this->rawVoxels.push_back(p2.z());
+                this->rawVoxels.push_back(p3.x());
+                this->rawVoxels.push_back(p3.y());
+                this->rawVoxels.push_back(p3.z());
 
             }
             else{
@@ -578,7 +578,7 @@ void BasicOctree::createInnerSurface()
 
     }
 
-    return;
+    geometryMap.clear();
 }
 
 void BasicOctree::setOuterNodes()
@@ -757,23 +757,23 @@ void BasicOctree::setupVectors()
 {
 
     QVector<QVector3D> tempVoxels;
-    tempVoxels.reserve(this->raw_voxels.length()/3);
+    tempVoxels.reserve(this->rawVoxels.length()/3);
 
     this->voxels.clear();
-    this->voxels.reserve(this->raw_voxels.length()/3);
+    this->voxels.reserve(this->rawVoxels.length()/3);
 
     GLint length;
 
-    length = this->raw_voxels.length();
+    length = this->rawVoxels.length();
 
     for (GLint i = 0; i < length ; i+=3)
     {
 
       QVector3D point;
 
-      point.setX(this->raw_voxels.at(i+0));
-      point.setY(this->raw_voxels.at(i+1));
-      point.setZ(this->raw_voxels.at(i+2));
+      point.setX(this->rawVoxels.at(i+0));
+      point.setY(this->rawVoxels.at(i+1));
+      point.setZ(this->rawVoxels.at(i+2));
 
       voxels.push_back(point);
     }
@@ -813,12 +813,16 @@ void BasicOctree::setupOctree(){
     freeIndicesForAllNodes.clear();
     freeIndicesForInnerNodes.clear();
 
+    this->innerNodeIndices.clear();
     this->shellNodeIndices.clear();
+
+    this->octreeNodes.clear();
 
     this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.length(),0,0,0);
 
+    this->rawVoxels.clear();
     this->voxels.clear();
-
+    this->isDirty = true;
 }
 
 GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z){
