@@ -5,6 +5,9 @@
 
 namespace octree {
 
+/**
+ * @brief The cubeObject struct Needed for the optimization.
+ */
 struct cubeObject{
 
 public:
@@ -21,12 +24,12 @@ class ExtendedOctree : public BasicOctree
 public:
     ExtendedOctree();
 
-    void updateBetas();
+    void updateBetaValues();
     QVector<octree::cubeObject>* getInnerCubes();
 
     void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
-    void getInnerNodesForNode(GLint index,QVector<GLint>* indices);
-    void getInnerNodesOfLeafSet(QVector<GLint>* indices);
+    void getInnerLeavesForNode(GLint index,QVector<GLint>* indices);
+    void getInnerLeafSets(QVector<GLint>* indices);
     void getInnerLeaves(QVector<GLint>* indices);
 
     bool splitAndMerge(GLfloat epsilon);

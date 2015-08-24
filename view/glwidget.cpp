@@ -1,5 +1,7 @@
 #include "glwidget.h"
 
+#define DEFAULT_SCALE_FACTOR 1.66238999
+
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {   
@@ -10,8 +12,12 @@ GLWidget::GLWidget(QWidget *parent)
     viewState = TRANSLATION_VIEW_XY;
 
     saveAsTop = true;
-    object = NULL;
+    object = NULL; 
 
+    middle.setX(0);
+    middle.setY(0);
+    middle.setZ(0);
+    scaleFactor = 1;
 }
 
 GLWidget::~GLWidget()
@@ -146,48 +152,15 @@ void GLWidget::paintGL()
     shader->setUniformValue("diffuse_light", diffuse_light);
 
     model_matrix.setToIdentity();
-    GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
-
-    /*
-    for (int i = 0; i < object->getGeometry()->size(); i += 3) {
-        if (object->getGeometry()->at(i) > x_max) {
-            x_max = object->getGeometry()->at(i);
-        }
-        if (object->getGeometry()->at(i) < x_min) {
-            x_min = object->getGeometry()->at(i);
-        }
-
-        if (object->getGeometry()->at(i + 1) > y_max) {
-            y_max = object->getGeometry()->at(i + 1);
-        }
-        if (object->getGeometry()->at(i + 1) < y_min) {
-            y_min = object->getGeometry()->at(i + 1);
-        }
-
-        if (object->getGeometry()->at(i + 2) > z_max) {
-            z_max = object->getGeometry()->at(i + 2);
-        }
-        if (object->getGeometry()->at(i + 2) < z_min) {
-            z_min = object->getGeometry()->at(i + 2);
-        }
-    }
-    */
-
-    x_min = 0;
-    x_max = 0;
-    y_min = 0;
-    y_max = 0;
-    z_min = 0;
-    z_max = 0;
 
     model_matrix.translate(-trans_x,trans_y,trans_z);
-
-    model_matrix.translate(-(x_max + x_min) / 2, -(y_max + y_min) / 2, -(z_max + z_min) / 2);
+    model_matrix.translate(-middle.x(), -middle.y(), -middle.z());
 
     model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
     model_matrix.scale(scale_xyz);
+    model_matrix.scale(DEFAULT_SCALE_FACTOR/scaleFactor);
 
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -383,6 +356,9 @@ void GLWidget::loadNewMesh()
     object = newObject;
 
     resetGLWidget();
+
+    middle = object->getMiddle();
+    scaleFactor = object->getMaxDistance2Middle();
 
     emit modelLoaded(true);
 

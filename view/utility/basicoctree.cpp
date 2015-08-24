@@ -33,6 +33,15 @@ void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,Q
 
 }
 
+void inline BasicOctree::setRawVoxel(GLfloat x,GLfloat y,GLfloat z)
+{
+
+    this->rawVoxels.push_back(x);
+    this->rawVoxels.push_back(y);
+    this->rawVoxels.push_back(z);
+
+}
+
 void BasicOctree::quantizeSurface()
 {
 
@@ -147,16 +156,47 @@ void BasicOctree::quantizeSurface()
 
             if(max_v<0.5f)
             {
-                this->rawVoxels.push_back(p1.x());
-                this->rawVoxels.push_back(p1.y());
-                this->rawVoxels.push_back(p1.z());
-                this->rawVoxels.push_back(p2.x());
-                this->rawVoxels.push_back(p2.y());
-                this->rawVoxels.push_back(p2.z());
-                this->rawVoxels.push_back(p3.x());
-                this->rawVoxels.push_back(p3.y());
-                this->rawVoxels.push_back(p3.z());
 
+                this->setRawVoxel(p1.x(),p1.y(),p1.z());
+                this->setRawVoxel(p2.x(),p2.y(),p2.z());
+                this->setRawVoxel(p3.x(),p3.y(),p3.z());
+
+                /*
+                QVector3D middle = (p1+p2+p1)/3;
+                GLfloat middleX = middle.x();
+                GLfloat middleY = middle.y();
+                GLfloat middleZ = middle.z();
+
+                this->setRawVoxel(middleX-1,middleY-1,middleZ-1);
+                this->setRawVoxel(middleX-1,middleY-1,middleZ+0);
+                this->setRawVoxel(middleX-1,middleY-1,middleZ+1);
+                this->setRawVoxel(middleX-1,middleY+0,middleZ-1);
+                this->setRawVoxel(middleX-1,middleY+0,middleZ+0);
+                this->setRawVoxel(middleX-1,middleY+0,middleZ+1);
+                this->setRawVoxel(middleX-1,middleY+1,middleZ-1);
+                this->setRawVoxel(middleX-1,middleY+1,middleZ+0);
+                this->setRawVoxel(middleX-1,middleY+1,middleZ+1);
+
+                this->setRawVoxel(middleX+0,middleY-1,middleZ-1);
+                this->setRawVoxel(middleX+0,middleY-1,middleZ+0);
+                this->setRawVoxel(middleX+0,middleY-1,middleZ+1);
+                this->setRawVoxel(middleX+0,middleY+0,middleZ-1);
+                this->setRawVoxel(middleX+0,middleY+0,middleZ+0);
+                this->setRawVoxel(middleX+0,middleY+0,middleZ+1);
+                this->setRawVoxel(middleX+0,middleY+1,middleZ-1);
+                this->setRawVoxel(middleX+0,middleY+1,middleZ+0);
+                this->setRawVoxel(middleX+0,middleY+1,middleZ+1);
+
+                this->setRawVoxel(middleX+1,middleY-1,middleZ-1);
+                this->setRawVoxel(middleX+1,middleY-1,middleZ+0);
+                this->setRawVoxel(middleX+1,middleY-1,middleZ+1);
+                this->setRawVoxel(middleX+1,middleY+0,middleZ-1);
+                this->setRawVoxel(middleX+1,middleY+0,middleZ+0);
+                this->setRawVoxel(middleX+1,middleY+0,middleZ+1);
+                this->setRawVoxel(middleX+1,middleY+1,middleZ-1);
+                this->setRawVoxel(middleX+1,middleY+1,middleZ+0);
+                this->setRawVoxel(middleX+1,middleY+1,middleZ+1);
+                */
             }
             else{
 
@@ -285,16 +325,16 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInte
 
     if(addToInteriors)
     {
-        if(!this->freeIndicesForInnerNodes.empty())
+        if(!this->freeIndicesForInnerLeaves.empty())
         {
-            node.typeVectorIndex = this->freeIndicesForInnerNodes.last();
-            this->freeIndicesForInnerNodes.pop_back();
-            this->innerNodeIndices.data()[node.typeVectorIndex] = node.index;
+            node.typeVectorIndex = this->freeIndicesForInnerLeaves.last();
+            this->freeIndicesForInnerLeaves.pop_back();
+            this->innerLeafIndices.data()[node.typeVectorIndex] = node.index;
         }
         else
         {
-            node.typeVectorIndex = this->freeIndicesForInnerNodes.length();
-            this->innerNodeIndices.push_back(node.index);
+            node.typeVectorIndex = this->freeIndicesForInnerLeaves.length();
+            this->innerLeafIndices.push_back(node.index);
         }
     }
 
@@ -460,8 +500,8 @@ void BasicOctree::setInnerNodeIndices()
 
     GLint length = this->octreeNodes.length();
 
-    this->innerNodeIndices.clear();
-    this->freeIndicesForInnerNodes.clear();
+    this->innerLeafIndices.clear();
+    this->freeIndicesForInnerLeaves.clear();
 
     for(int i=1;i<length;i++)
     {
@@ -472,7 +512,7 @@ void BasicOctree::setInnerNodeIndices()
            continue;
          }
 
-         innerNodeIndices.push_back(i);
+         innerLeafIndices.push_back(i);
     }
 
 }
@@ -507,11 +547,16 @@ void BasicOctree::createInnerSurface()
     indices.clear();
     geometryMap.clear();
 
-    GLint length = innerNodeIndices.length();
+    GLint length = innerLeafIndices.length();
 
     for(int i=0;i<length;i++)
     {
-        octreeNode* nodePointer = &this->octreeNodes.data()[innerNodeIndices.at(i)];
+        octreeNode* nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
+
+        if(nodePointer->invalid)
+        {
+            continue;
+        }
 
         if(!nodePointer->isVoid)
         {
@@ -720,12 +765,16 @@ void BasicOctree::setInnerNodes()
 
     octreeNode* nodePointer;
 
-    GLint length = this->octreeNodes.length();
-
-    for(int i=1;i<length;i++)
+    for(int i=1;i<this->octreeNodes.length();i++)
     {
 
          nodePointer = &this->octreeNodes.data()[i];
+
+         if(nodePointer->invalid)
+         {
+           continue;
+         }
+
          if(!nodePointer->leaf || nodePointer->isSet || nodePointer->shellNode)
          {
            continue;
@@ -733,7 +782,7 @@ void BasicOctree::setInnerNodes()
 
          nodePointer->isSet = true;
          nodePointer->inside = true;
-         nodePointer->typeVectorIndex = innerNodeIndices.size();
+         nodePointer->typeVectorIndex = innerLeafIndices.size();
 
     }
 
@@ -811,9 +860,9 @@ GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 void BasicOctree::setupOctree(){
 
     freeIndicesForAllNodes.clear();
-    freeIndicesForInnerNodes.clear();
+    freeIndicesForInnerLeaves.clear();
 
-    this->innerNodeIndices.clear();
+    this->innerLeafIndices.clear();
     this->shellNodeIndices.clear();
 
     this->octreeNodes.clear();
@@ -1059,7 +1108,6 @@ void BasicOctree::render(QGLShaderProgram* shader)
                 continue;
             }
 
-
             if( !node.inside || node.shellNode )
             {
                 continue;
@@ -1140,35 +1188,3 @@ void BasicOctree::render(QGLShaderProgram* shader)
     shader->disableAttributeArray("geometry");
 
 }
-
-/*
-void Octree2::setupOctree_pcl()
-{
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-
-    GLint length = this->raw_voxels.length();
-
-    cloud->width = length;
-    cloud->height = 1;
-    cloud->points.resize (cloud->width * cloud->height);
-
-    for (GLint i = 0; i < length ; i+=3)
-    {
-
-      cloud->points[i].x = this->raw_voxels.at(i+0);
-      cloud->points[i].y = this->raw_voxels.at(i+1);
-      cloud->points[i].z = this->raw_voxels.at(i+2);
-    }
-
-    float resolution_octree = 0.5f;
-
-    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree (resolution_octree);
-
-
-    octree.setInputCloud (cloud);
-    octree.defineBoundingBox ();
-    octree.addPointsFromInputCloud ();
-
-}
-*/

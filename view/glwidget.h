@@ -70,6 +70,9 @@ private:
 
     int rot_cam_phi;
 
+    QVector3D middle;
+    GLfloat scaleFactor;
+
     GLfloat trans_x;
     GLfloat trans_y;
     GLfloat trans_z;

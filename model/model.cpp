@@ -192,7 +192,7 @@ void Model::hollow()
         }
 
         // set new betas and clrea cubeVector
-        octree->updateBetas();
+        octree->updateBetaValues();
 
         // do split and merge
         not_converged = octree->splitAndMerge(0);

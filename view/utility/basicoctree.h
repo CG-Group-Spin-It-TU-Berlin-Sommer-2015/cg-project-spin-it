@@ -10,15 +10,6 @@
 
 #include "mesh.h"
 
-/*
-#include <pcl/point_cloud.h>
-#include <Eigen/StdVector>
-#include <pcl/pcl_config.h>
-#include <pcl/pcl_macros.h>
-#include <pcl/octree/octree_base.h>
-#include <pcl/octree/octree.h>
-*/
-
 namespace octree
 {
 
@@ -136,8 +127,6 @@ public:
 
     void setupVectors();
 
-    //void setupOctree_pcl();
-
     void setupOctree();
 
     void setOuterNodes();
@@ -157,6 +146,8 @@ public:
     void setShellNodeIndices();
 
 private:
+
+    void setRawVoxel(GLfloat x,GLfloat y,GLfloat z);
 
     bool addTriangle(GLint x, GLint y, GLint z);
     void createTriangle(GLint x, GLint y, GLint z, GLint code);
@@ -192,11 +183,11 @@ protected:
 
     GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
-    QVector<GLint> innerNodeIndices;
+    QVector<GLint> innerLeafIndices;
     QVector<GLint> shellNodeIndices;
 
     QVector<GLint> freeIndicesForAllNodes;
-    QVector<GLint> freeIndicesForInnerNodes;
+    QVector<GLint> freeIndicesForInnerLeaves;
 
     GLint startDepth;
     GLint maxDepth;
