@@ -159,6 +159,10 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     shader->disableAttributeArray("geometry");
 }
 
+/**
+ * @brief Mesh::getMiddle
+ * @return
+ */
 QVector3D Mesh::getMiddle()
 {
     GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
@@ -203,6 +207,10 @@ QVector3D Mesh::getMiddle()
     return middle;
 }
 
+/**
+ * @brief Mesh::getMaxDistance2Middle
+ * @return
+ */
 GLfloat Mesh::getMaxDistance2Middle()
 {
    QVector3D middle = getMiddle();
@@ -237,4 +245,56 @@ QVector3D Mesh::getMean()
     mean.setY(mean.y() / (geometry->size() / 3));
     mean.setZ(mean.z() / (geometry->size() / 3));
     return mean;
+}
+
+/**
+ * @brief Mesh::copy
+ * @return
+ */
+Mesh* Mesh::copy()
+{
+
+    QVector<GLfloat>* newGeometry = new QVector<GLfloat>();
+    for (int i = 0; i < geometry->size(); i+=3) {
+
+        newGeometry->push_back(geometry->at(i+0));
+        newGeometry->push_back(geometry->at(i+1));
+        newGeometry->push_back(geometry->at(i+2));
+    }
+
+    QVector<GLint>* newIndices = new QVector<GLint>();
+    for (int i = 0; i < indices->size(); i++) {
+        newIndices->push_back(indices->at(i));
+    }
+
+    return new Mesh(newGeometry,newIndices);
+
+}
+
+/**
+ * @brief Mesh::transform
+ * @param matrix
+ */
+void Mesh::transform(QMatrix4x4 matrix)
+{
+
+    QVector4D vec,tempVec;
+    vec.setW(1);
+
+    GLfloat* data = geometry->data();
+
+    for (int i = 0; i < geometry->size(); i+=3) {
+
+        vec.setX(data[i+0]);
+        vec.setY(data[i+1]);
+        vec.setZ(data[i+2]);
+
+        tempVec = matrix*vec;
+
+        data[i+0] = tempVec.x();
+        data[i+1] = tempVec.y();
+        data[i+2] = tempVec.z();
+
+    }
+
 }

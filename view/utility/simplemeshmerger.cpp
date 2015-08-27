@@ -1,5 +1,11 @@
 #include "simplemeshmerger.h"
 
+/**
+ * @brief mergeMeshes
+ * @param mesh1
+ * @param mesh2
+ * @return
+ */
 Mesh* mergeMeshes(Mesh* mesh1, Mesh* mesh2)
 {
 
@@ -45,4 +51,5 @@ Mesh* mergeMeshes(Mesh* mesh1, Mesh* mesh2)
 
     return new Mesh(geometry,indices);
 }
+
 

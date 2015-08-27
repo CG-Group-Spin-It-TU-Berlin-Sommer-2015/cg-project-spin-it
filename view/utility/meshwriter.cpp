@@ -2,6 +2,12 @@
 
 using namespace std;
 
+/**
+ * @brief writeMeshFromObjFile
+ * @param file_name
+ * @param mesh
+ * @return
+ */
 bool writeMeshFromObjFile (string file_name, Mesh* mesh)
 {
 

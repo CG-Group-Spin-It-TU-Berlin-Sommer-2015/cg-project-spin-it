@@ -13,11 +13,22 @@ rootNodeIndex(-1)
 
 }
 
+/**
+ * @brief BasicOctree::setMesh Set the mesh for the octree
+ * @param mesh
+ */
 void BasicOctree::setMesh(Mesh* mesh)
 {
     this->mesh = mesh;
 }
 
+/**
+ * @brief BasicOctree::addTriangle Set the triangle defined be the three points
+ * @param p1 point 1
+ * @param p2 point 2
+ * @param p3 point 3
+ * @param buffer triangle buffer
+ */
 void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer)
 {
 
@@ -33,6 +44,12 @@ void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,Q
 
 }
 
+/**
+ * @brief BasicOctree::setRawVoxel Set a voxel
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ */
 void inline BasicOctree::setRawVoxel(GLfloat x,GLfloat y,GLfloat z)
 {
 
@@ -42,19 +59,22 @@ void inline BasicOctree::setRawVoxel(GLfloat x,GLfloat y,GLfloat z)
 
 }
 
+/**
+ * @brief BasicOctree::quantizeSurface Quantize the surface of the mesh
+ */
 void BasicOctree::quantizeSurface()
 {
-
-    mean = mesh->getMean();
-
-    GLfloat x = mean.x();
-    GLfloat y = mean.y();
-    GLfloat z = mean.z();
 
     if(this->mesh == NULL)
     {
         return;
     }
+
+    mean = mesh->getMean();
+    GLfloat x = mean.x();
+    GLfloat y = mean.y();
+    GLfloat z = mean.z();
+
 
     GLfloat* gvd = this->mesh->getGeometry()->data();
     GLint* ivd = this->mesh->getIndices()->data();
@@ -62,6 +82,7 @@ void BasicOctree::quantizeSurface()
 
     GLdouble max_g = 0;
 
+    // search for the maximal coordiante
     for (GLint i=0;i<length;i+=3)
     {
         max_g = std::max(max_g,(double)(fabs(gvd[ivd[i+0]*3+0]-x) ));
@@ -96,6 +117,7 @@ void BasicOctree::quantizeSurface()
     plane_length = axis_length*axis_length;
     cell_length = (max_g*2)/axis_length;
 
+    // add the triangles to the initial front vector
     for (GLint i=0;i<length;i+=3)
     {
         GLfloat x1 = (gvd[ivd[i+0]*3+0]+px)/cell_length;
@@ -122,12 +144,14 @@ void BasicOctree::quantizeSurface()
     QVector3D p1,p2,p3;
     GLdouble max_v = 0;
 
+    // create a point cloud for the triangles
     while(frontBuffer->size()>0)
     {
 
         while(frontBuffer->size()>0)
         {
 
+            // get the points for the next triangle
             p3.setZ(frontBuffer->last());frontBuffer->pop_back();
             p3.setY(frontBuffer->last());frontBuffer->pop_back();
             p3.setX(frontBuffer->last());frontBuffer->pop_back();
@@ -156,54 +180,20 @@ void BasicOctree::quantizeSurface()
 
             if(max_v<0.5f)
             {
+                // triangle is small enough
 
+                // add raw voxel
                 this->setRawVoxel(p1.x(),p1.y(),p1.z());
                 this->setRawVoxel(p2.x(),p2.y(),p2.z());
                 this->setRawVoxel(p3.x(),p3.y(),p3.z());
 
-                /*
-                QVector3D middle = (p1+p2+p1)/3;
-                GLfloat middleX = middle.x();
-                GLfloat middleY = middle.y();
-                GLfloat middleZ = middle.z();
-
-                this->setRawVoxel(middleX-1,middleY-1,middleZ-1);
-                this->setRawVoxel(middleX-1,middleY-1,middleZ+0);
-                this->setRawVoxel(middleX-1,middleY-1,middleZ+1);
-                this->setRawVoxel(middleX-1,middleY+0,middleZ-1);
-                this->setRawVoxel(middleX-1,middleY+0,middleZ+0);
-                this->setRawVoxel(middleX-1,middleY+0,middleZ+1);
-                this->setRawVoxel(middleX-1,middleY+1,middleZ-1);
-                this->setRawVoxel(middleX-1,middleY+1,middleZ+0);
-                this->setRawVoxel(middleX-1,middleY+1,middleZ+1);
-
-                this->setRawVoxel(middleX+0,middleY-1,middleZ-1);
-                this->setRawVoxel(middleX+0,middleY-1,middleZ+0);
-                this->setRawVoxel(middleX+0,middleY-1,middleZ+1);
-                this->setRawVoxel(middleX+0,middleY+0,middleZ-1);
-                this->setRawVoxel(middleX+0,middleY+0,middleZ+0);
-                this->setRawVoxel(middleX+0,middleY+0,middleZ+1);
-                this->setRawVoxel(middleX+0,middleY+1,middleZ-1);
-                this->setRawVoxel(middleX+0,middleY+1,middleZ+0);
-                this->setRawVoxel(middleX+0,middleY+1,middleZ+1);
-
-                this->setRawVoxel(middleX+1,middleY-1,middleZ-1);
-                this->setRawVoxel(middleX+1,middleY-1,middleZ+0);
-                this->setRawVoxel(middleX+1,middleY-1,middleZ+1);
-                this->setRawVoxel(middleX+1,middleY+0,middleZ-1);
-                this->setRawVoxel(middleX+1,middleY+0,middleZ+0);
-                this->setRawVoxel(middleX+1,middleY+0,middleZ+1);
-                this->setRawVoxel(middleX+1,middleY+1,middleZ-1);
-                this->setRawVoxel(middleX+1,middleY+1,middleZ+0);
-                this->setRawVoxel(middleX+1,middleY+1,middleZ+1);
-                */
             }
             else{
 
+                // split triangle into four parts and add them to the back buffer
                 QVector3D newp1 = p1+(p2-p1)/2;
                 QVector3D newp2 = p1+(p3-p1)/2;
                 QVector3D newp3 = p2+(p3-p2)/2;
-
                 this->addTriangle(&p1,&newp2,&newp1,backBuffer);
                 this->addTriangle(&p2,&newp1,&newp3,backBuffer);
                 this->addTriangle(&p3,&newp3,&newp2,backBuffer);
@@ -212,6 +202,7 @@ void BasicOctree::quantizeSurface()
             }
         }
 
+        // switch buffers
         if(triangleBuffer1.size()>0)
         {
             frontBuffer = &triangleBuffer1;
@@ -226,11 +217,26 @@ void BasicOctree::quantizeSurface()
     }
 }
 
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z)
 {
     return getLeafNodeByCoordinate(x,y,z,this->rootNodeIndex);
 }
 
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates starting from specific node
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @param startNodeIndex index of start node
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLint startNodeIndex)
 {
     if(x<0 || y<0 || z<0)
@@ -245,6 +251,14 @@ octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLin
     return getLeafNodeByCoordinateHelper(x,y,z,startNodeIndex);
 }
 
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinateHelper
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @param nodeIndex index of node
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z, GLint nodeIndex)
 {
     octreeNode* nodePointer = &this->octreeNodes.data()[nodeIndex];
@@ -258,6 +272,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
     GLint yarea = (nodePointer->y+(nodePointer->cell_length>>1))<=y?1:0;
     GLint zarea = (nodePointer->z+(nodePointer->cell_length>>1))<=z?1:0;
 
+    // choose next octree node
     GLint code = zarea*1+yarea*2+xarea*4;
 
     switch(code){
@@ -274,7 +289,15 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
     return NULL;
 }
 
-bool inline BasicOctree::testNeighborNode(GLint x, GLint y, GLint z, octreeNode* nodePointer)
+/**
+ * @brief BasicOctree::checkNeighborNode
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @param nodePointer pointer for node
+ * @return  true if
+ */
+bool inline BasicOctree::checkNeighborNode(GLint x, GLint y, GLint z, octreeNode* nodePointer)
 {
 
     octreeNode* neighborNodePointer = this->getLeafNodeByCoordinate(x,y,z);
@@ -289,6 +312,16 @@ bool inline BasicOctree::testNeighborNode(GLint x, GLint y, GLint z, octreeNode*
     return false;
 }
 
+/**
+ * @brief BasicOctree::createNode
+ * @param x
+ * @param y
+ * @param z
+ * @param depth
+ * @param addToInteriors
+ * @param parentIndex
+ * @return
+ */
 GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex){
 
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
@@ -365,6 +398,13 @@ GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 
 }
 
+/**
+ * @brief BasicOctree::addTriangle
+ * @param x
+ * @param y
+ * @param z
+ * @return
+ */
 bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 {
     octreeNode* nodePointer = this->getLeafNodeByCoordinate(x,y,z);
@@ -372,6 +412,13 @@ bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
     return nodePointer->shellNode || (nodePointer->isSet && nodePointer->inside && !nodePointer->isVoid);
 }
 
+/**
+ * @brief BasicOctree::createTriangle
+ * @param x
+ * @param y
+ * @param z
+ * @param code
+ */
 void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 {
 
@@ -493,6 +540,9 @@ void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 
 }
 
+/**
+ * @brief BasicOctree::setInnerNodeIndices
+ */
 void BasicOctree::setInnerNodeIndices()
 {
 
@@ -517,6 +567,9 @@ void BasicOctree::setInnerNodeIndices()
 
 }
 
+/**
+ * @brief BasicOctree::setShellNodeIndices
+ */
 void BasicOctree::setShellNodeIndices()
 {
 
@@ -540,6 +593,9 @@ void BasicOctree::setShellNodeIndices()
 
 }
 
+/**
+ * @brief BasicOctree::createInnerSurface
+ */
 void BasicOctree::createInnerSurface()
 {
 
@@ -626,6 +682,9 @@ void BasicOctree::createInnerSurface()
     geometryMap.clear();
 }
 
+/**
+ * @brief BasicOctree::setOuterNodes
+ */
 void BasicOctree::setOuterNodes()
 {
     octreeNode* nodePointer;
@@ -760,6 +819,9 @@ void BasicOctree::setOuterNodes()
     return;
 }
 
+/**
+ * @brief BasicOctree::setInnerNodes
+ */
 void BasicOctree::setInnerNodes()
 {
 
@@ -802,6 +864,9 @@ bool compare (const QVector3D & a, const QVector3D & b)
   return false;
 }
 
+/**
+ * @brief BasicOctree::setupVectors
+ */
 void BasicOctree::setupVectors()
 {
 
@@ -829,6 +894,14 @@ void BasicOctree::setupVectors()
 
 }
 
+/**
+ * @brief BasicOctree::sortHalf
+ * @param start
+ * @param end
+ * @param coor
+ * @param prior
+ * @return
+ */
 GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 {
 
@@ -857,6 +930,9 @@ GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
     return tempEnd;
 }
 
+/**
+ * @brief BasicOctree::setupOctree
+ */
 void BasicOctree::setupOctree(){
 
     freeIndicesForAllNodes.clear();
@@ -874,6 +950,16 @@ void BasicOctree::setupOctree(){
     this->isDirty = true;
 }
 
+/**
+ * @brief BasicOctree::setupOctreeHelper
+ * @param depth
+ * @param start
+ * @param end
+ * @param x
+ * @param y
+ * @param z
+ * @return
+ */
 GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z){
 
 
@@ -954,6 +1040,10 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     return node.index;
 }
 
+/**
+ * @brief BasicOctree::setStartDepth
+ * @param depth
+ */
 void BasicOctree::setStartDepth(GLint depth){
 
     GLint minDepthLimit = 2;
@@ -966,6 +1056,10 @@ void BasicOctree::setStartDepth(GLint depth){
     this->startDepth = depth;
 }
 
+/**
+ * @brief BasicOctree::setMaxDepth
+ * @param depth
+ */
 void BasicOctree::setMaxDepth(GLint depth){
 
     GLint minDepthLimit = 2;
@@ -978,6 +1072,9 @@ void BasicOctree::setMaxDepth(GLint depth){
     this->maxDepth = depth;
 }
 
+/**
+ * @brief BasicOctree::adjustMaxDepth
+ */
 void BasicOctree::adjustMaxDepth()
 {
     GLint diff = this->maxDepth-startDepth;
@@ -1000,6 +1097,11 @@ void BasicOctree::adjustMaxDepth()
 
 }
 
+/**
+ * @brief BasicOctree::getMesh
+ * @param flip
+ * @return
+ */
 Mesh* BasicOctree::getMesh(bool flip)
 {
 
@@ -1036,6 +1138,10 @@ Mesh* BasicOctree::getMesh(bool flip)
     return mesh;
 }
 
+/**
+ * @brief BasicOctree::getPointMesh
+ * @return
+ */
 Mesh* BasicOctree::getPointMesh()
 {
 
@@ -1074,6 +1180,10 @@ Mesh* BasicOctree::getPointMesh()
 
 }
 
+/**
+ * @brief BasicOctree::render
+ * @param shader
+ */
 void BasicOctree::render(QGLShaderProgram* shader)
 {
 

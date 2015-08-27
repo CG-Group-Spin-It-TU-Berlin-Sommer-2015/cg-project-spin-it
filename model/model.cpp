@@ -14,41 +14,20 @@ ExtendedOctree* Model::octree = 0;
 Mesh* Model::modifiedMesh = NULL;
 Mesh* Model::shellMesh = NULL;
 
+/**
+ * @brief Model::initializeOctree
+ * @param originalMesh
+ * @param startDepth
+ * @param maximumDepth
+ * @param shellExtensionValue
+ * @param modelMatrix
+ */
 void Model::initializeOctree(
-        Mesh* originalMesh,
+        Mesh* newModifiedMesh,
         GLint startDepth,
         GLint maximumDepth,
-        GLint shellExtensionValue,
-        QMatrix4x4 modelMatrix)
+        GLint shellExtensionValue)
 {
-
-    QVector<GLfloat>* originalMeshGeometry = originalMesh->getGeometry();
-
-    QVector4D vec,tempVec;
-    vec.setW(1);
-
-    QVector<GLfloat>* newGeometry = new QVector<GLfloat>();
-    for (int i = 0; i < originalMeshGeometry->size(); i+=3) {
-
-        vec.setX(originalMeshGeometry->at(i+0));
-        vec.setY(originalMeshGeometry->at(i+1));
-        vec.setZ(originalMeshGeometry->at(i+2));
-
-        tempVec = modelMatrix*vec;
-
-        newGeometry->push_back(tempVec.x());
-        newGeometry->push_back(tempVec.y());
-        newGeometry->push_back(tempVec.z());
-    }
-
-    QVector<GLint>* originalMeshIndices = originalMesh->getIndices();
-
-    QVector<GLint>* newIndices = new QVector<GLint>();
-    for (int i = 0; i < originalMeshIndices->size(); i++) {
-        newIndices->push_back(originalMeshIndices->at(i));
-    }
-
-    Mesh* newModifiedMesh = new Mesh(newGeometry,newIndices);
 
     if(modifiedMesh != NULL)
     {

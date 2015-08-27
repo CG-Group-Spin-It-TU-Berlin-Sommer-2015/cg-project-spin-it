@@ -33,11 +33,10 @@ public:
     static void hollow();
 
     static void initializeOctree(
-            Mesh* originalMesh,
+            Mesh* newModifiedMesh,
             GLint startDepth,
             GLint maximumDepth,
-            GLint shellExtensionValue,
-            QMatrix4x4 modelMatrix);
+            GLint shellExtensionValue);
 
 private:
     static float* calculateVolume(Mesh* mesh, float p);

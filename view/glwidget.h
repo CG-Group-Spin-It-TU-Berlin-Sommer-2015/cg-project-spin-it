@@ -44,7 +44,10 @@ private:
 
     QMatrix4x4 projection_matrix;
     QMatrix4x4 model_matrix;
+
     QMatrix4x4 last_object_model_matrix;
+    QMatrix4x4 last_rotation_axis_model_matrix;
+
     QMatrix4x4 view_matrix;
 
     QVector3D camera_position;
@@ -60,6 +63,9 @@ private:
 
     Mesh* grid;
     Mesh* rot_axis;
+    Mesh* half_sphere;
+    Mesh* yoyo_area;
+    Mesh* yoyo_connection;
 
     bool left_pressed;
     bool right_pressed;
@@ -80,8 +86,6 @@ private:
 
     QPoint mouse_pos;
 
-    bool saveAsTop;
-
     bool showOuterSurface;
     bool showInnerSurface;
     bool showGrid;
@@ -89,6 +93,12 @@ private:
     GLint startDepth;
     GLint maximumDepth;
     GLint shellExtensionValue;
+
+    GLfloat lowest_y_rot_axis;
+    GLfloat lowest_y_half_sphere;
+
+    bool topOptimized;
+    bool tippeTopOptimized;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
@@ -120,6 +130,10 @@ public slots:
     void calculateOctree();
     void saveMesh();
 
+    void setYoyo();
+    void setTop();
+    void setTippeTop(bool tippeTopOptimized);
+
 signals:
     void setViewXYSignal();
     void setStartDepthSpinBoxValue(int);
@@ -143,7 +157,8 @@ protected:
     void mousePressEvent(QMouseEvent* ev);
     void mouseReleaseEvent(QMouseEvent* ev);
 
-    void saveMeshAsTop(QString fileName);
+    void saveMeshAsTippeTop(QString fileName);
+    void saveMeshAsTop(QString fileName);    
     void saveMeshAsYoyo(QString fileName);
 
     void resetGLWidget();

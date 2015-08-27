@@ -13,6 +13,9 @@
 namespace octree
 {
 
+/**
+ * @brief The octreeNode struct
+ */
 struct octreeNode {
 
   octreeNode()
@@ -41,6 +44,13 @@ struct octreeNode {
 
   }
 
+  /**
+   * @brief setPoints
+   * @param x
+   * @param y
+   * @param z
+   * @param cell_length
+   */
   void setPoints(GLfloat x,GLfloat y,GLfloat z,GLfloat cell_length)
   {
 
@@ -102,6 +112,9 @@ struct octreeNode {
   bool isVoid;
 } ;
 
+/**
+ * @brief The hashItem struct
+ */
 struct hashItem{
     QVector3D vertex;
     GLint index;
@@ -162,7 +175,7 @@ private:
 
     void addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer);
 
-    bool testNeighborNode(GLint x, GLint y, GLint z, octree::octreeNode* nodePointer);
+    bool checkNeighborNode(GLint x, GLint y, GLint z, octree::octreeNode* nodePointer);
 
     GLint handleHashItem(GLint vertexIndex,QVector3D point);
 

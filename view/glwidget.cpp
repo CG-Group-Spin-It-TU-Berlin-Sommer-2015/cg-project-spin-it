@@ -11,13 +11,15 @@ GLWidget::GLWidget(QWidget *parent)
     showGrid = false;
     viewState = TRANSLATION_VIEW_XY;
 
-    saveAsTop = true;
     object = NULL; 
 
     middle.setX(0);
     middle.setY(0);
     middle.setZ(0);
     scaleFactor = 1;
+
+    topOptimized = true;
+    tippeTopOptimized = false;
 }
 
 GLWidget::~GLWidget()
@@ -90,9 +92,40 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
-    rot_axis = readMeshFromObjFileDirectory("rot_axis");
+    rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
+    half_sphere = readMeshFromObjFileDirectory("half_sphere");
+    yoyo_area  = readMeshFromObjFileDirectory("yoyo_area");
+    yoyo_connection  = readMeshFromObjFileDirectory("yoyo_connection");
+
+    GLfloat lowest_y;
+
+    lowest_y = 0.0;
+    for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
+        if (rot_axis->getGeometry()->at(i) < lowest_y) {
+            lowest_y = rot_axis->getGeometry()->at(i);
+        }
+    }
+    lowest_y_rot_axis = lowest_y;
+
+    lowest_y = 0.0;
+    for (int i = 1; i < half_sphere->getGeometry()->size(); i += 3) {
+        if (half_sphere->getGeometry()->at(i) < lowest_y) {
+            lowest_y = half_sphere->getGeometry()->at(i);
+        }
+    }
+    lowest_y_half_sphere = lowest_y;
 
     last_object_model_matrix.setToIdentity();
+
+    QMatrix4x4 mat;
+
+    mat.setToIdentity();
+    mat.translate(QVector3D(0,-2.0-lowest_y_rot_axis,0));
+    rot_axis->transform(mat);
+
+    mat.setToIdentity();
+    mat.translate(QVector3D(0,-2.0-lowest_y_half_sphere,0));
+    half_sphere->transform(mat);
 
     //object = readMeshFromObjFileDirectory("test");
     //emit modelLoaded(true);
@@ -190,18 +223,35 @@ void GLWidget::paintGL()
         Model::octree->render(shader);
     }
 
-    model_matrix.setToIdentity();
-    GLfloat lowest_y = 0.0;
-    for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
-        if (rot_axis->getGeometry()->at(i) < lowest_y) {
-            lowest_y = rot_axis->getGeometry()->at(i);
-        }
+    if(topOptimized && tippeTopOptimized)
+    {
+        model_matrix.setToIdentity();
+        shader->setUniformValue("nMatrix", view_matrix * model_matrix);
+        shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
+        shader->setUniformValue("color", QColor(Qt::red));
+        half_sphere->render(shader, GL_TRIANGLES);
     }
-    model_matrix.translate(0.0, -2 - lowest_y, 0.0);
-    shader->setUniformValue("nMatrix", view_matrix * model_matrix);
-    shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
-    shader->setUniformValue("color", QColor(Qt::red));
-    rot_axis->render(shader, GL_TRIANGLES);
+    else
+    if(topOptimized)
+    {
+
+        model_matrix.setToIdentity();
+        shader->setUniformValue("nMatrix", view_matrix * model_matrix);
+        shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
+        shader->setUniformValue("color", QColor(Qt::red));
+        rot_axis->render(shader, GL_TRIANGLES);
+
+    }
+    else
+    {
+
+        model_matrix.setToIdentity();
+        shader->setUniformValue("nMatrix", view_matrix * model_matrix);
+        shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
+        shader->setUniformValue("color", QColor(Qt::blue));
+        yoyo_area->render(shader, GL_TRIANGLES);
+
+    }
 
     model_matrix.setToIdentity();
     model_matrix.translate(0.0, -2.0, 0.0);
@@ -567,12 +617,22 @@ void GLWidget::setShellExtensionValue(int value)
 void GLWidget::calculateOctree()
 {
 
+    Mesh* newModifiedMesh = object->copy();
+    newModifiedMesh->transform(this->last_object_model_matrix);
+
+    if(!topOptimized)
+    {
+        Mesh* tempMesh = booleanDifference(newModifiedMesh,yoyo_area);
+        delete newModifiedMesh;
+        newModifiedMesh = tempMesh;
+    }
+
     Model::initializeOctree(
-                this->object,
+                newModifiedMesh,
                 this->startDepth,
                 this->maximumDepth,
-                this->shellExtensionValue,
-                this->last_object_model_matrix);
+                this->shellExtensionValue);
+
 
     emit shellIsSet(true);
 
@@ -589,7 +649,12 @@ void GLWidget::saveMesh()
         return;
     }
 
-    if(saveAsTop)
+    if(topOptimized && tippeTopOptimized)
+    {
+        saveMeshAsTippeTop(fileName);
+    }
+    else
+    if(topOptimized)
     {
         saveMeshAsTop(fileName);
     }
@@ -597,22 +662,71 @@ void GLWidget::saveMesh()
     {
         saveMeshAsYoyo(fileName);
     }
+}
+
+/**
+ * @brief GLWidget::saveMeshAsTippeTop Save object as tippe top
+ * @param fileName name and path of file
+ */
+void GLWidget::saveMeshAsTippeTop(QString fileName)
+{
+
+    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,half_sphere);
+    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getMesh(true));
+    writeMeshFromObjFile(fileName.toStdString(),mesh2);
+
+    delete mesh1;
+    delete mesh2;
 
 }
 
+/**
+ * @brief GLWidget::saveMeshAsTop Save object as top
+ * @param fileName name and path of file
+ */
 void GLWidget::saveMeshAsTop(QString fileName)
 {
 
-    Mesh* merge1 = booleanUnion(Model::modifiedMesh,rot_axis);
-    Mesh* merge2 = mergeMeshes(merge1,Model::octree->getMesh(true));
-    writeMeshFromObjFile(fileName.toStdString(),merge2);
+    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,rot_axis);
+    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getMesh(true));
+    writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
+    delete mesh1;
+    delete mesh2;
 }
 
+/**
+ * @brief GLWidget::saveMeshAsYoyo Save object as yoyo
+ * @param fileName name and path of file
+ */
 void GLWidget::saveMeshAsYoyo(QString fileName)
 {
 
-    Mesh* merge = mergeMeshes(Model::modifiedMesh,Model::octree->getMesh(true));
-    writeMeshFromObjFile(fileName.toStdString(),merge);
+    Mesh* mesh1 = booleanDifference(Model::modifiedMesh,yoyo_area);
+    Mesh* mesh2 = booleanUnion(mesh1,yoyo_connection);
+    Mesh* mesh3 = mergeMeshes(mesh2,Model::octree->getMesh(true));
+    writeMeshFromObjFile(fileName.toStdString(),mesh3);
 
+    delete mesh1;
+    delete mesh2;
+    delete mesh3;
+
+}
+
+void GLWidget::setTippeTop(bool tippeTop)
+{
+    this->tippeTopOptimized = tippeTop;
+    this->updateGL();
+}
+
+void GLWidget::setYoyo()
+{
+    this->topOptimized = false;
+    this->updateGL();
+}
+
+void GLWidget::setTop()
+{
+    this->topOptimized = true;
+    this->updateGL();
 }

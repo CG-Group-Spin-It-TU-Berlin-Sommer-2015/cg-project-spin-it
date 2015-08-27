@@ -7,4 +7,7 @@
 
 Mesh* booleanUnion(Mesh* inputmesh1, Mesh* inputmesh2);
 
+Mesh* booleanDifference(Mesh* inputmesh1, Mesh* inputmesh2);
+
+
 #endif // EXTENDEDMESHMERGER_H
