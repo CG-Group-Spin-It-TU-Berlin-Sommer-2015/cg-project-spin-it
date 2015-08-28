@@ -655,6 +655,19 @@ void GLWidget::calculateOctree()
                 this->shellExtensionValue);
 
 
+    // test
+
+    /*
+    QVector<octree::cubeObject>* vec;
+    vec = Model::octree->getInnerCubes();
+    Model::octree->splitAndMerge(0);
+    vec = Model::octree->getInnerCubes();
+    Model::octree->splitAndMerge(0);
+    vec = Model::octree->getInnerCubes();
+    Model::octree->merge(7);
+    vec = Model::octree->getInnerCubes();
+    */
+
     emit shellIsSet(true);
 
     this->updateGL();

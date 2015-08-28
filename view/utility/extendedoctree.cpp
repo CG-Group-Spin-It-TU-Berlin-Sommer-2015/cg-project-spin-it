@@ -162,6 +162,9 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
     QVector<GLint> innerLeafIndices;
     getInnerLeaves(&innerLeafIndices);
 
+    // get a vector of the indices of all inner nodes
+    QVector<GLint> innerLeafSetNodeIndices;
+    getInnerLeafSets(&innerLeafSetNodeIndices);
 
     GLfloat oneMinusEpsilon = 1-epsilon;
     octreeNode* nodePointer;
@@ -199,11 +202,6 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
             }
         }
     }
-
-    // get a vector of the indices of all inner nodes
-    QVector<GLint> innerLeafSetNodeIndices;
-    getInnerLeafSets(&innerLeafSetNodeIndices);
-
 
     bool hasToBeMerged = false;
     GLfloat beta = 0.f;
@@ -243,14 +241,14 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
         else
         // all beta values of inner leaves are small than epsilon
         if(
-            (b0 <= oneMinusEpsilon) &&
-            (b1 <= oneMinusEpsilon) &&
-            (b2 <= oneMinusEpsilon) &&
-            (b3 <= oneMinusEpsilon) &&
-            (b4 <= oneMinusEpsilon) &&
-            (b5 <= oneMinusEpsilon) &&
-            (b6 <= oneMinusEpsilon) &&
-            (b7 <= oneMinusEpsilon))
+            (b0 <= epsilon) &&
+            (b1 <= epsilon) &&
+            (b2 <= epsilon) &&
+            (b3 <= epsilon) &&
+            (b4 <= epsilon) &&
+            (b5 <= epsilon) &&
+            (b6 <= epsilon) &&
+            (b7 <= epsilon))
         {
 
             beta = 0.f;
@@ -287,6 +285,12 @@ void ExtendedOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->invalid)
+        {
+            continue;
+        }
+
         if(nodePointer->nodeDepth>=depth)
         {
             indices->push_back(nodePointer->index);
@@ -346,7 +350,8 @@ void ExtendedOctree::getInnerLeafSets(QVector<GLint>* indices)
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->invalid){
+        if(nodePointer->invalid)
+        {
             continue;
         }
 
@@ -372,11 +377,12 @@ void ExtendedOctree::getInnerLeaves(QVector<GLint>* indices)
     for(int i=0;i<this->octreeNodes.length();i++)
     {
 
-        if(nodePointer->invalid){
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->invalid)
+        {
             continue;
         }
-
-        nodePointer = &this->octreeNodes.data()[i];
 
         if(nodePointer->inside && nodePointer->isSet && nodePointer->leaf)
         {
@@ -394,7 +400,8 @@ void ExtendedOctree::getInnerLeaves(QVector<GLint>* indices)
 void ExtendedOctree::split(octreeNode* nodePointer){
 
     // the node has to be a leaf and
-    if(!nodePointer->leaf || !nodePointer->isSet){
+    if(!nodePointer->leaf || !nodePointer->isSet)
+    {
         return;
     }
 
@@ -679,7 +686,8 @@ void ExtendedOctree::increaseShell(GLint loopNumber)
        // change front and back buffer
        frontVec->clear();
 
-       if(tempVec1.size()>0){
+       if(tempVec1.size()>0)
+       {
            frontVec = &tempVec1;
            backVec = &tempVec2;
        }

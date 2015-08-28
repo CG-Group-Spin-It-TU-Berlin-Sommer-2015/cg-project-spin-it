@@ -541,6 +541,12 @@ void BasicOctree::setInnerNodeIndices()
     {
 
          nodePointer = &this->octreeNodes.data()[i];
+
+         if(nodePointer->invalid)
+         {
+             continue;
+         }
+
          if(!nodePointer->leaf || !nodePointer->isSet || !nodePointer->inside || nodePointer->shellNode)
          {
            continue;
@@ -567,6 +573,12 @@ void BasicOctree::setShellNodeIndices()
     {
 
          nodePointer = &this->octreeNodes.data()[i];
+
+         if(nodePointer->invalid)
+         {
+             continue;
+         }
+
          if(!nodePointer->leaf || !nodePointer->shellNode)
          {
            continue;
@@ -1088,6 +1100,10 @@ void BasicOctree::adjustMaxDepth()
     for(int i=0;i<this->octreeNodes.length();i++){
         nodePointer = &this->octreeNodes.data()[i];
 
+        if(nodePointer->invalid){
+            continue;
+        }
+
         nodePointer->x = nodePointer->x<<diff;
         nodePointer->y = nodePointer->y<<diff;
         nodePointer->z = nodePointer->z<<diff;
@@ -1211,12 +1227,11 @@ void BasicOctree::render(QGLShaderProgram* shader)
 
             octreeNode node = this->octreeNodes.at(i);
 
-            if(!node.leaf || node.invalid)
-            {
+            if(node.invalid){
                 continue;
             }
 
-            if( !node.inside || node.shellNode )
+            if( !node.isSet || !node.inside || !node.leaf || node.shellNode )
             {
                 continue;
             }
