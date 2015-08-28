@@ -152,7 +152,7 @@ public:
 
     void createInnerSurface();
 
-    Mesh* getMesh(bool flip = false);
+    Mesh* getShellMesh(bool flip = false);
     Mesh* getPointMesh();
 
     void setInnerNodeIndices();
@@ -174,8 +174,6 @@ private:
     GLint setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z);
 
     void addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer);
-
-    bool checkNeighborNode(GLint x, GLint y, GLint z, octree::octreeNode* nodePointer);
 
     GLint handleHashItem(GLint vertexIndex,QVector3D point);
 

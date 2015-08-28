@@ -15,12 +15,11 @@ Mesh* Model::modifiedMesh = NULL;
 Mesh* Model::shellMesh = NULL;
 
 /**
- * @brief Model::initializeOctree
- * @param originalMesh
- * @param startDepth
- * @param maximumDepth
- * @param shellExtensionValue
- * @param modelMatrix
+ * @brief Model::initializeOctree Initialize the octree for the optimation
+ * @param newModifiedMesh the mesh for the optimation
+ * @param startDepth the start depth
+ * @param maximumDepth the maximum depth
+ * @param shellExtensionValue the shell extension value
  */
 void Model::initializeOctree(
         Mesh* newModifiedMesh,
@@ -41,12 +40,14 @@ void Model::initializeOctree(
         octree = new ExtendedOctree();
     }
 
+    // initialize the octree
+    // set point cloud
     octree->setMesh(modifiedMesh);
     octree->setStartDepth(startDepth);
     octree->setMaxDepth(maximumDepth);
     octree->quantizeSurface();
     octree->setupVectors();
-
+    // calculate outer and inner cells
     octree->setupOctree();
     octree->setShellNodeIndices();
     octree->setOuterNodes();
@@ -55,12 +56,13 @@ void Model::initializeOctree(
     octree->adjustMaxDepth();
     octree->increaseShell(shellExtensionValue);
 
+    // set important vectors
     octree->setShellNodeIndices();
     octree->setInnerNodeIndices();
 
+    // get mesh for inner shell (needed for view)
     octree->createInnerSurface();
-
-    Mesh* newShellMesh = octree->getMesh();
+    Mesh* newShellMesh = octree->getShellMesh();
 
     if(shellMesh != NULL)
     {

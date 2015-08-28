@@ -23,7 +23,7 @@ SOURCES += main.cpp \
     view/utility/simplemeshmerger.cpp \
     view/utility/basicoctree.cpp \
     view/utility/extendedoctree.cpp \
-    view/utility/extendedmeshmerger.cpp
+    view/utility/meshbooleanfunctions.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -35,7 +35,7 @@ HEADERS  += view/mainwindow.h \
     view/utility/simplemeshmerger.h \
     view/utility/basicoctree.h \
     view/utility/extendedoctree.h \
-    view/utility/extendedmeshmerger.h
+    view/utility/meshbooleanfunctions.h
 
 FORMS    += view/mainwindow.ui
 

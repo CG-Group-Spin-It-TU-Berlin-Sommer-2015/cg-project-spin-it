@@ -92,6 +92,7 @@ void GLWidget::initializeGL()
     diffuse_light.setZ(0.75);
     diffuse_light.setW(1);
 
+    // load helper meshes
     rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
     half_sphere = readMeshFromObjFileDirectory("half_sphere");
     yoyo_area  = readMeshFromObjFileDirectory("yoyo_area");
@@ -99,6 +100,7 @@ void GLWidget::initializeGL()
 
     GLfloat lowest_y;
 
+    // search for lowest y for rotation axis
     lowest_y = 0.0;
     for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
         if (rot_axis->getGeometry()->at(i) < lowest_y) {
@@ -107,6 +109,7 @@ void GLWidget::initializeGL()
     }
     lowest_y_rot_axis = lowest_y;
 
+    // search for lowest y for half sphere
     lowest_y = 0.0;
     for (int i = 1; i < half_sphere->getGeometry()->size(); i += 3) {
         if (half_sphere->getGeometry()->at(i) < lowest_y) {
@@ -119,10 +122,12 @@ void GLWidget::initializeGL()
 
     QMatrix4x4 mat;
 
+    // align rotation axis to touch point
     mat.setToIdentity();
     mat.translate(QVector3D(0,-2.0-lowest_y_rot_axis,0));
     rot_axis->transform(mat);
 
+    // align half sphere to touch point
     mat.setToIdentity();
     mat.translate(QVector3D(0,-2.0-lowest_y_half_sphere,0));
     half_sphere->transform(mat);
@@ -225,6 +230,7 @@ void GLWidget::paintGL()
 
     if(topOptimized && tippeTopOptimized)
     {
+        // draw half sphere
         model_matrix.setToIdentity();
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -234,7 +240,7 @@ void GLWidget::paintGL()
     else
     if(topOptimized)
     {
-
+        // draw rotation axis
         model_matrix.setToIdentity();
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -244,7 +250,7 @@ void GLWidget::paintGL()
     }
     else
     {
-
+        // draw yoyo area
         model_matrix.setToIdentity();
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
@@ -253,6 +259,7 @@ void GLWidget::paintGL()
 
     }
 
+    // draw grid
     model_matrix.setToIdentity();
     model_matrix.translate(0.0, -2.0, 0.0);
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
@@ -275,18 +282,22 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 {
     if (left_pressed) {
 
+
         if(this->viewState != TRANSLATION_VIEW_DEFAULT)
         {
+            // if xy translation should be set
             if(this->viewState == TRANSLATION_VIEW_XY){
                 this->trans_x += (mouse_pos.x() - ev->pos().x())/TRANSLATION_XY_RATIO;
                 this->trans_z += (mouse_pos.y() - ev->pos().y())/TRANSLATION_XY_RATIO;
             }
             else
+            // if z translation should be set
             if(this->viewState == TRANSLATION_VIEW_Z)
             {
                 this->trans_y += (mouse_pos.y() - ev->pos().y())/TRANSLATION_Z_RATIO;
             }
             else
+            // if rotation and scale should be set
             if(this->viewState == ROTATION_SCALE_VIEW)
             {
                if (mouse_pos.x() > ev->pos().x()) {
@@ -327,6 +338,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
     }
     if (right_pressed) {
 
+        // if rotation and scale should be set
         if(this->viewState == ROTATION_SCALE_VIEW)
         {
             scale_xyz += (ev->pos().y() - mouse_pos.y())/SCALE_RATIO;
@@ -480,6 +492,8 @@ void GLWidget::setView(int index)
 void GLWidget::setViewXY()
 {
 
+    // bird eye view
+
     camera_position.setX(0);
     camera_position.setY(-1);
     camera_position.setZ(0);
@@ -499,6 +513,8 @@ void GLWidget::setViewXY()
 
 void GLWidget::setViewZ()
 {
+    // view from the front
+
     camera_position.setX(0);
     camera_position.setY(0);
     camera_position.setZ(1);
@@ -518,6 +534,7 @@ void GLWidget::setViewZ()
 
 void GLWidget::setViewRotationScale()
 {
+
     camera_position.setX(1);
     camera_position.setY(-0.75);
     camera_position.setZ(1);
@@ -614,12 +631,16 @@ void GLWidget::setShellExtensionValue(int value)
     this->shellExtensionValue = value;
 }
 
+/**
+ * @brief GLWidget::calculateOctree Calculate the octree
+ */
 void GLWidget::calculateOctree()
 {
 
     Mesh* newModifiedMesh = object->copy();
     newModifiedMesh->transform(this->last_object_model_matrix);
 
+    // calculate the difference for the yoyo
     if(!topOptimized)
     {
         Mesh* tempMesh = booleanDifference(newModifiedMesh,yoyo_area);
@@ -672,7 +693,7 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
 
     Mesh* mesh1 = booleanUnion(Model::modifiedMesh,half_sphere);
-    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getMesh(true));
+    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getShellMesh(true));
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
     delete mesh1;
@@ -688,7 +709,7 @@ void GLWidget::saveMeshAsTop(QString fileName)
 {
 
     Mesh* mesh1 = booleanUnion(Model::modifiedMesh,rot_axis);
-    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getMesh(true));
+    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getShellMesh(true));
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
     delete mesh1;
@@ -704,7 +725,7 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
 
     Mesh* mesh1 = booleanDifference(Model::modifiedMesh,yoyo_area);
     Mesh* mesh2 = booleanUnion(mesh1,yoyo_connection);
-    Mesh* mesh3 = mergeMeshes(mesh2,Model::octree->getMesh(true));
+    Mesh* mesh3 = mergeMeshes(mesh2,Model::octree->getShellMesh(true));
     writeMeshFromObjFile(fileName.toStdString(),mesh3);
 
     delete mesh1;

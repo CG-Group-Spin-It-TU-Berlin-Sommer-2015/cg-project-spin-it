@@ -15,7 +15,7 @@
 #include "utility/meshreader.h"
 #include "utility/meshwriter.h"
 #include "utility/simplemeshmerger.h"
-#include "utility/extendedmeshmerger.h"
+#include "utility/meshbooleanfunctions.h"
 #include "utility/shader.h"
 #include "utility/basicoctree.h"
 #include "utility/extendedoctree.h"

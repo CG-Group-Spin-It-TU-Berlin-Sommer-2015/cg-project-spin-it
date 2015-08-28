@@ -15,7 +15,7 @@ rootNodeIndex(-1)
 
 /**
  * @brief BasicOctree::setMesh Set the mesh for the octree
- * @param mesh
+ * @param mesh the considered mesh
  */
 void BasicOctree::setMesh(Mesh* mesh)
 {
@@ -290,37 +290,14 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
 }
 
 /**
- * @brief BasicOctree::checkNeighborNode
- * @param x x coordinate
- * @param y y coordinate
- * @param z z coordinate
- * @param nodePointer pointer for node
- * @return  true if
- */
-bool inline BasicOctree::checkNeighborNode(GLint x, GLint y, GLint z, octreeNode* nodePointer)
-{
-
-    octreeNode* neighborNodePointer = this->getLeafNodeByCoordinate(x,y,z);
-    if(neighborNodePointer->isSet && !neighborNodePointer->inside)
-    {
-        nodePointer->isSet = true;
-        nodePointer->inside = false;
-
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * @brief BasicOctree::createNode
- * @param x
- * @param y
- * @param z
- * @param depth
- * @param addToInteriors
- * @param parentIndex
- * @return
+ * @brief BasicOctree::createNode Create a new node
+ * @param x x coordinate of octree
+ * @param y y coordinate of octree
+ * @param z z coordinate of octree
+ * @param depth node depth
+ * @param addToInteriors should be added to interiors
+ * @param parentIndex index of the parent node
+ * @return index of new node
  */
 GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex){
 
@@ -358,6 +335,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInte
 
     if(addToInteriors)
     {
+        // add node to interior vector
         if(!this->freeIndicesForInnerLeaves.empty())
         {
             node.typeVectorIndex = this->freeIndicesForInnerLeaves.last();
@@ -375,6 +353,12 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInte
     return node.index;
 }
 
+/**
+ * @brief BasicOctree::handleHashItem Handle vertice for avoiding multiple set up of a vertex
+ * @param vertexIndex unique index of a vertice
+ * @param point point in world
+ * @return index of the point
+ */
 GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 {
 
@@ -399,11 +383,11 @@ GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 }
 
 /**
- * @brief BasicOctree::addTriangle
- * @param x
- * @param y
- * @param z
- * @return
+ * @brief BasicOctree::addTriangle Should triangles added here
+ * @param x x coordinate in octree
+ * @param y y coordiante in octree
+ * @param z z coordinate in octree
+ * @return true, triangles should added. false, otherwise
  */
 bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 {
@@ -413,11 +397,11 @@ bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 }
 
 /**
- * @brief BasicOctree::createTriangle
- * @param x
- * @param y
- * @param z
- * @param code
+ * @brief BasicOctree::createTriangle Add vertices and indices for inner and shell border
+ * @param x x coordinate in octree
+ * @param y y coordinate in octree
+ * @param z z coordinate in octree
+ * @param code code for side where surface should be created
  */
 void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 {
@@ -541,7 +525,7 @@ void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 }
 
 /**
- * @brief BasicOctree::setInnerNodeIndices
+ * @brief BasicOctree::setInnerNodeIndices Set up vector with all inner node indices
  */
 void BasicOctree::setInnerNodeIndices()
 {
@@ -568,7 +552,7 @@ void BasicOctree::setInnerNodeIndices()
 }
 
 /**
- * @brief BasicOctree::setShellNodeIndices
+ * @brief BasicOctree::setShellNodeIndices Set up vector with all shell node indices
  */
 void BasicOctree::setShellNodeIndices()
 {
@@ -594,11 +578,12 @@ void BasicOctree::setShellNodeIndices()
 }
 
 /**
- * @brief BasicOctree::createInnerSurface
+ * @brief BasicOctree::createInnerSurface Calculate vertices and indices for inner shell mesh
  */
 void BasicOctree::createInnerSurface()
 {
 
+    // prepare new calcuation
     geometry.clear();
     indices.clear();
     geometryMap.clear();
@@ -657,6 +642,7 @@ void BasicOctree::createInnerSurface()
 
     QHash<GLint, hashItem>::iterator i;
 
+    // set up vector for vertices
     for (i = geometryMap.begin(); i != geometryMap.end(); ++i)
     {
 
@@ -669,6 +655,7 @@ void BasicOctree::createInnerSurface()
 
     GLfloat* data = geometry.data();
 
+    // necessary?
     for (i = geometryMap.begin(); i != geometryMap.end(); ++i)
     {
 
@@ -683,7 +670,7 @@ void BasicOctree::createInnerSurface()
 }
 
 /**
- * @brief BasicOctree::setOuterNodes
+ * @brief BasicOctree::setOuterNodes Mark outer nodes
  */
 void BasicOctree::setOuterNodes()
 {
@@ -695,6 +682,7 @@ void BasicOctree::setOuterNodes()
     QHash<GLint, octreeNode*>* frontMap = &tempMap1;
     QHash<GLint, octreeNode*>* backMap = &tempMap2;
 
+    // set border nodes as initial outer nodes
     for(int i=0;i<this->axis_length;i++)
     {
         for(int j=0;j<this->axis_length;j++)
@@ -735,6 +723,7 @@ void BasicOctree::setOuterNodes()
         }
     }
 
+    // search for outer nodes iteratively
     while(frontMap->size()>0)
     {
 
@@ -802,6 +791,7 @@ void BasicOctree::setOuterNodes()
             }
         }
 
+        // swap buffers
         frontMap->clear();
 
         if(tempMap1.size()>0){
@@ -820,7 +810,7 @@ void BasicOctree::setOuterNodes()
 }
 
 /**
- * @brief BasicOctree::setInnerNodes
+ * @brief BasicOctree::setInnerNodes Mark the inner nodes ( after calculating outer nodes)
  */
 void BasicOctree::setInnerNodes()
 {
@@ -850,6 +840,12 @@ void BasicOctree::setInnerNodes()
 
 }
 
+/**
+ * @brief compare currently not used
+ * @param a
+ * @param b
+ * @return
+ */
 bool compare (const QVector3D & a, const QVector3D & b)
 {
   if(a.x()<b.x()){return true;}
@@ -865,7 +861,7 @@ bool compare (const QVector3D & a, const QVector3D & b)
 }
 
 /**
- * @brief BasicOctree::setupVectors
+ * @brief BasicOctree::setupVectors Set voxel points for raw voxels
  */
 void BasicOctree::setupVectors()
 {
@@ -895,12 +891,12 @@ void BasicOctree::setupVectors()
 }
 
 /**
- * @brief BasicOctree::sortHalf
- * @param start
- * @param end
- * @param coor
- * @param prior
- * @return
+ * @brief BasicOctree::sortHalf Sort voxels until half of the array size (for x,y or z coordinate)
+ * @param start start index
+ * @param end end index
+ * @param coor code for coordinate
+ * @param prior prior value
+ * @return index of the last element of half sorted array
  */
 GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 {
@@ -931,10 +927,11 @@ GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 }
 
 /**
- * @brief BasicOctree::setupOctree
+ * @brief BasicOctree::setupOctree Create the octree according to set preferences
  */
 void BasicOctree::setupOctree(){
 
+    // prepare octree for new calculation
     freeIndicesForAllNodes.clear();
     freeIndicesForInnerLeaves.clear();
 
@@ -945,34 +942,36 @@ void BasicOctree::setupOctree(){
 
     this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.length(),0,0,0);
 
+    // clear obsolete data structures
     this->rawVoxels.clear();
     this->voxels.clear();
     this->isDirty = true;
 }
 
 /**
- * @brief BasicOctree::setupOctreeHelper
- * @param depth
- * @param start
- * @param end
- * @param x
- * @param y
- * @param z
- * @return
+ * @brief BasicOctree::setupOctreeHelper Helper function for creating the octree
+ * @param depth current depth
+ * @param start start value for range
+ * @param end end value for range
+ * @param x x coordinate in octree
+ * @param y y coordinate in octree
+ * @param z z coordinate in octree
+ * @return index of created node
  */
 GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z){
 
-
+    // calculate values
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
     GLfloat cell_length = this->cell_length*(pow(2,this->startDepth-depth));
 
-
+    // if recursion should stop (leaf is reached)
     if(this->startDepth<=depth || end-start<1 ){
 
         octreeNode node;
 
+        // set node data
         node.shellNode = this->startDepth<=depth && end-start>0;
         node.leaf = true;
         node.setPoints(xf,yf,zf,cell_length);
@@ -982,7 +981,6 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
         node.cell_length = pow(2,this->startDepth-depth);
         node.index = octreeNodes.length();
         node.nodeDepth = depth;
-
 
         octreeNodes.push_back(node);
         return node.index;
@@ -1005,6 +1003,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 
     GLint half_cell_length_int = cell_length_int >> 1;
 
+    // recursion step
     node.childIndex0 = setupOctreeHelper(newDepth,start         ,startEndTemp1 ,x,                 y,                 z                  );
     node.childIndex1 = setupOctreeHelper(newDepth,startEndTemp1 ,startEndZ1    ,x,                 y,                 z+half_cell_length_int );
     node.childIndex2 = setupOctreeHelper(newDepth,startEndZ1    ,startEndTemp2 ,x,                 y+half_cell_length_int,z                  );
@@ -1015,6 +1014,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     node.childIndex6 = setupOctreeHelper(newDepth,startEndZ2    ,startEndTemp4 ,x+half_cell_length_int,y+half_cell_length_int,z                  );
     node.childIndex7 = setupOctreeHelper(newDepth,startEndTemp4 ,end           ,x+half_cell_length_int,y+half_cell_length_int,z+half_cell_length_int );
 
+    // set node data
     node.shellNode = true;
     node.leaf = false;
     node.setPoints(xf,yf,zf,cell_length);
@@ -1025,7 +1025,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     node.index = octreeNodes.length();
     node.nodeDepth = depth;
 
-
+    // set parent index
     octreeNodes.data()[node.childIndex0].parentIndex = node.index;
     octreeNodes.data()[node.childIndex1].parentIndex = node.index;
     octreeNodes.data()[node.childIndex2].parentIndex = node.index;
@@ -1041,8 +1041,8 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 }
 
 /**
- * @brief BasicOctree::setStartDepth
- * @param depth
+ * @brief BasicOctree::setStartDepth Set a new start depth
+ * @param depth the start depth
  */
 void BasicOctree::setStartDepth(GLint depth){
 
@@ -1057,8 +1057,8 @@ void BasicOctree::setStartDepth(GLint depth){
 }
 
 /**
- * @brief BasicOctree::setMaxDepth
- * @param depth
+ * @brief BasicOctree::setMaxDepth Set a new maximal depth
+ * @param depth the maximal depth
  */
 void BasicOctree::setMaxDepth(GLint depth){
 
@@ -1073,7 +1073,7 @@ void BasicOctree::setMaxDepth(GLint depth){
 }
 
 /**
- * @brief BasicOctree::adjustMaxDepth
+ * @brief BasicOctree::adjustMaxDepth Adjust the octree to the maximal depth
  */
 void BasicOctree::adjustMaxDepth()
 {
@@ -1098,11 +1098,11 @@ void BasicOctree::adjustMaxDepth()
 }
 
 /**
- * @brief BasicOctree::getMesh
- * @param flip
- * @return
+ * @brief BasicOctree::getShellMesh Get the mesh of the inner shell
+ * @param flip true the normals are flip. false otherwise
+ * @return the mesh
  */
-Mesh* BasicOctree::getMesh(bool flip)
+Mesh* BasicOctree::getShellMesh(bool flip)
 {
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
@@ -1139,8 +1139,8 @@ Mesh* BasicOctree::getMesh(bool flip)
 }
 
 /**
- * @brief BasicOctree::getPointMesh
- * @return
+ * @brief BasicOctree::getPointMesh Get the mesh for the point cloud (for testing purposes)
+ * @return the mesh
  */
 Mesh* BasicOctree::getPointMesh()
 {
@@ -1181,17 +1181,15 @@ Mesh* BasicOctree::getPointMesh()
 }
 
 /**
- * @brief BasicOctree::render
- * @param shader
+ * @brief BasicOctree::render Render the grid of the octree
+ * @param shader the shader
  */
 void BasicOctree::render(QGLShaderProgram* shader)
 {
 
-
     if(this->octreeNodes.length()<0){
         return;
     }
-
 
     GLenum primitive = GL_LINES;
 

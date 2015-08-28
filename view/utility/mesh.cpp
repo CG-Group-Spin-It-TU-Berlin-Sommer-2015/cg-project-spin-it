@@ -160,8 +160,8 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
 }
 
 /**
- * @brief Mesh::getMiddle
- * @return
+ * @brief Mesh::getMiddle Get the middle point according to minimal and maximal coordinates
+ * @return the middle of the mesh
  */
 QVector3D Mesh::getMiddle()
 {
@@ -208,8 +208,8 @@ QVector3D Mesh::getMiddle()
 }
 
 /**
- * @brief Mesh::getMaxDistance2Middle
- * @return
+ * @brief Mesh::getMaxDistance2Middle Get the maximal distance according to the middle point
+ * @return the maximal distance
  */
 GLfloat Mesh::getMaxDistance2Middle()
 {
@@ -248,8 +248,8 @@ QVector3D Mesh::getMean()
 }
 
 /**
- * @brief Mesh::copy
- * @return
+ * @brief Mesh::copy Make a copy of the mesh
+ * @return the copy of the mesh
  */
 Mesh* Mesh::copy()
 {
@@ -272,8 +272,8 @@ Mesh* Mesh::copy()
 }
 
 /**
- * @brief Mesh::transform
- * @param matrix
+ * @brief Mesh::transform Transform the vertices of the mesh
+ * @param matrix the transformation matrix
  */
 void Mesh::transform(QMatrix4x4 matrix)
 {

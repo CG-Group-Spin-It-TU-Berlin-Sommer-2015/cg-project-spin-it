@@ -3,10 +3,10 @@
 using namespace std;
 
 /**
- * @brief writeMeshFromObjFile
- * @param file_name
- * @param mesh
- * @return
+ * @brief writeMeshFromObjFile Write the mesh to a specific file
+ * @param file_name the file with the path
+ * @param mesh the mesh
+ * @return True if the process was successful. False otherwise.
  */
 bool writeMeshFromObjFile (string file_name, Mesh* mesh)
 {
@@ -23,6 +23,7 @@ bool writeMeshFromObjFile (string file_name, Mesh* mesh)
     GLint geometryLength = mesh->getGeometry()->length();
     GLint indicesLength = mesh->getIndices()->length();
 
+    // write the vertices
     for(int i=0;i<geometryLength/3;i++)
     {
         outStream << "v";
@@ -32,6 +33,7 @@ bool writeMeshFromObjFile (string file_name, Mesh* mesh)
         outStream << "\n";
     }
 
+    // write the indices
     for(int i=0;i<indicesLength/3;i++)
     {
         outStream << "f";
