@@ -13,5 +13,6 @@
         <file>rot_axis_bold.obj</file>
         <file>yoyo_area.obj</file>
         <file>yoyo_connection.obj</file>
+        <file>tippe_top_object.obj</file>
     </qresource>
 </RCC>

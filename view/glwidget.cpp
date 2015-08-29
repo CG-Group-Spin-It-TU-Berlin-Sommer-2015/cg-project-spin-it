@@ -94,7 +94,7 @@ void GLWidget::initializeGL()
 
     // load helper meshes
     rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
-    half_sphere = readMeshFromObjFileDirectory("half_sphere");
+    half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
     yoyo_area  = readMeshFromObjFileDirectory("yoyo_area");
     yoyo_connection  = readMeshFromObjFileDirectory("yoyo_connection");
 

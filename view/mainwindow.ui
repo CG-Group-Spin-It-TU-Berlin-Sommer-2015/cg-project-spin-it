@@ -70,7 +70,7 @@
       <enum>Qt::LeftToRight</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <property name="movable">
       <bool>false</bool>
@@ -277,7 +277,7 @@
          <number>2</number>
         </property>
         <property name="maximum">
-         <number>9</number>
+         <number>8</number>
         </property>
        </widget>
        <widget class="QLabel" name="maximumOctreeDepthLabel">
@@ -312,7 +312,7 @@
          <number>2</number>
         </property>
         <property name="maximum">
-         <number>9</number>
+         <number>8</number>
         </property>
        </widget>
        <widget class="QLabel" name="shellExtentionLable">
