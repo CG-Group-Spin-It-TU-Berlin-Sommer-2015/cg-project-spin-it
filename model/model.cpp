@@ -43,22 +43,18 @@ void Model::initializeOctree(
     // initialize the octree
     // set point cloud
     octree->setMesh(modifiedMesh);
-    octree->setStartDepth(startDepth);
-    octree->setMaxDepth(maximumDepth);
+    octree->setStartMaxDepth(startDepth);
+    octree->setOptimationMaxDepth(maximumDepth);
     octree->quantizeSurface();
     octree->setupVectors();
+
     // calculate outer and inner cells
     octree->setupOctree();
-    octree->setShellNodeIndices();
     octree->setOuterNodes();
     octree->setInnerNodes();
-    octree->setInnerNodeIndices();
     octree->adjustMaxDepth();
     octree->increaseShell(shellExtensionValue);
-
-    // set important vectors
-    octree->setShellNodeIndices();
-    octree->setInnerNodeIndices();
+    octree->setMergeNodes();
 
     // get mesh for inner shell (needed for view)
     octree->createInnerSurface();
@@ -81,21 +77,16 @@ void Model::initialize(Mesh* mesh)
     GLint depth = 3;
     Model::octree = new ExtendedOctree();
     octree->setMesh(mesh);
-    octree->setStartDepth(depth);
-    octree->setMaxDepth(depth+1);
+    octree->setStartMaxDepth(depth);
+    octree->setOptimationMaxDepth(depth+1);
     octree->quantizeSurface();
     octree->setupVectors();
 
     octree->setupOctree();
-    octree->setShellNodeIndices();
     octree->setOuterNodes();
     octree->setInnerNodes();
-    octree->setInnerNodeIndices();
     octree->adjustMaxDepth();
     octree->increaseShell(0);
-
-    octree->setShellNodeIndices();
-    octree->setInnerNodeIndices();
 
     octree->createInnerSurface();
 

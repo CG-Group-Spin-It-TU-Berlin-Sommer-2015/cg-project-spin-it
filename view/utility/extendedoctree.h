@@ -29,27 +29,29 @@ public:
 
     void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
     void getInnerLeavesForNode(GLint index,QVector<GLint>* indices);
-    void getInnerLeafSets(QVector<GLint>* indices);
-    void getInnerLeaves(QVector<GLint>* indices);
 
     bool splitAndMerge(GLfloat epsilon);
 
     void split(octree::octreeNode* nodePointer);
     void split(GLint nodeIndex);
-    void merge(octree::octreeNode* nodePointer);
-    void merge(GLint nodeIndex);
 
     void increaseShell(GLint loopAmount);
 
     bool allChildrenAreLeaves(GLint nodeIndex);
 
     void setVoids();
+    void setMergeNodes();
+
+    void deleteNodeMeshes();
 
 private:
 
     QVector<octree::cubeObject> cubeVector;
 
     void handleShellNeighbor(GLint x, GLint y, GLint z, QVector<GLint>* backVec);
+    void setMergeChild(GLint index, GLfloat beta);
+    void addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector<GLint>* indices, GLint offset);
+
 
 };
 

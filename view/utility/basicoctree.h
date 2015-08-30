@@ -32,15 +32,19 @@ struct octreeNode {
 
       parentIndex = -1;
 
-      typeVectorIndex = -1;
-
       isSet = false;
-      invalid = false;
+      isInside = false;
+      isShell = false;
+      leaf = false;
+      isVoid = true;
+
+      isMergeRoot = false;
+      isMergeChild = false;
 
       // random float between 0 and 1
       beta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-      isVoid = true;
+      mesh = NULL;
 
   }
 
@@ -66,7 +70,6 @@ struct octreeNode {
   }
 
   GLint index;
-  GLint typeVectorIndex;
 
   GLint x;
   GLint y;
@@ -89,8 +92,13 @@ struct octreeNode {
   /* index of the parent (if negative there is no parent => root node) */
   GLint parentIndex;
 
-  bool shellNode;
+  bool isSet;
+  bool isInside;
+  bool isShell;
   bool leaf;
+  bool isMergeRoot;
+  bool isMergeChild;
+  bool isVoid;
 
   QVector3D p0; //(-x,-y,-z)
   QVector3D p1; //(-x,-y,+z)
@@ -102,14 +110,9 @@ struct octreeNode {
   QVector3D p6; //(+x,+y,-z)
   QVector3D p7; //(+x,+y,+z)
 
-  bool isSet;
-  bool inside;
-
-  bool invalid;
-
   float beta;
 
-  bool isVoid;
+  Mesh* mesh;
 } ;
 
 /**
@@ -130,8 +133,8 @@ public:
     void setMesh(Mesh* mesh);
     bool hasMesh();
 
-    void setStartDepth(GLint depth);
-    void setMaxDepth(GLint depth);
+    void setStartMaxDepth(GLint depth);
+    void setOptimationMaxDepth(GLint depth);
 
     void adjustMaxDepth();
 
@@ -153,10 +156,6 @@ public:
     void createInnerSurface();
 
     Mesh* getShellMesh(bool flip = false);
-    Mesh* getPointMesh();
-
-    void setInnerNodeIndices();
-    void setShellNodeIndices();
 
 private:
 
@@ -194,14 +193,8 @@ protected:
 
     GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
-    QVector<GLint> innerLeafIndices;
-    QVector<GLint> shellNodeIndices;
-
-    QVector<GLint> freeIndicesForAllNodes;
-    QVector<GLint> freeIndicesForInnerLeaves;
-
-    GLint startDepth;
-    GLint maxDepth;
+    GLint startMaxDepth;
+    GLint optimationMaxDepth;
     GLint rootNodeIndex;
 
     QVector3D mean;
@@ -209,6 +202,11 @@ protected:
     GLint axis_length;
     GLint plane_length;
     GLdouble max_g;
+
+    void getInnerLeaves(QVector<GLint>* indices);
+    void getShellLeaves(QVector<GLint>* indices);
+    void getMergeRoots(QVector<GLint>* indices);
+    void getMergeRootCandidates(QVector<GLint>* indices);
 
 };
 

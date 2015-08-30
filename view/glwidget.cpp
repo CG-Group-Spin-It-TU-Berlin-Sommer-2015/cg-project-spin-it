@@ -228,6 +228,8 @@ void GLWidget::paintGL()
         Model::octree->render(shader);
     }
 
+    if(showOuterSurface)
+    {
     if(topOptimized && tippeTopOptimized)
     {
         // draw half sphere
@@ -257,6 +259,7 @@ void GLWidget::paintGL()
         shader->setUniformValue("color", QColor(Qt::blue));
         yoyo_area->render(shader, GL_TRIANGLES);
 
+    }
     }
 
     // draw grid
@@ -658,15 +661,15 @@ void GLWidget::calculateOctree()
     // test
 
     /*
+
     QVector<octree::cubeObject>* vec;
     vec = Model::octree->getInnerCubes();
-    Model::octree->splitAndMerge(0);
+    Model::octree->splitAndMerge(0.01);
     vec = Model::octree->getInnerCubes();
-    Model::octree->splitAndMerge(0);
-    vec = Model::octree->getInnerCubes();
-    Model::octree->merge(7);
-    vec = Model::octree->getInnerCubes();
-    */
+
+    Model::octree->deleteNodeMeshes();
+
+    //*/
 
     emit shellIsSet(true);
 
@@ -704,11 +707,13 @@ void GLWidget::saveMesh()
  */
 void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
+    Mesh* shell = Model::octree->getShellMesh(true);
 
     Mesh* mesh1 = booleanUnion(Model::modifiedMesh,half_sphere);
-    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getShellMesh(true));
+    Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
+    delete shell;
     delete mesh1;
     delete mesh2;
 
@@ -720,11 +725,13 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
  */
 void GLWidget::saveMeshAsTop(QString fileName)
 {
+    Mesh* shell = Model::octree->getShellMesh(true);
 
     Mesh* mesh1 = booleanUnion(Model::modifiedMesh,rot_axis);
-    Mesh* mesh2 = mergeMeshes(mesh1,Model::octree->getShellMesh(true));
+    Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
+    delete shell;
     delete mesh1;
     delete mesh2;
 }
@@ -735,12 +742,14 @@ void GLWidget::saveMeshAsTop(QString fileName)
  */
 void GLWidget::saveMeshAsYoyo(QString fileName)
 {
+    Mesh* shell = Model::octree->getShellMesh(true);
 
     Mesh* mesh1 = booleanDifference(Model::modifiedMesh,yoyo_area);
     Mesh* mesh2 = booleanUnion(mesh1,yoyo_connection);
-    Mesh* mesh3 = mergeMeshes(mesh2,Model::octree->getShellMesh(true));
+    Mesh* mesh3 = mergeMeshes(mesh2,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh3);
 
+    delete shell;
     delete mesh1;
     delete mesh2;
     delete mesh3;
