@@ -298,3 +298,27 @@ void Mesh::transform(QMatrix4x4 matrix)
     }
 
 }
+
+/**
+ * @brief Mesh::swapYZ Swap the y and z coordinate
+ */
+void Mesh::swapYZ()
+{
+
+    QVector4D vec;
+
+    GLfloat* data = geometry->data();
+
+    for (int i = 0; i < geometry->size(); i+=3) {
+
+        vec.setX(data[i+0]);
+        vec.setY(data[i+1]);
+        vec.setZ(data[i+2]);
+
+        data[i+0] = vec.x();
+        data[i+1] = vec.z();
+        data[i+2] = vec.y();
+
+    }
+
+}

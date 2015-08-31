@@ -69,6 +69,7 @@ void Model::initializeOctree(
 
     shellMesh = newShellMesh;
 
+    newModifiedMesh->swapYZ();
     Model::mesh = newModifiedMesh;
 
     return;
