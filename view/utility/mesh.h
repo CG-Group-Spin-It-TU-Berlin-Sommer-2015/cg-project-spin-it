@@ -32,7 +32,12 @@ public:
 
     void render(QGLShaderProgram* shader, GLenum primitive);
 
+    QVector3D getMiddle();
+    GLfloat getMaxDistance2Middle();
     QVector3D getMean();
+
+    Mesh* copy();
+    void transform(QMatrix4x4 matrix);
 };
 
 #endif // MESH_H

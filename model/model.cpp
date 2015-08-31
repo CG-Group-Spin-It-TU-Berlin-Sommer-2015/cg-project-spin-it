@@ -13,6 +13,64 @@ ExtendedOctree* Model::octree = 0;
 
 QVector<int>* Model::J = 0;
 
+Mesh* Model::modifiedMesh = NULL;
+Mesh* Model::shellMesh = NULL;
+
+/**
+ * @brief Model::initializeOctree Initialize the octree for the optimation
+ * @param newModifiedMesh the mesh for the optimation
+ * @param startDepth the start depth
+ * @param maximumDepth the maximum depth
+ * @param shellExtensionValue the shell extension value
+ */
+void Model::initializeOctree(
+        Mesh* newModifiedMesh,
+        GLint startDepth,
+        GLint maximumDepth,
+        GLint shellExtensionValue)
+{
+
+    if(modifiedMesh != NULL)
+    {
+        delete modifiedMesh;
+    }
+
+    modifiedMesh = newModifiedMesh;
+
+    if(octree == NULL)
+    {
+        octree = new ExtendedOctree();
+    }
+
+    // initialize the octree
+    // set point cloud
+    octree->setMesh(modifiedMesh);
+    octree->setStartMaxDepth(startDepth);
+    octree->setOptimationMaxDepth(maximumDepth);
+    octree->quantizeSurface();
+    octree->setupVectors();
+
+    // calculate outer and inner cells
+    octree->setupOctree();
+    octree->setOuterNodes();
+    octree->setInnerNodes();
+    octree->adjustMaxDepth();
+    octree->increaseShell(shellExtensionValue);
+    octree->setMergeNodes();
+
+    // get mesh for inner shell (needed for view)
+    octree->createInnerSurface();
+    Mesh* newShellMesh = octree->getShellMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
+
+    return;
+}
 
 void Model::initialize(Mesh* mesh)
 {
@@ -21,21 +79,16 @@ void Model::initialize(Mesh* mesh)
     GLint depth = 3;
     Model::octree = new ExtendedOctree();
     octree->setMesh(mesh);
-    octree->setStartDepth(depth);
-    octree->setMaxDepth(depth);
+    octree->setStartMaxDepth(depth);
+    octree->setOptimationMaxDepth(depth+1);
     octree->quantizeSurface();
     octree->setupVectors();
 
     octree->setupOctree();
-    octree->setShellNodeIndices();
     octree->setOuterNodes();
     octree->setInnerNodes();
-    octree->setInnerNodeIndices();
     octree->adjustMaxDepth();
-    octree->increaseShell(1);
-
-    octree->setShellNodeIndices();
-    octree->setInnerNodeIndices();
+    octree->increaseShell(0);
 
     octree->createInnerSurface();
 
@@ -51,14 +104,14 @@ void Model::hollow()
         cout << mesh_volume[i] << endl;
     }
 
-    //objectShell = octree.getMesh();
-
-    QVector<octree::cubeObject> cubeVector;
+    QVector<octree::cubeObject>* cubeVector = NULL;
 
     bool not_converged = true;
-    while (not_converged) {
+    while (not_converged)
+    {
+
         // get the inner cubes of the octree
-        octree->getInnerCubes(&cubeVector);
+        cubeVector = octree->getInnerCubes();
 
         VectorXd b(cubeVector.size());
         MatrixXd S(cubeVector.size(), 10);
@@ -114,14 +167,13 @@ void Model::hollow()
         b = optimize(b,S);
 
         for (int i = 0; i < b.rows(); i++) {
-            octree::cubeObject o = cubeVector.at(i);
+            octree::cubeObject o = cubeVector->at(i);
             o.beta = b(i);
-            cubeVector.replace(i, o);
+            cubeVector->replace(i, o);
         }
 
         // set new betas and clrea cubeVector
-        octree->setBetasForCubes(&cubeVector);
-        cubeVector.clear();
+        octree->updateBetaValues();
 
         // do split and merge
         not_converged = octree->splitAndMerge(0);

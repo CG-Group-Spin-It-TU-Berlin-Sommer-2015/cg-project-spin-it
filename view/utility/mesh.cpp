@@ -69,15 +69,23 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector
     this->vertex_normals = vertex_normals;
     this->surface_normals = new QVector<GLfloat>();
     this->indices = indices;
+
     this->isDirty = true;
 }
 
 Mesh::~Mesh()
 {
     geometry->clear();
+    delete geometry;
+
     vertex_normals->clear();
+    delete vertex_normals;
+
     surface_normals->clear();
+    delete surface_normals;
+
     indices->clear();
+    delete indices;
 }
 
 QVector<GLfloat>* Mesh::getGeometry()
@@ -151,6 +159,80 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
     shader->disableAttributeArray("geometry");
 }
 
+/**
+ * @brief Mesh::getMiddle Get the middle point according to minimal and maximal coordinates
+ * @return the middle of the mesh
+ */
+QVector3D Mesh::getMiddle()
+{
+    GLfloat x_min, x_max, y_min, y_max, z_min, z_max;
+
+    x_min = std::numeric_limits<float>::max();
+    y_min = std::numeric_limits<float>::max();
+    z_min = std::numeric_limits<float>::max();
+
+    x_max = std::numeric_limits<float>::min();
+    y_max = std::numeric_limits<float>::min();
+    z_max = std::numeric_limits<float>::min();
+
+    for (int i = 0; i < getGeometry()->size(); i += 3) {
+        if (getGeometry()->at(i) > x_max) {
+            x_max = getGeometry()->at(i);
+        }
+        if (getGeometry()->at(i) < x_min) {
+            x_min = getGeometry()->at(i);
+        }
+
+        if (getGeometry()->at(i + 1) > y_max) {
+            y_max = getGeometry()->at(i + 1);
+        }
+        if (getGeometry()->at(i + 1) < y_min) {
+            y_min = getGeometry()->at(i + 1);
+        }
+
+        if (getGeometry()->at(i + 2) > z_max) {
+            z_max = getGeometry()->at(i + 2);
+        }
+        if (getGeometry()->at(i + 2) < z_min) {
+            z_min = getGeometry()->at(i + 2);
+        }
+    }
+
+    QVector3D middle;
+
+    middle.setX((x_max + x_min) / 2);
+    middle.setY((y_max + y_min) / 2);
+    middle.setZ((z_max + z_min) / 2);
+
+    return middle;
+}
+
+/**
+ * @brief Mesh::getMaxDistance2Middle Get the maximal distance according to the middle point
+ * @return the maximal distance
+ */
+GLfloat Mesh::getMaxDistance2Middle()
+{
+   QVector3D middle = getMiddle();
+
+   GLfloat max = 0;
+
+   for (int i = 0; i < getGeometry()->size(); i += 3) {
+
+       GLfloat xt = fabs(getGeometry()->at(i + 0)-middle.x());
+       max = xt>max?xt:max;
+
+       GLfloat yt = fabs(getGeometry()->at(i + 1)-middle.y());
+       max = yt>max?yt:max;
+
+       GLfloat zt = fabs(getGeometry()->at(i + 2)-middle.z());
+       max = zt>max?zt:max;
+
+   }
+
+   return max;
+}
+
 QVector3D Mesh::getMean()
 {
     QVector3D mean;
@@ -163,4 +245,56 @@ QVector3D Mesh::getMean()
     mean.setY(mean.y() / (geometry->size() / 3));
     mean.setZ(mean.z() / (geometry->size() / 3));
     return mean;
+}
+
+/**
+ * @brief Mesh::copy Make a copy of the mesh
+ * @return the copy of the mesh
+ */
+Mesh* Mesh::copy()
+{
+
+    QVector<GLfloat>* newGeometry = new QVector<GLfloat>();
+    for (int i = 0; i < geometry->size(); i+=3) {
+
+        newGeometry->push_back(geometry->at(i+0));
+        newGeometry->push_back(geometry->at(i+1));
+        newGeometry->push_back(geometry->at(i+2));
+    }
+
+    QVector<GLint>* newIndices = new QVector<GLint>();
+    for (int i = 0; i < indices->size(); i++) {
+        newIndices->push_back(indices->at(i));
+    }
+
+    return new Mesh(newGeometry,newIndices);
+
+}
+
+/**
+ * @brief Mesh::transform Transform the vertices of the mesh
+ * @param matrix the transformation matrix
+ */
+void Mesh::transform(QMatrix4x4 matrix)
+{
+
+    QVector4D vec,tempVec;
+    vec.setW(1);
+
+    GLfloat* data = geometry->data();
+
+    for (int i = 0; i < geometry->size(); i+=3) {
+
+        vec.setX(data[i+0]);
+        vec.setY(data[i+1]);
+        vec.setZ(data[i+2]);
+
+        tempVec = matrix*vec;
+
+        data[i+0] = tempVec.x();
+        data[i+1] = tempVec.y();
+        data[i+2] = tempVec.z();
+
+    }
+
 }

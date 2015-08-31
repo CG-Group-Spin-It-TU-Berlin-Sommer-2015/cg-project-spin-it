@@ -6,18 +6,51 @@ using namespace octree;
 BasicOctree::BasicOctree():
 isDirty(true),
 mesh(NULL),
-startDepth(6),
-maxDepth(6),
+startMaxDepth(6),
+optimationMaxDepth(6),
 rootNodeIndex(-1)
 {
 
 }
 
+//-------------------------------------------------- setup parameters
+
+/**
+ * @brief BasicOctree::setMesh Set the mesh for the octree
+ * @param mesh the considered mesh
+ */
 void BasicOctree::setMesh(Mesh* mesh)
 {
     this->mesh = mesh;
 }
 
+/**
+ * @brief BasicOctree::setStartDepth Set a new start depth
+ * @param depth the start depth
+ */
+void BasicOctree::setStartMaxDepth(GLint depth)
+{
+    this->startMaxDepth = depth;
+}
+
+/**
+ * @brief BasicOctree::setMaxDepth Set a new maximal depth
+ * @param depth the maximal depth
+ */
+void BasicOctree::setOptimationMaxDepth(GLint depth)
+{
+    this->optimationMaxDepth = depth;
+}
+
+//-------------------------------------------------- quantizing mesh
+
+/**
+ * @brief BasicOctree::addTriangle Set the triangle defined be the three points
+ * @param p1 point 1
+ * @param p2 point 2
+ * @param p3 point 3
+ * @param buffer triangle buffer
+ */
 void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer)
 {
 
@@ -33,19 +66,37 @@ void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,Q
 
 }
 
-void BasicOctree::quantizeSurface()
+/**
+ * @brief BasicOctree::setRawVoxel Set a voxel
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ */
+void inline BasicOctree::setRawVoxel(GLfloat x,GLfloat y,GLfloat z)
 {
 
-    mean = mesh->getMean();
+    this->rawVoxels.push_back(x);
+    this->rawVoxels.push_back(y);
+    this->rawVoxels.push_back(z);
 
-    GLfloat x = mean.x();
-    GLfloat y = mean.y();
-    GLfloat z = mean.z();
+}
+
+/**
+ * @brief BasicOctree::quantizeSurface Quantize the surface of the mesh
+ */
+void BasicOctree::quantizeSurface()
+{
 
     if(this->mesh == NULL)
     {
         return;
     }
+
+    mean = mesh->getMean();
+    GLfloat x = mean.x();
+    GLfloat y = mean.y();
+    GLfloat z = mean.z();
+
 
     GLfloat* gvd = this->mesh->getGeometry()->data();
     GLint* ivd = this->mesh->getIndices()->data();
@@ -53,6 +104,7 @@ void BasicOctree::quantizeSurface()
 
     GLdouble max_g = 0;
 
+    // search for the maximal coordiante
     for (GLint i=0;i<length;i+=3)
     {
         max_g = std::max(max_g,(double)(fabs(gvd[ivd[i+0]*3+0]-x) ));
@@ -68,8 +120,8 @@ void BasicOctree::quantizeSurface()
 
     this->max_g = max_g;
 
-    this->raw_voxels.clear();
-    this->raw_voxels.reserve( length*pow(4,2) );
+    this->rawVoxels.clear();
+    this->rawVoxels.reserve( length*pow(4,2) );
 
     QVector<GLfloat> triangleBuffer1;
     QVector<GLfloat> triangleBuffer2;
@@ -83,10 +135,11 @@ void BasicOctree::quantizeSurface()
     GLfloat py = max_g-y;
     GLfloat pz = max_g-z;
 
-    axis_length = pow(2,this->startDepth);
+    axis_length = pow(2,this->startMaxDepth);
     plane_length = axis_length*axis_length;
     cell_length = (max_g*2)/axis_length;
 
+    // add the triangles to the initial front vector
     for (GLint i=0;i<length;i+=3)
     {
         GLfloat x1 = (gvd[ivd[i+0]*3+0]+px)/cell_length;
@@ -113,12 +166,14 @@ void BasicOctree::quantizeSurface()
     QVector3D p1,p2,p3;
     GLdouble max_v = 0;
 
+    // create a point cloud for the triangles
     while(frontBuffer->size()>0)
     {
 
         while(frontBuffer->size()>0)
         {
 
+            // get the points for the next triangle
             p3.setZ(frontBuffer->last());frontBuffer->pop_back();
             p3.setY(frontBuffer->last());frontBuffer->pop_back();
             p3.setX(frontBuffer->last());frontBuffer->pop_back();
@@ -147,23 +202,20 @@ void BasicOctree::quantizeSurface()
 
             if(max_v<0.5f)
             {
-                this->raw_voxels.push_back(p1.x());
-                this->raw_voxels.push_back(p1.y());
-                this->raw_voxels.push_back(p1.z());
-                this->raw_voxels.push_back(p2.x());
-                this->raw_voxels.push_back(p2.y());
-                this->raw_voxels.push_back(p2.z());
-                this->raw_voxels.push_back(p3.x());
-                this->raw_voxels.push_back(p3.y());
-                this->raw_voxels.push_back(p3.z());
+                // triangle is small enough
+
+                // add raw voxel
+                this->setRawVoxel(p1.x(),p1.y(),p1.z());
+                this->setRawVoxel(p2.x(),p2.y(),p2.z());
+                this->setRawVoxel(p3.x(),p3.y(),p3.z());
 
             }
             else{
 
+                // split triangle into four parts and add them to the back buffer
                 QVector3D newp1 = p1+(p2-p1)/2;
                 QVector3D newp2 = p1+(p3-p1)/2;
                 QVector3D newp3 = p2+(p3-p2)/2;
-
                 this->addTriangle(&p1,&newp2,&newp1,backBuffer);
                 this->addTriangle(&p2,&newp1,&newp3,backBuffer);
                 this->addTriangle(&p3,&newp3,&newp2,backBuffer);
@@ -172,6 +224,7 @@ void BasicOctree::quantizeSurface()
             }
         }
 
+        // switch buffers
         if(triangleBuffer1.size()>0)
         {
             frontBuffer = &triangleBuffer1;
@@ -186,11 +239,58 @@ void BasicOctree::quantizeSurface()
     }
 }
 
+/**
+ * @brief BasicOctree::setupVectors Set voxel points for raw voxels
+ */
+void BasicOctree::setupVectors()
+{
+
+    QVector<QVector3D> tempVoxels;
+    tempVoxels.reserve(this->rawVoxels.length()/3);
+
+    this->voxels.clear();
+    this->voxels.reserve(this->rawVoxels.length()/3);
+
+    GLint length;
+
+    length = this->rawVoxels.length();
+
+    for (GLint i = 0; i < length ; i+=3)
+    {
+
+      QVector3D point;
+
+      point.setX(this->rawVoxels.at(i+0));
+      point.setY(this->rawVoxels.at(i+1));
+      point.setZ(this->rawVoxels.at(i+2));
+
+      voxels.push_back(point);
+    }
+
+}
+
+//-------------------------------------------------- helper functions for octree
+
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z)
 {
     return getLeafNodeByCoordinate(x,y,z,this->rootNodeIndex);
 }
 
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates starting from specific node
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @param startNodeIndex index of start node
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLint startNodeIndex)
 {
     if(x<0 || y<0 || z<0)
@@ -205,6 +305,14 @@ octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLin
     return getLeafNodeByCoordinateHelper(x,y,z,startNodeIndex);
 }
 
+/**
+ * @brief BasicOctree::getLeafNodeByCoordinateHelper
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param z z coordinate
+ * @param nodeIndex index of node
+ * @return pointer to searched node
+ */
 octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z, GLint nodeIndex)
 {
     octreeNode* nodePointer = &this->octreeNodes.data()[nodeIndex];
@@ -218,6 +326,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
     GLint yarea = (nodePointer->y+(nodePointer->cell_length>>1))<=y?1:0;
     GLint zarea = (nodePointer->z+(nodePointer->cell_length>>1))<=z?1:0;
 
+    // choose next octree node
     GLint code = zarea*1+yarea*2+xarea*4;
 
     switch(code){
@@ -234,74 +343,55 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
     return NULL;
 }
 
-bool inline BasicOctree::testNeighborNode(GLint x, GLint y, GLint z, octreeNode* nodePointer)
-{
-
-    octreeNode* neighborNodePointer = this->getLeafNodeByCoordinate(x,y,z);
-    if(neighborNodePointer->isSet && !neighborNodePointer->inside)
-    {
-        nodePointer->isSet = true;
-        nodePointer->inside = false;
-
-        return true;
-    }
-
-    return false;
-}
-
-GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex){
+/**
+ * @brief BasicOctree::createNode Create a new node
+ * @param x x coordinate of octree
+ * @param y y coordinate of octree
+ * @param z z coordinate of octree
+ * @param depth node depth
+ * @param addToInteriors should be added to interiors
+ * @param parentIndex index of the parent node
+ * @return index of new node
+ */
+GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,GLint parentIndex){
 
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
-    GLfloat cell_length = this->cell_length*(pow(2,this->maxDepth-depth));
+    GLfloat cell_length = this->cell_length*(pow(2,this->optimationMaxDepth-depth));
 
     octreeNode node;
 
-    node.shellNode = false;
-    node.leaf = true;
     node.isSet = true;
-    node.inside = addToInteriors;
+
+    node.leaf = true;
+    node.isInside = isInside;
+    node.isShell = false;
+
     node.parentIndex = parentIndex;
     node.setPoints(xf,yf,zf,cell_length);
     node.x = x;
     node.y = y;
     node.z = z;
-    node.cell_length = pow(2,this->maxDepth-depth);
+    node.cell_length = pow(2,this->optimationMaxDepth-depth);
     node.nodeDepth = depth;
 
-    /* add node in the data structures (avoid waste of storage by using voids in the vectors) */
-    if(!this->freeIndicesForAllNodes.empty())
-    {
-        node.index = this->freeIndicesForAllNodes.last();
-        this->freeIndicesForAllNodes.pop_back();
-        this->octreeNodes.data()[node.index] = node;
-    }
-    else
-    {
-        node.index = this->octreeNodes.length();
-        this->octreeNodes.push_back(node);
-    }
-
-    if(addToInteriors)
-    {
-        if(!this->freeIndicesForInnerNodes.empty())
-        {
-            node.typeVectorIndex = this->freeIndicesForInnerNodes.last();
-            this->freeIndicesForInnerNodes.pop_back();
-            this->innerNodeIndices.data()[node.typeVectorIndex] = node.index;
-        }
-        else
-        {
-            node.typeVectorIndex = this->freeIndicesForInnerNodes.length();
-            this->innerNodeIndices.push_back(node.index);
-        }
-    }
+    // add node to octree node vector
+    node.index = this->octreeNodes.length();
+    this->octreeNodes.push_back(node);
 
     this->octreeNodes.data()[node.index] = node;
     return node.index;
 }
 
+//-------------------------------------------------- shell mesh calculation
+
+/**
+ * @brief BasicOctree::handleHashItem Handle vertice for avoiding multiple set up of a vertex
+ * @param vertexIndex unique index of a vertice
+ * @param point point in world
+ * @return index of the point
+ */
 GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 {
 
@@ -325,13 +415,27 @@ GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 
 }
 
+/**
+ * @brief BasicOctree::addTriangle Should triangles added here
+ * @param x x coordinate in octree
+ * @param y y coordiante in octree
+ * @param z z coordinate in octree
+ * @return true, triangles should added. false, otherwise
+ */
 bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 {
     octreeNode* nodePointer = this->getLeafNodeByCoordinate(x,y,z);
 
-    return nodePointer->shellNode || (nodePointer->isSet && nodePointer->inside && !nodePointer->isVoid);
+    return nodePointer->isShell || (nodePointer->isInside && !nodePointer->isVoid);
 }
 
+/**
+ * @brief BasicOctree::createTriangle Add vertices and indices for inner and shell border
+ * @param x x coordinate in octree
+ * @param y y coordinate in octree
+ * @param z z coordinate in octree
+ * @param code code for side where surface should be created
+ */
 void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 {
 
@@ -453,65 +557,25 @@ void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 
 }
 
-void BasicOctree::setInnerNodeIndices()
-{
-
-    octreeNode* nodePointer;
-
-    GLint length = this->octreeNodes.length();
-
-    this->innerNodeIndices.clear();
-    this->freeIndicesForInnerNodes.clear();
-
-    for(int i=1;i<length;i++)
-    {
-
-         nodePointer = &this->octreeNodes.data()[i];
-         if(!nodePointer->leaf || !nodePointer->isSet || !nodePointer->inside || nodePointer->shellNode)
-         {
-           continue;
-         }
-
-         innerNodeIndices.push_back(i);
-    }
-
-}
-
-void BasicOctree::setShellNodeIndices()
-{
-
-    octreeNode* nodePointer;
-
-    GLint length = this->octreeNodes.length();
-
-    this->shellNodeIndices.clear();
-
-    for(int i=1;i<length;i++)
-    {
-
-         nodePointer = &this->octreeNodes.data()[i];
-         if(!nodePointer->leaf || !nodePointer->shellNode)
-         {
-           continue;
-         }
-
-         shellNodeIndices.push_back(i);
-    }
-
-}
-
+/**
+ * @brief BasicOctree::createInnerSurface Calculate vertices and indices for inner shell mesh
+ */
 void BasicOctree::createInnerSurface()
 {
 
+    // get a vector of the indices of all inner nodes
+    QVector<GLint> innerLeafIndices;
+    this->getInnerLeaves(&innerLeafIndices);
+    octreeNode* nodePointer;
+
+    // prepare new calcuation
     geometry.clear();
     indices.clear();
     geometryMap.clear();
 
-    GLint length = innerNodeIndices.length();
-
-    for(int i=0;i<length;i++)
+    for(int i=0;i<innerLeafIndices.length();i++)
     {
-        octreeNode* nodePointer = &this->octreeNodes.data()[innerNodeIndices.at(i)];
+        nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
 
         if(!nodePointer->isVoid)
         {
@@ -556,6 +620,7 @@ void BasicOctree::createInnerSurface()
 
     QHash<GLint, hashItem>::iterator i;
 
+    // set up vector for vertices
     for (i = geometryMap.begin(); i != geometryMap.end(); ++i)
     {
 
@@ -568,6 +633,7 @@ void BasicOctree::createInnerSurface()
 
     GLfloat* data = geometry.data();
 
+    // reverse the order of the vertices values
     for (i = geometryMap.begin(); i != geometryMap.end(); ++i)
     {
 
@@ -578,9 +644,59 @@ void BasicOctree::createInnerSurface()
 
     }
 
-    return;
+    geometryMap.clear();
+
+    innerLeafIndices.clear();
+
 }
 
+/**
+ * @brief BasicOctree::getShellMesh Get the mesh of the inner shell
+ * @param flip true the normals are flip. false otherwise
+ * @return the mesh
+ */
+Mesh* BasicOctree::getShellMesh(bool flip)
+{
+
+    QVector<GLfloat>* geometry = new QVector<GLfloat>();
+    QVector<GLint>* indices = new QVector<GLint>();
+
+    geometry->reserve(this->geometry.length());
+    indices->reserve(this->indices.length());
+
+    for (int i=0;i<this->geometry.length();i++)
+    {
+       geometry->push_back(this->geometry.at(i));
+    }
+
+    // flip surface
+    if(flip)
+    {
+        for (int i=0;i<this->indices.length();i+=3)
+        {
+            indices->push_back(this->indices.at(i+2));
+            indices->push_back(this->indices.at(i+1));
+            indices->push_back(this->indices.at(i+0));
+        }
+    }
+    else
+    {
+        for (int i=0;i<this->indices.length();i++)
+        {
+            indices->push_back(this->indices.at(i));
+        }
+    }
+
+    Mesh* mesh = new Mesh(geometry,indices);
+
+    return mesh;
+}
+
+//-------------------------------------------------- mark nodes
+
+/**
+ * @brief BasicOctree::setOuterNodes Mark outer nodes
+ */
 void BasicOctree::setOuterNodes()
 {
     octreeNode* nodePointer;
@@ -591,6 +707,7 @@ void BasicOctree::setOuterNodes()
     QHash<GLint, octreeNode*>* frontMap = &tempMap1;
     QHash<GLint, octreeNode*>* backMap = &tempMap2;
 
+    // set border nodes as initial outer nodes
     for(int i=0;i<this->axis_length;i++)
     {
         for(int j=0;j<this->axis_length;j++)
@@ -598,32 +715,32 @@ void BasicOctree::setOuterNodes()
 
 
             nodePointer = this->getLeafNodeByCoordinate(i,j,0);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
             nodePointer = this->getLeafNodeByCoordinate(i,j,this->axis_length-1);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
             nodePointer = this->getLeafNodeByCoordinate(i,0,j);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
             nodePointer = this->getLeafNodeByCoordinate(i,this->axis_length-1,j);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
             nodePointer = this->getLeafNodeByCoordinate(0,i,j);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
             nodePointer = this->getLeafNodeByCoordinate(this->axis_length-1,i,j);
-            if(nodePointer !=NULL && !nodePointer->shellNode)
+            if(nodePointer !=NULL && !nodePointer->isShell)
             {
                 frontMap->insert(nodePointer->index,nodePointer);
             }
@@ -631,6 +748,7 @@ void BasicOctree::setOuterNodes()
         }
     }
 
+    // search for outer nodes iteratively
     while(frontMap->size()>0)
     {
 
@@ -641,8 +759,9 @@ void BasicOctree::setOuterNodes()
 
             octreeNode* nodePointer = i.value();
             nodePointer->isSet = true;
-            nodePointer->inside = false;
 
+            nodePointer->isInside = false;
+            nodePointer->isShell = false;
         }
 
         for (i = frontMap->begin(); i != frontMap->end(); ++i)
@@ -660,36 +779,36 @@ void BasicOctree::setOuterNodes()
                 {
 
                     nodePointer = this->getLeafNodeByCoordinate(x+j,y+k,z-1);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
                     nodePointer = this->getLeafNodeByCoordinate(x+j,y+k,z+length2);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
 
 
                     nodePointer = this->getLeafNodeByCoordinate(x+j,y-1,z+k);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
                     nodePointer = this->getLeafNodeByCoordinate(x+j,y+length2,z+k);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
 
 
                     nodePointer = this->getLeafNodeByCoordinate(x-1,y+j,z+k);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
                     nodePointer = this->getLeafNodeByCoordinate(x+length2,y+j,z+k);
-                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->shellNode)
+                    if(nodePointer !=NULL && !nodePointer->isSet && !nodePointer->isShell)
                     {
                         backMap->insert(nodePointer->index,nodePointer);
                     }
@@ -698,6 +817,7 @@ void BasicOctree::setOuterNodes()
             }
         }
 
+        // swap buffers
         frontMap->clear();
 
         if(tempMap1.size()>0){
@@ -715,71 +835,43 @@ void BasicOctree::setOuterNodes()
     return;
 }
 
+/**
+ * @brief BasicOctree::setInnerNodes Mark the inner nodes ( after calculating outer nodes)
+ */
 void BasicOctree::setInnerNodes()
 {
 
     octreeNode* nodePointer;
 
-    GLint length = this->octreeNodes.length();
-
-    for(int i=1;i<length;i++)
+    for(int i=1;i<this->octreeNodes.length();i++)
     {
 
          nodePointer = &this->octreeNodes.data()[i];
-         if(!nodePointer->leaf || nodePointer->isSet || nodePointer->shellNode)
+
+         if(!nodePointer->leaf || nodePointer->isSet || nodePointer->isShell)
          {
            continue;
          }
 
          nodePointer->isSet = true;
-         nodePointer->inside = true;
-         nodePointer->typeVectorIndex = innerNodeIndices.size();
+
+         nodePointer->isInside = true;
+         nodePointer->isShell = false;
 
     }
 
 }
 
-bool compare (const QVector3D & a, const QVector3D & b)
-{
-  if(a.x()<b.x()){return true;}
-  if(a.x()>b.x()){return false;}
+//-------------------------------------------------- set up octree
 
-  if(a.y()<b.y()){return true;}
-  if(a.y()>b.y()){return false;}
-
-  if(a.z()<b.z()){return true;}
-  if(a.z()>b.z()){return false;}
-
-  return false;
-}
-
-void BasicOctree::setupVectors()
-{
-
-    QVector<QVector3D> tempVoxels;
-    tempVoxels.reserve(this->raw_voxels.length()/3);
-
-    this->voxels.clear();
-    this->voxels.reserve(this->raw_voxels.length()/3);
-
-    GLint length;
-
-    length = this->raw_voxels.length();
-
-    for (GLint i = 0; i < length ; i+=3)
-    {
-
-      QVector3D point;
-
-      point.setX(this->raw_voxels.at(i+0));
-      point.setY(this->raw_voxels.at(i+1));
-      point.setZ(this->raw_voxels.at(i+2));
-
-      voxels.push_back(point);
-    }
-
-}
-
+/**
+ * @brief BasicOctree::sortHalf Sort voxels until half of the array size (for x,y or z coordinate)
+ * @param start start index
+ * @param end end index
+ * @param coor code for coordinate
+ * @param prior prior value
+ * @return index of the last element of half sorted array
+ */
 GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 {
 
@@ -808,48 +900,61 @@ GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
     return tempEnd;
 }
 
+/**
+ * @brief BasicOctree::setupOctree Create the octree according to set preferences
+ */
 void BasicOctree::setupOctree(){
 
-    freeIndicesForAllNodes.clear();
-    freeIndicesForInnerNodes.clear();
-
-    this->shellNodeIndices.clear();
+    this->octreeNodes.clear();
 
     this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.length(),0,0,0);
 
+    // clear obsolete data structures
+    this->rawVoxels.clear();
     this->voxels.clear();
-
+    this->isDirty = true;
 }
 
+/**
+ * @brief BasicOctree::setupOctreeHelper Helper function for creating the octree
+ * @param depth current depth
+ * @param start start value for range
+ * @param end end value for range
+ * @param x x coordinate in octree
+ * @param y y coordinate in octree
+ * @param z z coordinate in octree
+ * @return index of created node
+ */
 GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z){
 
-
+    // calculate values
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
-    GLfloat cell_length = this->cell_length*(pow(2,this->startDepth-depth));
+    GLfloat cell_length = this->cell_length*(pow(2,this->startMaxDepth-depth));
 
-
-    if(this->startDepth<=depth || end-start<1 ){
+    // if recursion should stop (leaf is reached)
+    if(this->startMaxDepth<=depth || end-start<1 ){
 
         octreeNode node;
 
-        node.shellNode = this->startDepth<=depth && end-start>0;
+        // set node data
+        node.isShell = this->startMaxDepth<=depth && end-start>0;
         node.leaf = true;
+
         node.setPoints(xf,yf,zf,cell_length);
         node.x = x;
         node.y = y;
         node.z = z;
-        node.cell_length = pow(2,this->startDepth-depth);
+        node.cell_length = pow(2,this->startMaxDepth-depth);
         node.index = octreeNodes.length();
         node.nodeDepth = depth;
-
 
         octreeNodes.push_back(node);
         return node.index;
     }
 
-    GLint cell_length_int = pow(2,this->startDepth-depth);
+    GLint cell_length_int = pow(2,this->startMaxDepth-depth);
     GLint prior = cell_length_int >> 1;
 
     GLint startEndY = sortHalf(start,end,0,x+prior);
@@ -866,6 +971,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 
     GLint half_cell_length_int = cell_length_int >> 1;
 
+    // recursion step
     node.childIndex0 = setupOctreeHelper(newDepth,start         ,startEndTemp1 ,x,                 y,                 z                  );
     node.childIndex1 = setupOctreeHelper(newDepth,startEndTemp1 ,startEndZ1    ,x,                 y,                 z+half_cell_length_int );
     node.childIndex2 = setupOctreeHelper(newDepth,startEndZ1    ,startEndTemp2 ,x,                 y+half_cell_length_int,z                  );
@@ -876,8 +982,10 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     node.childIndex6 = setupOctreeHelper(newDepth,startEndZ2    ,startEndTemp4 ,x+half_cell_length_int,y+half_cell_length_int,z                  );
     node.childIndex7 = setupOctreeHelper(newDepth,startEndTemp4 ,end           ,x+half_cell_length_int,y+half_cell_length_int,z+half_cell_length_int );
 
-    node.shellNode = true;
+    // set node data
+    node.isShell = true;
     node.leaf = false;
+
     node.setPoints(xf,yf,zf,cell_length);
     node.x = x;
     node.y = y;
@@ -886,7 +994,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     node.index = octreeNodes.length();
     node.nodeDepth = depth;
 
-
+    // set parent index
     octreeNodes.data()[node.childIndex0].parentIndex = node.index;
     octreeNodes.data()[node.childIndex1].parentIndex = node.index;
     octreeNodes.data()[node.childIndex2].parentIndex = node.index;
@@ -901,33 +1009,12 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     return node.index;
 }
 
-void BasicOctree::setStartDepth(GLint depth){
-
-    GLint minDepthLimit = 3;
-    GLint maxDepthLimit = 9;
-
-    depth = depth<maxDepthLimit?depth:maxDepthLimit;
-    depth = depth>minDepthLimit?depth:minDepthLimit;
-    depth = depth<=maxDepth?depth:maxDepth;
-
-    this->startDepth = depth;
-}
-
-void BasicOctree::setMaxDepth(GLint depth){
-
-    GLint minDepthLimit = 3;
-    GLint maxDepthLimit = 9;
-
-    depth = depth<maxDepthLimit?depth:maxDepthLimit;
-    depth = depth>minDepthLimit?depth:minDepthLimit;
-    depth = depth>=startDepth?depth:startDepth;
-
-    this->maxDepth = depth;
-}
-
+/**
+ * @brief BasicOctree::adjustMaxDepth Adjust the octree to the maximal depth
+ */
 void BasicOctree::adjustMaxDepth()
 {
-    GLint diff = this->maxDepth-startDepth;
+    GLint diff = this->optimationMaxDepth-startMaxDepth;
 
     this->cell_length = this->cell_length/pow(2,diff);
 
@@ -947,88 +1034,18 @@ void BasicOctree::adjustMaxDepth()
 
 }
 
-Mesh* BasicOctree::getMesh(bool flip)
-{
+//-------------------------------------------------- draw octree grid
 
-    QVector<GLfloat>* geometry = new QVector<GLfloat>();
-    QVector<GLint>* indices = new QVector<GLint>();
-
-    geometry->reserve(this->geometry.length());
-    indices->reserve(this->indices.length());
-
-    for (int i=0;i<this->geometry.length();i++)
-    {
-       geometry->push_back(this->geometry.at(i));
-    }
-
-    if(flip)
-    {
-        for (int i=0;i<this->indices.length();i+=3)
-        {
-            indices->push_back(this->indices.at(i+2));
-            indices->push_back(this->indices.at(i+1));
-            indices->push_back(this->indices.at(i+0));
-        }
-    }
-    else
-    {
-        for (int i=0;i<this->indices.length();i++)
-        {
-            indices->push_back(this->indices.at(i));
-        }
-    }
-
-    Mesh* mesh = new Mesh(geometry,indices);
-
-    return mesh;
-}
-
-Mesh* BasicOctree::getPointMesh()
-{
-
-    if(this->voxels.length()>10000)
-    {
-        return NULL;
-    }
-
-    QVector<GLfloat>* geometry = new QVector<GLfloat>();
-    QVector<GLint>* indices = new QVector<GLint>();
-
-    geometry->reserve(this->voxels.length()*3);
-    indices->reserve(this->voxels.length());
-
-    for (int i=0;i<this->voxels.length();++i)
-    {
-        geometry->push_back(this->voxels.at(i).x()*this->cell_length-(max_g-this->mean.x()));
-        geometry->push_back(this->voxels.at(i).y()*this->cell_length-(max_g-this->mean.y()));
-        geometry->push_back(this->voxels.at(i).z()*this->cell_length-(max_g-this->mean.z()));
-        indices->push_back(i*3+0);
-
-        geometry->push_back((this->voxels.at(i).x()+0.1)*this->cell_length-(max_g-this->mean.x()));
-        geometry->push_back(this->voxels.at(i).y()*this->cell_length-(max_g-this->mean.y()));
-        geometry->push_back(this->voxels.at(i).z()*this->cell_length-(max_g-this->mean.z()));
-        indices->push_back(i*3+1);
-
-        geometry->push_back(this->voxels.at(i).x()*this->cell_length-(max_g-this->mean.x()));
-        geometry->push_back((this->voxels.at(i).y()+0.1)*this->cell_length-(max_g-this->mean.y()));
-        geometry->push_back(this->voxels.at(i).z()*this->cell_length-(max_g-this->mean.z()));
-        indices->push_back(i*3+2);
-    }
-
-    Mesh* mesh = new Mesh(geometry,indices);
-
-    return mesh;
-
-}
-
+/**
+ * @brief BasicOctree::render Render the grid of the octree
+ * @param shader the shader
+ */
 void BasicOctree::render(QGLShaderProgram* shader)
 {
-
 
     if(this->octreeNodes.length()<0){
         return;
     }
-
 
     GLenum primitive = GL_LINES;
 
@@ -1050,13 +1067,7 @@ void BasicOctree::render(QGLShaderProgram* shader)
 
             octreeNode node = this->octreeNodes.at(i);
 
-            if(!node.leaf || node.invalid)
-            {
-                continue;
-            }
-
-
-            if( !node.inside || node.shellNode )
+            if( !node.isSet || !node.isInside || !node.leaf || node.isShell )
             {
                 continue;
             }
@@ -1137,34 +1148,100 @@ void BasicOctree::render(QGLShaderProgram* shader)
 
 }
 
-/*
-void Octree2::setupOctree_pcl()
+//-------------------------------------------------- vector getters
+
+/**
+ * @brief ExtendedOctree::getInnerLeaves Get the indices of all inner leaf nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
 {
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    octreeNode* nodePointer;
 
-    GLint length = this->raw_voxels.length();
-
-    cloud->width = length;
-    cloud->height = 1;
-    cloud->points.resize (cloud->width * cloud->height);
-
-    for (GLint i = 0; i < length ; i+=3)
+    for(int i=0;i<this->octreeNodes.length();i++)
     {
 
-      cloud->points[i].x = this->raw_voxels.at(i+0);
-      cloud->points[i].y = this->raw_voxels.at(i+1);
-      cloud->points[i].z = this->raw_voxels.at(i+2);
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->isInside && nodePointer->leaf)
+        {
+           indices->push_back(nodePointer->index);
+        }
+
     }
 
-    float resolution_octree = 0.5f;
+}
 
-    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree (resolution_octree);
+/**
+ * @brief ExtendedOctree::getShellLeaves Get the indices of all shell leaf nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getShellLeaves(QVector<GLint>* indices)
+{
 
+    octreeNode* nodePointer;
 
-    octree.setInputCloud (cloud);
-    octree.defineBoundingBox ();
-    octree.addPointsFromInputCloud ();
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->leaf && nodePointer->isShell)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
 
 }
-*/
+
+/**
+ * @brief ExtendedOctree::getMergeIndices Get the indices of all merge nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getMergeRoots(QVector<GLint>* indices)
+{
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->isMergeRoot)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
+/**
+ * @brief ExtendedOctree::getMergeCandidateIndices Get the indices of all nodes which are merge candidates
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)
+{
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(
+                !nodePointer->leaf &&
+                !nodePointer->isMergeRoot &&
+                !nodePointer->isMergeChild &&
+                !(nodePointer->isInside && nodePointer->isShell))
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}

@@ -10,18 +10,12 @@
 
 #include "mesh.h"
 
-/*
-#include <pcl/point_cloud.h>
-#include <Eigen/StdVector>
-#include <pcl/pcl_config.h>
-#include <pcl/pcl_macros.h>
-#include <pcl/octree/octree_base.h>
-#include <pcl/octree/octree.h>
-*/
-
 namespace octree
 {
 
+/**
+ * @brief The octreeNode struct
+ */
 struct octreeNode {
 
   octreeNode()
@@ -38,18 +32,29 @@ struct octreeNode {
 
       parentIndex = -1;
 
-      typeVectorIndex = -1;
-
       isSet = false;
-      invalid = false;
+      isInside = false;
+      isShell = false;
+      leaf = false;
+      isVoid = true;
+
+      isMergeRoot = false;
+      isMergeChild = false;
 
       // random float between 0 and 1
       beta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-      isVoid = true;
+      mesh = NULL;
 
   }
 
+  /**
+   * @brief setPoints
+   * @param x
+   * @param y
+   * @param z
+   * @param cell_length
+   */
   void setPoints(GLfloat x,GLfloat y,GLfloat z,GLfloat cell_length)
   {
 
@@ -65,7 +70,6 @@ struct octreeNode {
   }
 
   GLint index;
-  GLint typeVectorIndex;
 
   GLint x;
   GLint y;
@@ -88,8 +92,13 @@ struct octreeNode {
   /* index of the parent (if negative there is no parent => root node) */
   GLint parentIndex;
 
-  bool shellNode;
+  bool isSet;
+  bool isInside;
+  bool isShell;
   bool leaf;
+  bool isMergeRoot;
+  bool isMergeChild;
+  bool isVoid;
 
   QVector3D p0; //(-x,-y,-z)
   QVector3D p1; //(-x,-y,+z)
@@ -101,16 +110,14 @@ struct octreeNode {
   QVector3D p6; //(+x,+y,-z)
   QVector3D p7; //(+x,+y,+z)
 
-  bool isSet;
-  bool inside;
-
-  bool invalid;
-
   float beta;
 
-  bool isVoid;
+  Mesh* mesh;
 } ;
 
+/**
+ * @brief The hashItem struct
+ */
 struct hashItem{
     QVector3D vertex;
     GLint index;
@@ -126,8 +133,8 @@ public:
     void setMesh(Mesh* mesh);
     bool hasMesh();
 
-    void setStartDepth(GLint depth);
-    void setMaxDepth(GLint depth);
+    void setStartMaxDepth(GLint depth);
+    void setOptimationMaxDepth(GLint depth);
 
     void adjustMaxDepth();
 
@@ -135,8 +142,6 @@ public:
     bool hasQantizedSurface();
 
     void setupVectors();
-
-    //void setupOctree_pcl();
 
     void setupOctree();
 
@@ -150,13 +155,11 @@ public:
 
     void createInnerSurface();
 
-    Mesh* getMesh(bool flip = false);
-    Mesh* getPointMesh();
-
-    void setInnerNodeIndices();
-    void setShellNodeIndices();
+    Mesh* getShellMesh(bool flip = false);
 
 private:
+
+    void setRawVoxel(GLfloat x,GLfloat y,GLfloat z);
 
     bool addTriangle(GLint x, GLint y, GLint z);
     void createTriangle(GLint x, GLint y, GLint z, GLint code);
@@ -171,8 +174,6 @@ private:
 
     void addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer);
 
-    bool testNeighborNode(GLint x, GLint y, GLint z, octree::octreeNode* nodePointer);
-
     GLint handleHashItem(GLint vertexIndex,QVector3D point);
 
     GLint sortHalf(GLint start,GLint end,GLint coor, GLint prior);
@@ -182,7 +183,7 @@ private:
     QOpenGLBuffer* ibo;
     QVector<int> cubeLineIndices;
 
-    QVector<GLfloat> raw_voxels;
+    QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
     Mesh* mesh;
 
@@ -192,14 +193,8 @@ protected:
 
     GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
-    QVector<GLint> innerNodeIndices;
-    QVector<GLint> shellNodeIndices;
-
-    QVector<GLint> freeIndicesForAllNodes;
-    QVector<GLint> freeIndicesForInnerNodes;
-
-    GLint startDepth;
-    GLint maxDepth;
+    GLint startMaxDepth;
+    GLint optimationMaxDepth;
     GLint rootNodeIndex;
 
     QVector3D mean;
@@ -207,6 +202,11 @@ protected:
     GLint axis_length;
     GLint plane_length;
     GLdouble max_g;
+
+    void getInnerLeaves(QVector<GLint>* indices);
+    void getShellLeaves(QVector<GLint>* indices);
+    void getMergeRoots(QVector<GLint>* indices);
+    void getMergeRootCandidates(QVector<GLint>* indices);
 
 };
 

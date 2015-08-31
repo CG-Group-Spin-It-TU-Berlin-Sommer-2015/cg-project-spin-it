@@ -23,6 +23,10 @@ private:
     static Mesh* mesh;
     static float* mesh_volume;
 
+public:
+
+    static Mesh* modifiedMesh;
+    static Mesh* shellMesh;
     static ExtendedOctree* octree;
 
     static QVector<int>* J;
@@ -30,6 +34,12 @@ private:
 public:
     static void initialize(Mesh *mesh);
     static void hollow();
+
+    static void initializeOctree(
+            Mesh* newModifiedMesh,
+            GLint startDepth,
+            GLint maximumDepth,
+            GLint shellExtensionValue);
 
 private:
     static float* calculateVolume(Mesh* mesh, float p);

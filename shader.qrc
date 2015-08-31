@@ -9,5 +9,10 @@
         <file>monkey.obj</file>
         <file>rot_axis.obj</file>
         <file>bunny.obj</file>
+        <file>half_sphere.obj</file>
+        <file>rot_axis_bold.obj</file>
+        <file>yoyo_area.obj</file>
+        <file>yoyo_connection.obj</file>
+        <file>tippe_top_object.obj</file>
     </qresource>
 </RCC>
