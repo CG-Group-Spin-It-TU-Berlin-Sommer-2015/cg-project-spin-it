@@ -3,6 +3,7 @@
 Mesh* booleanHelper(Mesh* inputmesh1, Mesh* inputmesh2,GLint type)
 {
 
+    /*
     int length = 0;
 
     // set cork mesh for the first mesh
@@ -79,6 +80,9 @@ Mesh* booleanHelper(Mesh* inputmesh1, Mesh* inputmesh2,GLint type)
     Mesh* resultMesh = new Mesh(geometry,indices);
 
     return resultMesh;
+    */
+
+    return inputmesh1;
 }
 
 /**
