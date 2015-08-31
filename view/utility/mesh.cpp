@@ -297,6 +297,7 @@ void Mesh::transform(QMatrix4x4 matrix)
 
     }
 
+    updateNormals();
 }
 
 /**
@@ -320,5 +321,64 @@ void Mesh::swapYZ()
         data[i+2] = vec.y();
 
     }
+
+    updateNormals();
+
+}
+
+void Mesh::updateNormals()
+{
+
+    surface_normals->clear();
+    surface_normals->reserve(indices->size());
+
+    vertex_normals->clear();
+    vertex_normals->reserve(3 * indices->size());
+    for (int i = 0; i < 3 * indices->size(); i++) {
+        vertex_normals->push_back(0);
+    }
+
+    for (int i = 0; i < indices->size(); i += 3) {
+        QVector3D n1;
+        n1.setX(geometry->at(3 * indices->at(i)) - geometry->at(3 * indices->at(i + 1)));
+        n1.setY(geometry->at(3 * indices->at(i) + 1) - geometry->at(3 * indices->at(i + 1) + 1));
+        n1.setZ(geometry->at(3 * indices->at(i) + 2) - geometry->at(3 * indices->at(i + 1) + 2));
+
+        QVector3D n2;
+        n2.setX(geometry->at(3 * indices->at(i)) - geometry->at(3 * indices->at(i + 2)));
+        n2.setY(geometry->at(3 * indices->at(i) + 1) - geometry->at(3 * indices->at(i + 2) + 1));
+        n2.setZ(geometry->at(3 * indices->at(i) + 2) - geometry->at(3 * indices->at(i + 2) + 2));
+
+        QVector3D n = QVector3D::crossProduct(n1, n2);
+
+        surface_normals->push_back(-n.x());
+        surface_normals->push_back(-n.y());
+        surface_normals->push_back(-n.z());
+
+        vertex_normals->replace(3 * indices->at(i), vertex_normals->at(3 * indices->at(i)) + n.x());
+        vertex_normals->replace(3 * indices->at(i) + 1, vertex_normals->at(3 * indices->at(i) + 1) + n.y());
+        vertex_normals->replace(3 * indices->at(i) + 2, vertex_normals->at(3 * indices->at(i) + 2) + n.z());
+
+        vertex_normals->replace(3 * indices->at(i + 1), vertex_normals->at(3 * indices->at(i + 1)) + n.x());
+        vertex_normals->replace(3 * indices->at(i + 1) + 1, vertex_normals->at(3 * indices->at(i + 1) + 1) + n.y());
+        vertex_normals->replace(3 * indices->at(i + 1) + 2, vertex_normals->at(3 * indices->at(i + 1) + 2) + n.z());
+
+        vertex_normals->replace(3 * indices->at(i + 2), vertex_normals->at(3 * indices->at(i + 2)) + n.x());
+        vertex_normals->replace(3 * indices->at(i + 2) + 1, vertex_normals->at(3 * indices->at(i + 2) + 1) + n.y());
+        vertex_normals->replace(3 * indices->at(i + 2) + 2, vertex_normals->at(3 * indices->at(i + 2) + 2) + n.z());
+    }
+
+    for (int i = 0; i < geometry->size() / 3; i++) {
+        QVector3D normal;
+        normal.setX(vertex_normals->at(3*i));
+        normal.setY(vertex_normals->at(3*i + 1));
+        normal.setZ(vertex_normals->at(3*i + 2));
+
+        vertex_normals->replace(3 * i, normal.x() / normal.length());
+        vertex_normals->replace(3 * i + 1, normal.y() / normal.length());
+        vertex_normals->replace(3 * i + 2, normal.z() / normal.length());
+    }
+
+    this->isDirty = true;
 
 }

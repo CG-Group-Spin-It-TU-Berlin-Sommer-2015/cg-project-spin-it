@@ -39,6 +39,7 @@ public:
     Mesh* copy();
     void transform(QMatrix4x4 matrix);
     void swapYZ();
+    void updateNormals();
 
 };
 

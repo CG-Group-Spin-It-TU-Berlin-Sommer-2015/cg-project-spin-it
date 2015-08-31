@@ -101,7 +101,7 @@ void Model::hollow()
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);
         for (int i = 0; i < cubeVector->size(); i++) {
-            b(i) = 0;
+            b(i) = 0.5;
             float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
