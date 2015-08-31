@@ -36,9 +36,11 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
     octreeNode* nodePointer = &this->octreeNodes.data()[index];
 
     // set the vertices
+    /*
     geometry->push_back(nodePointer->p0.x());
     geometry->push_back(nodePointer->p0.y());
     geometry->push_back(nodePointer->p0.z());
+
     geometry->push_back(nodePointer->p1.x());
     geometry->push_back(nodePointer->p1.y());
     geometry->push_back(nodePointer->p1.z());
@@ -46,6 +48,7 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
     geometry->push_back(nodePointer->p2.x());
     geometry->push_back(nodePointer->p2.y());
     geometry->push_back(nodePointer->p2.z());
+
     geometry->push_back(nodePointer->p3.x());
     geometry->push_back(nodePointer->p3.y());
     geometry->push_back(nodePointer->p3.z());
@@ -53,6 +56,7 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
     geometry->push_back(nodePointer->p4.x());
     geometry->push_back(nodePointer->p4.y());
     geometry->push_back(nodePointer->p4.z());
+
     geometry->push_back(nodePointer->p5.x());
     geometry->push_back(nodePointer->p5.y());
     geometry->push_back(nodePointer->p5.z());
@@ -60,9 +64,43 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
     geometry->push_back(nodePointer->p6.x());
     geometry->push_back(nodePointer->p6.y());
     geometry->push_back(nodePointer->p6.z());
+
     geometry->push_back(nodePointer->p7.x());
     geometry->push_back(nodePointer->p7.y());
     geometry->push_back(nodePointer->p7.z());
+    */
+
+    geometry->push_back(nodePointer->p0.x());
+    geometry->push_back(nodePointer->p0.z());
+    geometry->push_back(nodePointer->p0.y());
+
+    geometry->push_back(nodePointer->p1.x());
+    geometry->push_back(nodePointer->p1.z());
+    geometry->push_back(nodePointer->p1.y());
+
+    geometry->push_back(nodePointer->p2.x());
+    geometry->push_back(nodePointer->p2.z());
+    geometry->push_back(nodePointer->p2.y());
+
+    geometry->push_back(nodePointer->p3.x());
+    geometry->push_back(nodePointer->p3.z());
+    geometry->push_back(nodePointer->p3.y());
+
+    geometry->push_back(nodePointer->p4.x());
+    geometry->push_back(nodePointer->p4.z());
+    geometry->push_back(nodePointer->p4.y());
+
+    geometry->push_back(nodePointer->p5.x());
+    geometry->push_back(nodePointer->p5.z());
+    geometry->push_back(nodePointer->p5.y());
+
+    geometry->push_back(nodePointer->p6.x());
+    geometry->push_back(nodePointer->p6.z());
+    geometry->push_back(nodePointer->p6.y());
+
+    geometry->push_back(nodePointer->p7.x());
+    geometry->push_back(nodePointer->p7.z());
+    geometry->push_back(nodePointer->p7.y());
 
     // set the indices
 

@@ -20,6 +20,7 @@ GLWidget::GLWidget(QWidget *parent)
 
     topOptimized = true;
     tippeTopOptimized = false;
+
 }
 
 GLWidget::~GLWidget()
@@ -39,12 +40,12 @@ void GLWidget::resetGLWidget()
     this->rot_cam_phi = 0;
 
     this->trans_x = 0.f;
-    this->trans_y = 0.f;
+    this->trans_y = 2.f;
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
-    this->startDepth = 3;
-    this->maximumDepth = 4;
+    this->startDepth = 2;
+    this->maximumDepth = 2;
     emit setStartDepthSpinBoxValue(this->startDepth);
     emit setMaximumDepthSpinBoxValue(this->maximumDepth);
 
@@ -72,10 +73,10 @@ void GLWidget::initializeGL()
     shader->link();
 
     camera_position.setX(1);
-    camera_position.setY(-0.75);
+    camera_position.setY(-0.75+2);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0);
+    camera_direction.setY(0+2);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -124,12 +125,12 @@ void GLWidget::initializeGL()
 
     // align rotation axis to touch point
     mat.setToIdentity();
-    mat.translate(QVector3D(0,-2.0-lowest_y_rot_axis,0));
+    mat.translate(QVector3D(0,0.0-lowest_y_rot_axis,0));
     rot_axis->transform(mat);
 
     // align half sphere to touch point
     mat.setToIdentity();
-    mat.translate(QVector3D(0,-2.0-lowest_y_half_sphere,0));
+    mat.translate(QVector3D(0,0.0-lowest_y_half_sphere,0));
     half_sphere->transform(mat);
 
     //object = readMeshFromObjFileDirectory("test");
@@ -165,6 +166,8 @@ void GLWidget::initializeGL()
     }
 
     grid = new Mesh(geometry, normals, indices);
+
+    loadInitialMesh();
 }
 
 void GLWidget::paintGL()
@@ -264,13 +267,14 @@ void GLWidget::paintGL()
 
     // draw grid
     model_matrix.setToIdentity();
-    model_matrix.translate(0.0, -2.0, 0.0);
+    model_matrix.translate(0.0, 0.0, 0.0);
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
     shader->setUniformValue("color", QColor(Qt::black));
     grid->render(shader, GL_LINES);
 
     shader->release();
+
 }
 
 void GLWidget::resizeGL(int width, int height)
@@ -401,12 +405,40 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
     middle_pressed = false;
 }
 
+void GLWidget::loadInitialMesh()
+{
+
+    Mesh* newObject = readMeshFromObjFileDirectory("cube");
+
+    if(newObject==NULL)
+    {
+        return;
+    }
+
+    if(object!=NULL)
+    {
+        delete object;
+    }
+
+    object = newObject;
+
+    resetGLWidget();
+
+    middle = object->getMiddle();
+    scaleFactor = object->getMaxDistance2Middle();
+
+    trans_y = 3.5;
+
+    emit modelLoaded(true);
+
+    this->updateGL();
+
+}
+
 void GLWidget::loadNewMesh()
 {
     QString s = QFileDialog::getOpenFileName(this,tr("Open Mesh"), "../", tr("Meshes (*.obj)"));
     Mesh* newObject = readMeshFromObjFile(s.toStdString());
-
-    //Model::initialize(object);
 
     if(newObject==NULL)
     {
@@ -498,15 +530,15 @@ void GLWidget::setViewXY()
     // bird eye view
 
     camera_position.setX(0);
-    camera_position.setY(-1);
-    camera_position.setZ(0);
+    camera_position.setY(-0.75+1);
+    camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0);
+    camera_direction.setY(0+2);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
-    camera_up.setY(0);
-    camera_up.setZ(1);
+    camera_up.setY(1);
+    camera_up.setZ(0);
 
     this->viewState = TRANSLATION_VIEW_XY;
 
@@ -519,10 +551,10 @@ void GLWidget::setViewZ()
     // view from the front
 
     camera_position.setX(0);
-    camera_position.setY(0);
+    camera_position.setY(0+2);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0);
+    camera_direction.setY(0+2);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -539,10 +571,10 @@ void GLWidget::setViewRotationScale()
 {
 
     camera_position.setX(1);
-    camera_position.setY(-0.75);
+    camera_position.setY(-0.75+2);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0);
+    camera_direction.setY(0+2);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -558,10 +590,10 @@ void GLWidget::setViewRotationScale()
 void GLWidget::setViewDefault()
 {
     camera_position.setX(1);
-    camera_position.setY(-0.75);
+    camera_position.setY(-0.75+2);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0);
+    camera_direction.setY(0+2);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -674,6 +706,7 @@ void GLWidget::calculateOctree()
     emit shellIsSet(true);
 
     this->updateGL();
+
 }
 
 void GLWidget::saveMesh()

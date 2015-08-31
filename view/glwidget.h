@@ -149,6 +149,8 @@ protected:
 
     void setViewDefault();
 
+    void loadInitialMesh();
+
     void initializeGL();
     void paintGL();
     void resizeGL(int width, int height);

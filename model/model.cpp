@@ -69,30 +69,14 @@ void Model::initializeOctree(
 
     shellMesh = newShellMesh;
 
+    Model::mesh = newModifiedMesh;
+
     return;
 }
 
 void Model::initialize(Mesh* mesh)
 {
-    Model::mesh = mesh;
 
-    GLint depth = 3;
-    Model::octree = new ExtendedOctree();
-    octree->setMesh(mesh);
-    octree->setStartMaxDepth(depth);
-    octree->setOptimationMaxDepth(depth+1);
-    octree->quantizeSurface();
-    octree->setupVectors();
-
-    octree->setupOctree();
-    octree->setOuterNodes();
-    octree->setInnerNodes();
-    octree->adjustMaxDepth();
-    octree->increaseShell(0);
-
-    octree->createInnerSurface();
-
-    Model::hollow();
 }
 
 void Model::hollow()
@@ -113,11 +97,11 @@ void Model::hollow()
         // get the inner cubes of the octree
         cubeVector = octree->getInnerCubes();
 
-        VectorXd b(cubeVector.size());
-        MatrixXd S(cubeVector.size(), 10);
-        for (int i = 0; i < cubeVector.size(); i++) {
+        VectorXd b(cubeVector->size());
+        MatrixXd S(cubeVector->size(), 10);
+        for (int i = 0; i < cubeVector->size(); i++) {
             b(i) = 0;
-            float* s = calculateVolume(cubeVector.at(i).mesh, p);
+            float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
             }
@@ -176,11 +160,27 @@ void Model::hollow()
         octree->updateBetaValues();
 
         // do split and merge
-        not_converged = octree->splitAndMerge(0);
+
+        //not_converged = octree->splitAndMerge(0);
+
+        not_converged = false;
     }
+
+    octree->deleteNodeMeshes();
 
     // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
     octree->setVoids();
+
+    octree->createInnerSurface();
+    Mesh* newShellMesh = octree->getShellMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
+
 }
 
 /**
@@ -697,7 +697,7 @@ double Model::penalty(VectorXd b, MatrixXd S, VectorXd beta, VectorXd gamma)
     double s1 = (Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)));
     double s2 = (Ix * Ix) / (Iz * Iz) + (Iy * Iy) / (Iz * Iz);
 
-    VectorXd h(0);
+    VectorXd h(beta.rows());
 //    h(0) = abs(Model::mesh_volume[1] - b.dot(S.col(1)));
 //    h(1) = abs(Model::mesh_volume[2] - b.dot(S.col(2)));
 //    //h(2) = abs(Model::mesh_volume[4] - b.dot(S.col(4)));

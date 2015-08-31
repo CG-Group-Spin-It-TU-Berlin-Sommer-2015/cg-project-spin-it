@@ -699,6 +699,7 @@
     <slot>setTop()</slot>
     <slot>setYoyo()</slot>
     <slot>setTippeTop(bool)</slot>
+    <slot>makeItSpin()</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -772,22 +773,6 @@
     <hint type="sourcelabel">
      <x>780</x>
      <y>301</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>325</x>
-     <y>258</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>hollowButton</sender>
-   <signal>clicked()</signal>
-   <receiver>glWidget</receiver>
-   <slot>showOnlyInnerSurface()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>783</x>
-     <y>461</y>
     </hint>
     <hint type="destinationlabel">
      <x>325</x>
@@ -1288,6 +1273,22 @@
     <hint type="destinationlabel">
      <x>827</x>
      <y>209</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>hollowButton</sender>
+   <signal>clicked()</signal>
+   <receiver>glWidget</receiver>
+   <slot>makeItSpin()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>787</x>
+     <y>272</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>258</y>
     </hint>
    </hints>
   </connection>
