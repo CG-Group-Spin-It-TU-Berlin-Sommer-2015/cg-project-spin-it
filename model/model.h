@@ -25,23 +25,29 @@ private:
 
     static ExtendedOctree* octree;
 
+    static QVector<int>* J;
+
 public:
     static void initialize(Mesh *mesh);
     static void hollow();
 
 private:
     static float* calculateVolume(Mesh* mesh, float p);
-    static MatrixXf eqMatrix(VectorXf b, MatrixXf S);
-    static VectorXf eqVector(VectorXf b, MatrixXf S);
-    static MatrixXf ineqMatrix(VectorXf b, QVector<int> J);
-    static VectorXf ineqVector(VectorXf b, QVector<int> J);
-    static VectorXf gradient(VectorXf b, MatrixXf S);
-    static VectorXf optimize(VectorXf b, MatrixXf S);
-    static float powell(VectorXf b, MatrixXf S, VectorXf d, float alpha, float delta, float beta);
-    static float powellG1(float sigma, VectorXf b, MatrixXf S, VectorXf d, float alpha);
-    static float powellG2(float sigma, VectorXf b, MatrixXf S, VectorXf d, float alpha);
-    static float penalty(VectorXf b, MatrixXf S, float alpha);
-    static float penaltyDirectionalGradient(VectorXf b, MatrixXf S, VectorXf d, float alpha);
+    static MatrixXd eqMatrix(VectorXd b, MatrixXd S);
+    static VectorXd eqVector(VectorXd b, MatrixXd S);
+    static MatrixXd ineqMatrix(VectorXd b);
+    static VectorXd ineqVector(VectorXd b);
+    static VectorXd gradient(VectorXd b, MatrixXd S);
+    static VectorXd optimize(VectorXd b, MatrixXd S);
+    static double armijo(VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma);
+    static double powell(VectorXd b, MatrixXd S, VectorXd d, double d1, double d2, VectorXd beta, VectorXd gamma);
+    static double powellG1(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma);
+    static double powellG2(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma);
+    static double penalty(VectorXd b, MatrixXd S, VectorXd beta, VectorXd gamma);
+    static double penaltyDirectionalGradient(VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma);
+    static VectorXd test(VectorXd x);
+    static double penaltyTest(VectorXd x, VectorXd beta, VectorXd gamma);
+    static double penaltyTestDirectionalGradient(VectorXd x, VectorXd d, VectorXd beta, VectorXd gamma);
 };
 
 #endif // MODEL_H
