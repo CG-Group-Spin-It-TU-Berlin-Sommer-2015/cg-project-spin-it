@@ -165,9 +165,7 @@ void Model::hollow()
 
         // do split and merge
 
-        //not_converged = octree->splitAndMerge(0);
-
-        not_converged = false;
+        not_converged = octree->splitAndMerge(0);
     }
 
     octree->deleteNodeMeshes();
@@ -385,6 +383,15 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     A += 2 * Model::w_I * ((((dIx*Iz + Ix*dIz)*dIx.transpose() - (2*Ix*dIx)*dIz.transpose()) * Iz * Iz * Iz - (Ix*Iz*dIx - Ix*Ix*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
     A += 2 * Model::w_I * ((((dIy*Iz + Iy*dIz)*dIy.transpose() - (2*Iy*dIy)*dIz.transpose()) * Iz * Iz * Iz - (Iy*Iz*dIy - Iy*Iy*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
 
+    SelfAdjointEigenSolver<MatrixXd> eigensolver2(A);
+    VectorXd eig = eigensolver2.eigenvalues();
+    double smallest = eig(0);
+    for (int i = 1; i < eig.rows(); i++) {
+        if (eig(i) < smallest) {
+            smallest = eig(i);
+        }
+    }
+
     VectorXd d = VectorXd::Ones(1);
     VectorXd lambda = -VectorXd::Ones(1);
     VectorXd mu = -VectorXd::Ones(1);
@@ -419,13 +426,13 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     c.block(grad.rows(), 0, h.rows(), 1) = h;
     c.block(grad.rows() + h.rows(), 0, g.rows(), 1) = g;
 
-    VectorXd x = L.fullPivLu().solve(c);
+    VectorXd x = L.fullPivHouseholderQr() .solve(c);
     d = x.block(0, 0, b.rows(), 1);
     lambda = x.block(b.rows(), 0, h.rows(), 1);
     mu = x.block(b.rows() + h.rows(), 0, g.rows(), 1);
 
     while (!(/*(d.array() == 0).all()*/d.norm() <= 1e-5 && (mu.array() >= 0).all())) {
-        while (/*(d.array() == 0).all()*/d.norm() <= 1e-5 && !((mu.array() >= 0).all())) {
+        if (/*(d.array() == 0).all()*/d.norm() <= 1e-5 && !((mu.array() >= 0).all())) {
             //Inactivity step
             int j = 0;
             for (int i = 1; i < mu.rows(); i++) {
@@ -451,7 +458,7 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
             c.block(grad.rows(), 0, h.rows(), 1) = h;
             c.block(grad.rows() + h.rows(), 0, g.rows(), 1) = g;
 
-            VectorXd z = L.fullPivLu().solve(c);
+            VectorXd z = L.fullPivHouseholderQr().solve(c);
             d = z.block(0, 0, b.rows(), 1);
             lambda = z.block(b.rows(), 0, h.rows(), 1);
             mu = z.block(b.rows() + h.rows(), 0, g.rows(), 1);
@@ -541,7 +548,7 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
         c.block(grad.rows(), 0, h.rows(), 1) = h;
         c.block(grad.rows() + h.rows(), 0, g.rows(), 1) = g;
 
-        VectorXd x = L.fullPivLu().solve(c);
+        VectorXd x = L.fullPivHouseholderQr() .solve(c);
         d = x.block(0, 0, b.rows(), 1);
         lambda = x.block(b.rows(), 0, h.rows(), 1);
         mu = x.block(b.rows() + h.rows(), 0, g.rows(), 1);
