@@ -168,6 +168,21 @@ void GLWidget::initializeGL()
     grid = new Mesh(geometry, normals, indices);
 
     loadInitialMesh();
+
+    model_matrix.setToIdentity();
+
+    model_matrix.translate(-trans_x,trans_y,trans_z);
+    model_matrix.translate(-middle.x(), -middle.y(), -middle.z());
+
+    model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
+    model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
+
+    model_matrix.scale(scale_xyz);
+    model_matrix.scale(DEFAULT_SCALE_FACTOR/scaleFactor);
+
+    last_object_model_matrix = model_matrix;
+
+    calculateOctree();
 }
 
 void GLWidget::paintGL()
