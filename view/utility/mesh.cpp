@@ -73,6 +73,16 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector
     this->isDirty = true;
 }
 
+Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector<GLfloat>* surface_normals, QVector<GLint>* indices)
+{
+    this->geometry = geometry;
+    this->vertex_normals = vertex_normals;
+    this->surface_normals = surface_normals;
+    this->indices = indices;
+
+    this->isDirty = true;
+}
+
 Mesh::~Mesh()
 {
     geometry->clear();

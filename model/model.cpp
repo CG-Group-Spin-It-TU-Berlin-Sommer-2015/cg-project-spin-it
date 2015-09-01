@@ -82,7 +82,6 @@ void Model::initialize(Mesh* mesh)
 
 void Model::hollow()
 {
-    //QVector<float>* geometry = Model::mesh->getGeometry();
     mesh_volume = calculateVolume(Model::mesh, p);
     cout << "Volumnes:" << endl;
     for (int i = 0; i < 10; i++) {
@@ -107,46 +106,6 @@ void Model::hollow()
                 S(i,j) = s[j];
             }
         }
-
-
-        //move center to (0,0,0)
-        QVector3D c;
-        c.setX(1/mesh_volume[0]*mesh_volume[1]);
-        c.setY(1/mesh_volume[0]*mesh_volume[2]);
-        c.setZ(1/mesh_volume[0]*mesh_volume[3]);
-
-        cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
-
-        /*QVector<GLfloat>* tmp =/ new QVector<GLfloat>();
-        for (int i = 0; i < geometry->size(); i++) {
-            tmp->push_back(0);
-        }
-
-        Mesh* working_copy = new Mesh(tmp, Model::mesh->getSurfaceNormals(), Model::mesh->getVertexNormals(), Model::mesh->getIndices());
-        for (int i = 0; i < geometry->size(); i += 3) {
-                working_copy->getGeometry()->replace(i, geometry->at(i) - cp.x());
-                working_copy->getGeometry()->replace(i + 1, geometry->at(i + 1) - 0);
-                working_copy->getGeometry()->replace(i + 2, geometry->at(i + 2) - 0);
-        }
-
-        mesh_volume = calculateVolume(working_copy, p);
-        cout << "Volumnes:" << endl;
-        for (int i = 0; i < 10; i++) {
-            cout << mesh_volume[i] << endl;
-        }
-
-        c.setX(1/mesh_volume[0]*mesh_volume[1]);
-        c.setY(1/mesh_volume[0]*mesh_volume[2]);
-        c.setZ(1/mesh_volume[0]*mesh_volume[3]);
-
-        cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
-        cout << "Done" << endl;*/
-        //Zuerst Winkel berechnen
-
-//        if (mesh_volume[4] != 0) {
-//            double phi = asin(sqrt(1/(atan((mesh_volume[8] - mesh_volume[7]) / mesh_volume[4]) + 2)));
-//            cout << cos(phi)*sin(phi)*(mesh_volume[7] - mesh_volume[8]) + (cos(phi)*cos(phi) - sin(phi)*sin(phi)) * mesh_volume[4] << endl;
-//        }
 
         //shifted inertia tensor
         mesh_volume[7] = mesh_volume[7] - ((mesh_volume[3] * mesh_volume[3]) / mesh_volume[0]);
@@ -382,15 +341,6 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     MatrixXd A = 2 * Model::w_c * (S.col(3) * S.col(3).transpose());
     A += 2 * Model::w_I * ((((dIx*Iz + Ix*dIz)*dIx.transpose() - (2*Ix*dIx)*dIz.transpose()) * Iz * Iz * Iz - (Ix*Iz*dIx - Ix*Ix*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
     A += 2 * Model::w_I * ((((dIy*Iz + Iy*dIz)*dIy.transpose() - (2*Iy*dIy)*dIz.transpose()) * Iz * Iz * Iz - (Iy*Iz*dIy - Iy*Iy*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
-
-    SelfAdjointEigenSolver<MatrixXd> eigensolver2(A);
-    VectorXd eig = eigensolver2.eigenvalues();
-    double smallest = eig(0);
-    for (int i = 1; i < eig.rows(); i++) {
-        if (eig(i) < smallest) {
-            smallest = eig(i);
-        }
-    }
 
     VectorXd d = VectorXd::Ones(1);
     VectorXd lambda = -VectorXd::Ones(1);
