@@ -101,7 +101,7 @@ void Model::hollow()
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);
         for (int i = 0; i < cubeVector->size(); i++) {
-            b(i) = 0.5;
+            b(i) = 0;
             float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
@@ -141,14 +141,17 @@ void Model::hollow()
 
         cout << "Center of Mass: (" << c.x() << "," << c.y() << "," << c.z() << ")" << endl;
         cout << "Done" << endl;*/
-//        VectorXf b(2);
-//        b(0) = 0.5;
-//        b(1) = 0.5;
-//        MatrixXf S = MatrixXf::Random(2,10);
-//        VectorXd x(2);
-//        x(0) = 1;
-//        x(1) = 1;
-//        x = test(x);
+        //Zuerst Winkel berechnen
+
+//        if (mesh_volume[4] != 0) {
+//            double phi = asin(sqrt(1/(atan((mesh_volume[8] - mesh_volume[7]) / mesh_volume[4]) + 2)));
+//            cout << cos(phi)*sin(phi)*(mesh_volume[7] - mesh_volume[8]) + (cos(phi)*cos(phi) - sin(phi)*sin(phi)) * mesh_volume[4] << endl;
+//        }
+
+        //shifted inertia tensor
+        mesh_volume[7] = mesh_volume[7] - ((mesh_volume[3] * mesh_volume[3]) / mesh_volume[0]);
+        mesh_volume[8] = mesh_volume[8] - ((mesh_volume[3] * mesh_volume[3]) / mesh_volume[0]);
+
         b = optimize(b,S);
 
         for (int i = 0; i < b.rows(); i++) {
@@ -306,17 +309,13 @@ VectorXd Model::eqVector(VectorXd b, MatrixXd S)
  */
 MatrixXd Model::ineqMatrix(VectorXd b)
 {
-    VectorXd e = VectorXd::Zero(b.rows());
-    MatrixXd G(Model::J->size(), b.rows());
+    MatrixXd G = MatrixXd::Zero(Model::J->size(), b.rows());
     for (int i = 0; i < Model::J->size(); i++) {
         if (Model::J->at(i) % 2 == 0) {
-            e(Model::J->at(i) / 2) = -1;
+            G(i, Model::J->at(i) / 2) = -1;
         } else {
-            e(Model::J->at(i) / 2) = 1;
+            G(i, Model::J->at(i) / 2) = 1;
         }
-
-        G.row(i) = e;
-        e(Model::J->at(i) / 2) = 0;
     }
 
     if (Model::J->size() == 0) {
@@ -338,19 +337,9 @@ VectorXd Model::ineqVector(VectorXd b)
     for (int i = 0; i < Model::J->size(); i++) {
         if (Model::J->at(i) % 2 == 0) {
             g(i) = b(Model::J->at(i) / 2);
-//            if (b(Model::J->at(i) / 2) < 0) {
-//                g(i) = -b(Model::J->at(i) / 2);
-//            } else {
-//                g(i) = 0;
-//            }
         }
         if (Model::J->at(i) % 2 == 1) {
             g(i) = 1 - b(Model::J->at(i) / 2);
-//            if (b(Model::J->at(i) / 2) > 1) {
-//                g(i) = 1 - b(Model::J->at(i) / 2);
-//            } else {
-//                g(i) = 0;
-//            }
         }
     }
 
@@ -373,9 +362,6 @@ VectorXd Model::gradient(VectorXd b, MatrixXd S)
     VectorXd dIz = S.col(7) + S.col(8);
     VectorXd grad_top = -2 * Model::w_c * (Model::mesh_volume[3] - b.dot(S.col(3))) * S.col(3);
     VectorXd grad_yoyo = -2 * Model::w_I * ((Ix*Iz*dIx - Ix*Ix*dIz) / (Iz*Iz*Iz) + (Iy*Iz*dIy - Iy*Iy*dIz) / (Iz*Iz*Iz));
-    MatrixXd A = 2 * Model::w_c * (S.col(3) * S.col(3).transpose());
-    A += 2 * Model::w_I * ((((dIx*Iz + Ix*dIz)*dIx.transpose() - (2*Ix*dIx)*dIz.transpose()) * Iz * Iz * Iz - (Ix*Iz*dIx - Ix*Ix*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
-    A += 2 * Model::w_I * ((((dIy*Iz + Iy*dIz)*dIy.transpose() - (2*Iy*dIy)*dIz.transpose()) * Iz * Iz * Iz - (Iy*Iz*dIy - Iy*Iy*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
     VectorXd grad = grad_top + grad_yoyo;
     return grad;
 }
@@ -404,8 +390,8 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     VectorXd mu = -VectorXd::Ones(1);
 
     Model::J = new QVector<int>();
-    for (int i = 0; i < 2*b.rows(); i++) {
-        Model::J->push_back(i);
+    for (int i = 0; i < b.rows(); i++) {
+        Model::J->push_back(2*i);
     }
 
 //    double eps = 1000;
@@ -438,8 +424,8 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     lambda = x.block(b.rows(), 0, h.rows(), 1);
     mu = x.block(b.rows() + h.rows(), 0, g.rows(), 1);
 
-    while (!((d.array() == 0).all() && (mu.array() >= 0).all())) {
-        if ((d.array() == 0).all() && !((mu.array() >= 0).all())) {
+    while (!(/*(d.array() == 0).all()*/d.norm() <= 1e-5 && (mu.array() >= 0).all())) {
+        while (/*(d.array() == 0).all()*/d.norm() <= 1e-5 && !((mu.array() >= 0).all())) {
             //Inactivity step
             int j = 0;
             for (int i = 1; i < mu.rows(); i++) {
@@ -449,8 +435,8 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
             }
             Model::J->removeAt(j);
 
-            G = ineqMatrix(b);
-            g = ineqVector(b);
+            MatrixXd G = ineqMatrix(b);
+            VectorXd g = ineqVector(b);
 
             L.resize(A.rows() + H.rows() + G.rows(), A.cols() + H.rows() + G.rows());
             L.block(0, 0, A.rows(), A.cols()) = A;
@@ -565,600 +551,246 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     return b;
 }
 
-/**
- * @brief Model::armijo Armijo Stepsize strategy
- * @param b
- * @param S
- * @param d
- * @param alpha
- * @param delta
- * @param gamma
- * @return
- */
-double Model::armijo(VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
-{
-    double sigma = -penaltyDirectionalGradient(b, S, d, beta, gamma) / d.dot(d);
-    cout << penaltyDirectionalGradient(b, S, d, beta, gamma) << endl;
+///**
+// * @brief Model::armijo Armijo Stepsize strategy
+// * @param b
+// * @param S
+// * @param d
+// * @param alpha
+// * @param delta
+// * @param gamma
+// * @return
+// */
+//double Model::armijo(VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
+//{
+//    double sigma = -penaltyDirectionalGradient(b, S, d, beta, gamma) / d.dot(d);
+//    cout << penaltyDirectionalGradient(b, S, d, beta, gamma) << endl;
 
-    while (!(penalty(b + sigma * d, S, beta, gamma) <= penalty(b, S, beta, gamma) + 0.1 * sigma * penaltyDirectionalGradient(b, S, d, beta, gamma))) {
-        sigma = 0.5 * sigma;
-    }
-
-    return sigma;
-}
-
-/**
- * @brief Model::powell Calculates efficient step-size with powell strategy
- * @param b current beta distribution
- * @param S internal mass distribution
- * @param d descend direction
- * @param alpha scaling factor for merit function
- * @param delta bias for powell step-size
- * @param beta bias for powell step-size
- * @return sigma
- */
-double Model::powell(VectorXd b, MatrixXd S, VectorXd d, double d1, double d2, VectorXd beta, VectorXd gamma)
-{
-    double sigma = 1000;
-    double a1 = sigma;
-    double a2 = sigma;
-
-    cout << penalty(b, S, beta, gamma) << endl;
-    cout << penalty(b + sigma * d, S, beta, gamma) << endl;
-    cout << penaltyDirectionalGradient(b, S, d,beta, gamma) << endl;
-
-    double g1 = powellG1(sigma, b, S, d, beta, gamma);
-    double g2 = powellG2(sigma, b, S, d, beta, gamma);
-
-    if (g1 >= d1 && g2 <= d2) {
-        return sigma;
-    }
-    if (g1 >= d1) {
-        a1 = sigma;
-        int l = 1;
-        while (!(powellG1(a2, b, S, d, beta, gamma) < d1)) {
-            a2 = pow(2, l) * sigma;
-            l += 1;
-        }
-    } else {
-        if (g1 < d1) {
-            a2 = sigma;
-            int l = 1;
-            while (!(powellG1(a1, b, S, d, beta, gamma) >= d1 && powellG2(a1, b, S, d, beta, gamma) > d2)) {
-//                cout << powellG1(a1, b, S, d, beta, gamma) << endl;
-//                cout << powellG2(a1, b, S, d, beta, gamma) << endl;
-                a1 = pow(2, -l) * sigma;
-                l += 1;
-            }
-        }
-    }
-
-    while (!(g1 >= d1 && g2 <= d2)) {
-        sigma = 0.5 * (a1 + a2);
-
-        g1 = powellG1(sigma, b, S, d, beta, gamma);
-        g2 = powellG2(sigma, b, S, d, beta, gamma);
-
-        if (g1 >= d1) {
-            a1 = sigma;
-        } else {
-            a2 = sigma;
-        }
-    }
-
-    return sigma;
-}
-
-/**
- * @brief Model::powellG1 Auxilary function for powell strategy. Calculates g1(x).
- * @param sigma current step-size
- * @param b current beta distribution
- * @param S internal mass distribution
- * @param d descend direction
- * @param alpha scaling factor for merit function
- * @return g
- */
-double Model::powellG1(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
-{
-    double g = 1;
-    if (sigma > 0) {
-        g = (penalty(b + sigma * d, S, beta, gamma) - penalty(b, S, beta, gamma)) / (sigma * penaltyDirectionalGradient(b, S, d, beta, gamma));
-    }
-
-    return g;
-}
-
-/**
- * @brief Model::powellG1 Auxilary function for powell strategy. Calculates g2(x).
- * @param sigma current step-size
- * @param b current beta distribution
- * @param S internal mass distribution
- * @param d descend direction
- * @param alpha scaling factor for merit function
- * @return
- */
-double Model::powellG2(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
-{
-    double g2 = penaltyDirectionalGradient(b + sigma * d, S, d, beta, gamma) / penaltyDirectionalGradient(b, S, d, beta, gamma);
-    return g2;
-}
-
-/**
- * @brief Model::penalty Returns value of merit function.
- * @param b current beta distribution
- * @param S internal mass distribution
- * @param alpha scaling factor for merit function
- * @return
- */
-double Model::penalty(VectorXd b, MatrixXd S, VectorXd beta, VectorXd gamma)
-{
-    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
-    double s1 = (Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)));
-    double s2 = (Ix * Ix) / (Iz * Iz) + (Iy * Iy) / (Iz * Iz);
-
-    VectorXd h(beta.rows());
-//    h(0) = abs(Model::mesh_volume[1] - b.dot(S.col(1)));
-//    h(1) = abs(Model::mesh_volume[2] - b.dot(S.col(2)));
-//    //h(2) = abs(Model::mesh_volume[4] - b.dot(S.col(4)));
-//    h(2) = abs(Model::mesh_volume[5] - b.dot(S.col(5)));
-//    h(3) = abs(Model::mesh_volume[6] - b.dot(S.col(6)));
-
-    VectorXd g(Model::J->size());
-    for (int i = 0; i < Model::J->size(); i++) {
-        if (Model::J->at(i) % 2 == 0) {
-            g(i) = (-b(Model::J->at(i) / 2) + abs(-b(Model::J->at(i) / 2))) / 2;
-        }
-        if (Model::J->at(i) % 2 == 1) {
-            g(i) = ((b(Model::J->at(i) / 2) - 1) + abs(b(Model::J->at(i) / 2) - 1)) / 2;
-        }
-    }
-
-    return Model::w_c * s1 + Model::w_I * s2 + beta.dot(h) + gamma.dot(g);
-}
-
-/**
- * @brief Model::penaltyDirectionalGradient Returns value of directional derivate of merit function in direction d.
- * @param b current beta distribution
- * @param S internal mass distribution
- * @param d descent direction
- * @param alpha scaling factor for merit function
- * @return
- */
-double Model::penaltyDirectionalGradient(VectorXd b, MatrixXd S,  VectorXd d, VectorXd beta, VectorXd gamma)
-{
-    double result = gradient(b, S).dot(d);
-
-//    double h = Model::mesh_volume[1] - b.dot(S.col(1));
-//    if (h > 0) {
-//       result += beta(0) * -S.col(1).dot(d);
-//    } else {
-//        if (h < 0) {
-//            result -= beta(0) * -S.col(1).dot(d);
-//        } else {
-//            if (h == 0) {
-//                result += beta(0) * (abs(-S.col(1).dot(d)));
-//            }
-//        }
+//    while (!(penalty(b + sigma * d, S, beta, gamma) <= penalty(b, S, beta, gamma) + 0.1 * sigma * penaltyDirectionalGradient(b, S, d, beta, gamma))) {
+//        sigma = 0.5 * sigma;
 //    }
-//    h = Model::mesh_volume[2] - b.dot(S.col(2));
-//    if (h > 0) {
-//       result += beta(1) * -S.col(2).dot(d);
-//    } else {
-//        if (h < 0) {
-//            result -= beta(1) * -S.col(2).dot(d);
-//        } else {
-//            if (h == 0) {
-//                result += beta(1) * (abs(-S.col(2).dot(d)));
-//            }
-//        }
+
+//    return sigma;
+//}
+
+///**
+// * @brief Model::powell Calculates efficient step-size with powell strategy
+// * @param b current beta distribution
+// * @param S internal mass distribution
+// * @param d descend direction
+// * @param alpha scaling factor for merit function
+// * @param delta bias for powell step-size
+// * @param beta bias for powell step-size
+// * @return sigma
+// */
+//double Model::powell(VectorXd b, MatrixXd S, VectorXd d, double d1, double d2, VectorXd beta, VectorXd gamma)
+//{
+//    double sigma = 1000;
+//    double a1 = sigma;
+//    double a2 = sigma;
+
+//    cout << penalty(b, S, beta, gamma) << endl;
+//    cout << penalty(b + sigma * d, S, beta, gamma) << endl;
+//    cout << penaltyDirectionalGradient(b, S, d,beta, gamma) << endl;
+
+//    double g1 = powellG1(sigma, b, S, d, beta, gamma);
+//    double g2 = powellG2(sigma, b, S, d, beta, gamma);
+
+//    if (g1 >= d1 && g2 <= d2) {
+//        return sigma;
 //    }
-//    h = Model::mesh_volume[4] - b.dot(S.col(4));
-//    if (h > 0) {
-//       result += beta(2) * (-S.col(4).dot(d));
-//    } else {
-//        if (h < 0) {
-//            result -= beta(2) * (-S.col(4).dot(d));
-//        } else {
-//            if (h == 0) {
-//                result += beta(2) * (abs(-S.col(4).dot(d)));
-//            }
+//    if (g1 >= d1) {
+//        a1 = sigma;
+//        int l = 1;
+//        while (!(powellG1(a2, b, S, d, beta, gamma) < d1)) {
+//            a2 = pow(2, l) * sigma;
+//            l += 1;
 //        }
-//    }
-//    h = Model::mesh_volume[5] - b.dot(S.col(5));
-//    if (h > 0) {
-//       result += beta(2) * (-S.col(5).dot(d));
 //    } else {
-//        if (h < 0) {
-//            result -= beta(2) * (-S.col(5).dot(d));
-//        } else {
-//            if (h == 0) {
-//                result += beta(2) * (abs(-S.col(5).dot(d)));
-//            }
-//        }
-//    }
-//    h = Model::mesh_volume[6] - b.dot(S.col(6));
-//    if (h > 0) {
-//       result += beta(3) * (-S.col(6).dot(d));
-//    } else {
-//        if (h < 0) {
-//            result -= beta(3) * (-S.col(6).dot(d));
-//        } else {
-//            if (h == 0) {
-//                result += beta(3) * (abs(-S.col(6).dot(d)));
+//        if (g1 < d1) {
+//            a2 = sigma;
+//            int l = 1;
+//            while (!(powellG1(a1, b, S, d, beta, gamma) >= d1 && powellG2(a1, b, S, d, beta, gamma) > d2)) {
+////                cout << powellG1(a1, b, S, d, beta, gamma) << endl;
+////                cout << powellG2(a1, b, S, d, beta, gamma) << endl;
+//                a1 = pow(2, -l) * sigma;
+//                l += 1;
 //            }
 //        }
 //    }
 
-    double g = 0;
-    for (int i = 0; i < Model::J->size(); i++) {
-        if (Model::J->at(i) % 2 == 0) {
-            g = -b(Model::J->at(i) / 2);
-            if (g > 0 || (g == 0 && -d(Model::J->at(i) / 2) > 0)) {
-                result += gamma(i) * -d(Model::J->at(i) / 2);
-            }
-        } else {
-            g = b(Model::J->at(i) / 2) - 1;
-            if (g > 0 || (g == 0 && d(Model::J->at(i) / 2) > 0)) {
-                result += gamma(i) * d(Model::J->at(i) / 2);
-            }
-        }
-    }
+//    while (!(g1 >= d1 && g2 <= d2)) {
+//        sigma = 0.5 * (a1 + a2);
 
-    return result;
-}
+//        g1 = powellG1(sigma, b, S, d, beta, gamma);
+//        g2 = powellG2(sigma, b, S, d, beta, gamma);
 
-VectorXd Model::test(VectorXd x)
-{
-    MatrixXd A(2, 2);
-    A.setIdentity();
+//        if (g1 >= d1) {
+//            a1 = sigma;
+//        } else {
+//            a2 = sigma;
+//        }
+//    }
 
-    VectorXd d = VectorXd::Ones(1);
-    VectorXd lambda = -VectorXd::Ones(1);
-    VectorXd mu = -VectorXd::Ones(1);
+//    return sigma;
+//}
 
-    Model::J = new QVector<int>();
-    Model::J->push_back(0);
-    Model::J->push_back(1);
-    Model::J->push_back(2);
+///**
+// * @brief Model::powellG1 Auxilary function for powell strategy. Calculates g1(x).
+// * @param sigma current step-size
+// * @param b current beta distribution
+// * @param S internal mass distribution
+// * @param d descend direction
+// * @param alpha scaling factor for merit function
+// * @return g
+// */
+//double Model::powellG1(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
+//{
+//    double g = 1;
+//    if (sigma > 0) {
+//        g = (penalty(b + sigma * d, S, beta, gamma) - penalty(b, S, beta, gamma)) / (sigma * penaltyDirectionalGradient(b, S, d, beta, gamma));
+//    }
 
-    double eps = 1;
+//    return g;
+//}
 
-    while (!((d.norm() <= 1e-6) && (mu.array() >= 0).all())) {
-        A(0,0) = 12 * x(0) * x(0);
-        A(1,1) = 12 * x(1) * x(1);
+///**
+// * @brief Model::powellG1 Auxilary function for powell strategy. Calculates g2(x).
+// * @param sigma current step-size
+// * @param b current beta distribution
+// * @param S internal mass distribution
+// * @param d descend direction
+// * @param alpha scaling factor for merit function
+// * @return
+// */
+//double Model::powellG2(double sigma, VectorXd b, MatrixXd S, VectorXd d, VectorXd beta, VectorXd gamma)
+//{
+//    double g2 = penaltyDirectionalGradient(b + sigma * d, S, d, beta, gamma) / penaltyDirectionalGradient(b, S, d, beta, gamma);
+//    return g2;
+//}
 
-        VectorXd grad(2);
-        grad(0) = 4 * x(0)*x(0)*x(0);
-        grad(1) = 4 * x(1)*x(1)*x(1);
+///**
+// * @brief Model::penalty Returns value of merit function.
+// * @param b current beta distribution
+// * @param S internal mass distribution
+// * @param alpha scaling factor for merit function
+// * @return
+// */
+//double Model::penalty(VectorXd b, MatrixXd S, VectorXd beta, VectorXd gamma)
+//{
+//    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+//    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+//    double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
+//    double s1 = (Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)));
+//    double s2 = (Ix * Ix) / (Iz * Iz) + (Iy * Iy) / (Iz * Iz);
 
-        //Setting up equality constraints
-        MatrixXd H(1,2);
-        H(0,0) = -1;
-        H(0,1) = 1;
-        VectorXd h(1);
-        h(0) = x(0) - x(1) + 1;
+//    VectorXd h(beta.rows());
+////    h(0) = abs(Model::mesh_volume[1] - b.dot(S.col(1)));
+////    h(1) = abs(Model::mesh_volume[2] - b.dot(S.col(2)));
+////    //h(2) = abs(Model::mesh_volume[4] - b.dot(S.col(4)));
+////    h(2) = abs(Model::mesh_volume[5] - b.dot(S.col(5)));
+////    h(3) = abs(Model::mesh_volume[6] - b.dot(S.col(6)));
 
-        MatrixXd G(J->size(), 2);
-        for (int i = 0; i < J->size(); i++) {
-            if (J->at(i) == 0) {
-                G(i,0) = 0;
-                G(i,1) = -1;
-            }
-            if (J->at(i) == 1){
-                G(i,0) = 0;
-                G(i,1) = 1;
-            }
-            if (J->at(i) == 2) {
-                G(i, 0) = -1;
-                G(i, 1) = 0;
-            }
-        }
+//    VectorXd g(Model::J->size());
+//    for (int i = 0; i < Model::J->size(); i++) {
+//        if (Model::J->at(i) % 2 == 0) {
+//            g(i) = (-b(Model::J->at(i) / 2) + abs(-b(Model::J->at(i) / 2))) / 2;
+//        }
+//        if (Model::J->at(i) % 2 == 1) {
+//            g(i) = ((b(Model::J->at(i) / 2) - 1) + abs(b(Model::J->at(i) / 2) - 1)) / 2;
+//        }
+//    }
 
-        VectorXd g(J->size());
-        for (int i = 0; i < J->size(); i++) {
-            if (J->at(i) == 0 && x(1) < 0) {
-                g(i) = x(1);
-            } else {
-                g(i) = 0;
-            }
-            if (J->at(i) == 1 && 1 - x(1) > 0) {
-                g(i) = 1 - x(1);
-            } else {
-                g(i) = 0;
-            }
-            if (J->at(i) == 2 && x(0) < 0) {
-                g(i) = x(0);
-            } else {
-                g(i) = 0;
-            }
-        }
+//    return Model::w_c * s1 + Model::w_I * s2 + beta.dot(h) + gamma.dot(g);
+//}
 
-        MatrixXd L(A.rows() + H.rows() + G.rows(), A.cols() + H.rows() + G.rows());
-        L.block(0, 0, A.rows(), A.cols()) = A;
-        L.block(A.rows(), 0, H.rows(), H.cols()) = H;
-        L.block(0, A.cols(), H.cols(), H.rows()) = H.transpose();
-        L.block(A.rows() + H.rows(), 0, G.rows(), G.cols()) = G;
-        L.block(0, A.cols() + H.rows(), G.cols(), G.rows()) = G.transpose();
-        L.block(A.rows(), A.cols(), H.rows() + G.rows(), H.rows() + G.rows()).setZero();
+///**
+// * @brief Model::penaltyDirectionalGradient Returns value of directional derivate of merit function in direction d.
+// * @param b current beta distribution
+// * @param S internal mass distribution
+// * @param d descent direction
+// * @param alpha scaling factor for merit function
+// * @return
+// */
+//double Model::penaltyDirectionalGradient(VectorXd b, MatrixXd S,  VectorXd d, VectorXd beta, VectorXd gamma)
+//{
+//    double result = gradient(b, S).dot(d);
 
-        VectorXd c(grad.rows() + h.rows() + g.rows());
-        c.block(0 , 0, grad.rows(), 1) = -grad;
-        c.block(grad.rows(), 0, h.rows(), 1) = h;
-        c.block(grad.rows() + h.rows(), 0, g.rows(), 1) = g;
+////    double h = Model::mesh_volume[1] - b.dot(S.col(1));
+////    if (h > 0) {
+////       result += beta(0) * -S.col(1).dot(d);
+////    } else {
+////        if (h < 0) {
+////            result -= beta(0) * -S.col(1).dot(d);
+////        } else {
+////            if (h == 0) {
+////                result += beta(0) * (abs(-S.col(1).dot(d)));
+////            }
+////        }
+////    }
+////    h = Model::mesh_volume[2] - b.dot(S.col(2));
+////    if (h > 0) {
+////       result += beta(1) * -S.col(2).dot(d);
+////    } else {
+////        if (h < 0) {
+////            result -= beta(1) * -S.col(2).dot(d);
+////        } else {
+////            if (h == 0) {
+////                result += beta(1) * (abs(-S.col(2).dot(d)));
+////            }
+////        }
+////    }
+////    h = Model::mesh_volume[4] - b.dot(S.col(4));
+////    if (h > 0) {
+////       result += beta(2) * (-S.col(4).dot(d));
+////    } else {
+////        if (h < 0) {
+////            result -= beta(2) * (-S.col(4).dot(d));
+////        } else {
+////            if (h == 0) {
+////                result += beta(2) * (abs(-S.col(4).dot(d)));
+////            }
+////        }
+////    }
+////    h = Model::mesh_volume[5] - b.dot(S.col(5));
+////    if (h > 0) {
+////       result += beta(2) * (-S.col(5).dot(d));
+////    } else {
+////        if (h < 0) {
+////            result -= beta(2) * (-S.col(5).dot(d));
+////        } else {
+////            if (h == 0) {
+////                result += beta(2) * (abs(-S.col(5).dot(d)));
+////            }
+////        }
+////    }
+////    h = Model::mesh_volume[6] - b.dot(S.col(6));
+////    if (h > 0) {
+////       result += beta(3) * (-S.col(6).dot(d));
+////    } else {
+////        if (h < 0) {
+////            result -= beta(3) * (-S.col(6).dot(d));
+////        } else {
+////            if (h == 0) {
+////                result += beta(3) * (abs(-S.col(6).dot(d)));
+////            }
+////        }
+////    }
 
-        VectorXd z = L.fullPivLu().solve(c);
-        cout << L << endl << endl;
-        d = z.block(0, 0, 2, 1);
-        lambda = z.block(2, 0, h.rows(), 1);
-        mu = z.block(2 + h.rows(), 0, g.rows(), 1);
+//    double g = 0;
+//    for (int i = 0; i < Model::J->size(); i++) {
+//        if (Model::J->at(i) % 2 == 0) {
+//            g = -b(Model::J->at(i) / 2);
+//            if (g > 0 || (g == 0 && -d(Model::J->at(i) / 2) > 0)) {
+//                result += gamma(i) * -d(Model::J->at(i) / 2);
+//            }
+//        } else {
+//            g = b(Model::J->at(i) / 2) - 1;
+//            if (g > 0 || (g == 0 && d(Model::J->at(i) / 2) > 0)) {
+//                result += gamma(i) * d(Model::J->at(i) / 2);
+//            }
+//        }
+//    }
 
-        if (((d.array() == 0).all()) && !((mu.array() >= 0).all())) {
-            //Inactivity step
-            int j = 0;
-            for (int i = 1; i < mu.rows(); i++) {
-                if (mu(i) < mu(j)) {
-                    j = i;
-                }
-            }
-            Model::J->removeAt(j);
-
-            if (J->size() == 0) {
-                G.resize(0,0);
-            } else {
-                G.resize(J->size(),2);
-                for (int i = 0; i < J->size(); i++) {
-                    if (J->at(i) == 0) {
-                        G(i,0) = 0;
-                        G(i,1) = -1;
-                    }
-                    if (J->at(i) == 1){
-                        G(i,0) = 0;
-                        G(i,1) = 1;
-                    }
-                    if (J->at(i) == 2) {
-                        G(i, 0) = -1;
-                        G(i, 1) = 0;
-                    }
-                }
-            }
-
-
-            g.resize(J->size());
-            for (int i = 0; i < J->size(); i++) {
-                    if (J->at(i) == 0) {
-                        g(i) = x(1);
-                    }
-                    if (J->at(i) == 1) {
-                        g(i) = 1 - x(1);
-                    }
-                    if (J->at(i) == 2) {
-                        g(i) = x(0);
-                    }
-            }
-
-            L.resize(A.rows() + H.rows() + G.rows(), A.cols() + H.rows() + G.rows());
-            L.block(0, 0, A.rows(), A.cols()) = A;
-            L.block(A.rows(), 0, H.rows(), H.cols()) = H;
-            L.block(0, A.cols(), H.cols(), H.rows()) = H.transpose();
-            L.block(A.rows() + H.rows(), 0, G.rows(), G.cols()) = G;
-            L.block(0, A.cols() + H.rows(), G.cols(), G.rows()) = G.transpose();
-            L.block(A.rows(), A.cols(), H.rows() + G.rows(), H.rows() + G.rows()).setZero();
-
-            c.resize(grad.rows() + h.rows() + g.rows());
-            c.block(0 , 0, grad.rows(), 1) = -grad;
-            c.block(grad.rows(), 0, h.rows(), 1) = h;
-            c.block(grad.rows() + h.rows(), 0, g.rows(), 1) = g;
-
-            VectorXd w = L.fullPivLu().solve(c);
-            d = w.block(0, 0, 2, 1);
-            lambda = w.block(2, 0, h.rows(), 1);
-            mu = w.block(2 + h.rows(), 0, g.rows(), 1);
-        }
-
-
-        VectorXd beta(lambda.rows());
-        VectorXd gamma(mu.rows());
-        //Powell step-size with merit function
-        for (int i = 0; i < lambda.rows(); i++) {
-            beta(i) = abs(lambda(i)) + eps;
-        }
-        for (int i = 0; i < mu.rows(); i++) {
-            gamma(i) = mu(i) + eps;
-        }
-
-//            powel
-        double sigma = 1;
-            double d1 = 0.1;
-            double d2 = 0.9;
-            double a1 = sigma;
-            double a2 = sigma;
-
-            double g1 = 1;
-            if (sigma > 0) {
-                cout << penaltyTest(x + sigma * d, beta, gamma) << endl;
-                cout << penaltyTest(x, beta, gamma) << endl;
-                cout << sigma * penaltyTestDirectionalGradient(x, d, beta, gamma) << endl;
-                g1 = (penaltyTest(x + sigma * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (sigma * penaltyTestDirectionalGradient(x, d, beta, gamma));
-            }
-            cout << penaltyTestDirectionalGradient(x + sigma * d, d, beta, gamma) << endl;
-            cout << penaltyTestDirectionalGradient(x, d, beta, gamma) << endl;
-            double g2 = penaltyTestDirectionalGradient(x + sigma * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-
-
-            if (g1 >= d1 && g2 > d2) {
-                a1 = sigma;
-                int l = 1;
-                g1 = 1;
-                if (a2 > 0) {
-                    g1 = (penaltyTest(x + a2 * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (a2 * penaltyTestDirectionalGradient(x, d, beta, gamma));
-                }
-                g2 = penaltyTestDirectionalGradient(x + a2 * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-                while (!(g1 < d1)) {
-                    a2 = pow(2, l) * sigma;
-                    l += 1;
-                    g1 = 1;
-                    if (a2 > 0) {
-                        g1 = (penaltyTest(x + a2 * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (a2 * penaltyTestDirectionalGradient(x, d, beta, gamma));
-                    }
-                    g2 = penaltyTestDirectionalGradient(x + a2 * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-                }
-            } else {
-                if (g1 < d1) {
-                    a2 = sigma;
-                    int l = 1;
-                    g1 = 1;
-                    if (a1 > 0) {
-                        g1 = (penaltyTest(x + a1 * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (a1 * penaltyTestDirectionalGradient(x, d, beta, gamma));
-                    }
-                    g2 = penaltyTestDirectionalGradient(x + a1 * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-                    while (!(g1 >= d1 && g2 > d2)) {
-                        a1 = pow(2, -l) * sigma;
-                        l += 1;
-                        g1 = 1;
-                        if (a1 > 0) {
-                            g1 = (penaltyTest(x + a1 * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (a1 * penaltyTestDirectionalGradient(x, d, beta, gamma));
-                        }
-                        g2 = penaltyTestDirectionalGradient(x + a1 * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-                    }
-                }
-            }
-
-            while (!(g1 >= d1 && g2 <= d2)) {
-                sigma = 0.5 * (a1 + a2);
-                cout << a1 << endl;
-                cout << a2 << endl;
-                cout << 0.5 * a2 << endl;
-                cout << a1 + a2 << endl;
-
-                g1 = 1;
-                if (sigma > 0) {
-                    cout << penaltyTest(x + sigma * d, beta, gamma) << endl;
-                    cout << penaltyTest(x, beta, gamma) << endl;
-                    cout << penaltyTest(x + sigma * d, beta, gamma) - penaltyTest(x, beta, gamma) << endl;
-                    cout << sigma * penaltyTestDirectionalGradient(x, d, beta, gamma) << endl;
-                    g1 = (penaltyTest(x + sigma * d, beta, gamma) - penaltyTest(x, beta, gamma)) / (sigma * penaltyTestDirectionalGradient(x, d, beta, gamma));
-                }
-                g2 = penaltyTestDirectionalGradient(x + sigma * d, d, beta, gamma) / penaltyTestDirectionalGradient(x, d, beta, gamma);
-
-                if (g1 >= d1) {
-                    a1 = sigma;
-                } else {
-                     if (g1 < d1) {
-                         a2 = sigma;
-                     }
-                }
-            }
-
-
-
-        //Armijo
-        sigma = -0.5 * penaltyTestDirectionalGradient(x, d, beta, gamma) / d.dot(d);
-
-        h(0) = abs(-x(0) + x(1) - 1);
-
-        for (int i = 0; i < Model::J->size(); i++) {
-            if (Model::J->at(i) == 0) {
-                g(i) = (-x(1) + abs(-x(1))) / 2;
-            }
-            if (Model::J->at(i) == 1) {
-                g(i) = ((x(1) - 1) + abs(x(1) - 1)) / 2;
-            }
-            if (Model::J->at(i) == 2) {
-                g(J->size() - 1) = (-x(0) + abs(-x(0))) / 2;
-            }
-        }
-
-        while (!(penaltyTest(x + sigma * d, beta, gamma) <= penaltyTest(x, beta, gamma) + 0.25 * sigma * penaltyTestDirectionalGradient(x, d, beta, gamma))) {
-            sigma = 0.5 * sigma;
-        }
-
-        //BFGS Update
-        VectorXd s = (x + sigma * d) - x;
-        VectorXd gradient(2);
-        gradient(0) = 4 * (x(0)+sigma * d(0))*(x(0)+sigma * d(0))*(x(0)+sigma * d(0));
-        gradient(1) = 4 * (x(1)+sigma * d(1))*(x(1)+sigma * d(1))*(x(1)+sigma * d(1));
-        VectorXd y = gradient - grad;
-        SelfAdjointEigenSolver<Matrix2d> eigensolver(A);
-        cout << eigensolver.eigenvalues() << endl;
-        A = A - ((A*s)*(A*s).transpose())/(s.dot(A*s)) + y*y.transpose()/(y.dot(s));
-        SelfAdjointEigenSolver<Matrix2d> eigensolver2(A);
-        cout << eigensolver2.eigenvalues() << endl;
-
-        x = x + sigma * d;
-    }
-
-    delete Model::J;
-    return d;
-}
-
-double Model::penaltyTest(VectorXd x, VectorXd beta, VectorXd gamma)
-{
-    double f = x(0)*x(0)*x(0)*x(0) + x(1)*x(1)*x(1)*x(1);
-
-    VectorXd h(1);
-    h(0) = abs(-x(0) + x(1) - 1);
-
-    VectorXd g(Model::J->size());
-    for (int i = 0; i < Model::J->size(); i++) {
-        if (Model::J->at(i) == 0) {
-            g(i) = (-x(1) + abs(-x(1))) / 2;
-        }
-        if (Model::J->at(i) == 1) {
-            g(i) = ((x(1) - 1) + abs(x(1) - 1)) / 2;
-        }
-        if (Model::J->at(i) == 2) {
-            g(i) = (-x(0) + abs(-x(0))) / 2;
-        }
-    }
-
-    return f + beta.dot(h) + gamma.dot(g);
-}
-
-double Model::penaltyTestDirectionalGradient(VectorXd x, VectorXd d, VectorXd beta, VectorXd gamma)
-{
-    VectorXd grad(2);
-    grad(0) = 4 * x(0)*x(0)*x(0);
-    grad(1) = 4 * x(1)*x(1)*x(1);
-    double result = grad.dot(d);
-
-    VectorXd gradh(2);
-    gradh(0) = -1;
-    gradh(1) = 1;
-
-    double h = -x(0) + x(1) - 1;
-    if (h > 0) {
-       result += beta(0) * gradh.dot(d);
-    } else {
-        if (h < 0) {
-            result -= beta(0) * gradh.dot(d);
-        } else {
-            result += beta(0) * abs(gradh.dot(d));
-        }
-    }
-
-    double g = 0;
-    for (int i = 0; i < J->size(); i++) {
-        if (J->at(i) == 0) {
-            g = -x(1);
-            if (g > 0 || (g == 0 && -d(1) > 0)) {
-                result += gamma(i) * -d(1);
-            }
-        }
-        if (J->at(i) == 1) {
-            g = x(1) - 1;
-            if (g > 0 || (g == 0 && d(1) > 0)) {
-                result += gamma(i) * d(1);
-            }
-        }
-        if (J->at(i) == 2) {
-            g = -x(0);
-            if (g > 0 || (g == 0 && -d(0) > 0)) {
-                result += gamma(i) * -d(0);
-            }
-        }
-    }
-
-    return result;
-}
+//    return result;
+//}
