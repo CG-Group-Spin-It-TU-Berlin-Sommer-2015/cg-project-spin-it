@@ -133,10 +133,6 @@ void GLWidget::initializeGL()
     mat.translate(QVector3D(0,0.0-lowest_y_half_sphere,0));
     half_sphere->transform(mat);
 
-    object = readMeshFromObjFileDirectory("test");
-    emit modelLoaded(true);
-    Model::initialize(object);
-
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
     QVector<GLint>* indices = new QVector<GLint>();

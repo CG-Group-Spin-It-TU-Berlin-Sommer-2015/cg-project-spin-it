@@ -334,14 +334,14 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
         c6p = &this->octreeNodes.data()[nodePointer->childIndex6];
         c7p = &this->octreeNodes.data()[nodePointer->childIndex7];
 
-        bool ignoreC0 =(c0p->isShell && c0p->leaf) || (!c0p->isShell && !c0p->isInside);
-        bool ignoreC1 =(c1p->isShell && c1p->leaf) || (!c1p->isShell && !c1p->isInside);
-        bool ignoreC2 =(c2p->isShell && c2p->leaf) || (!c2p->isShell && !c2p->isInside);
-        bool ignoreC3 =(c3p->isShell && c3p->leaf) || (!c3p->isShell && !c3p->isInside);
-        bool ignoreC4 =(c4p->isShell && c4p->leaf) || (!c4p->isShell && !c4p->isInside);
-        bool ignoreC5 =(c5p->isShell && c5p->leaf) || (!c5p->isShell && !c5p->isInside);
-        bool ignoreC6 =(c6p->isShell && c6p->leaf) || (!c6p->isShell && !c6p->isInside);
-        bool ignoreC7 =(c7p->isShell && c7p->leaf) || (!c7p->isShell && !c7p->isInside);
+        bool ignoreC0 =(c0p->isShell && c0p->leaf) || (!c0p->isShell && !c0p->isInside) || c0p->isIgnored;
+        bool ignoreC1 =(c1p->isShell && c1p->leaf) || (!c1p->isShell && !c1p->isInside) || c0p->isIgnored;
+        bool ignoreC2 =(c2p->isShell && c2p->leaf) || (!c2p->isShell && !c2p->isInside) || c0p->isIgnored;
+        bool ignoreC3 =(c3p->isShell && c3p->leaf) || (!c3p->isShell && !c3p->isInside) || c0p->isIgnored;
+        bool ignoreC4 =(c4p->isShell && c4p->leaf) || (!c4p->isShell && !c4p->isInside) || c0p->isIgnored;
+        bool ignoreC5 =(c5p->isShell && c5p->leaf) || (!c5p->isShell && !c5p->isInside) || c0p->isIgnored;
+        bool ignoreC6 =(c6p->isShell && c6p->leaf) || (!c6p->isShell && !c6p->isInside) || c0p->isIgnored;
+        bool ignoreC7 =(c7p->isShell && c7p->leaf) || (!c7p->isShell && !c7p->isInside) || c0p->isIgnored;
 
 
         bool allSmallerEpsilon =
@@ -354,21 +354,16 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
                 (ignoreC6 || (c6p->isMergeRoot && c6p->beta < epsilon)) &&
                 (ignoreC7 || (c7p->isMergeRoot && c7p->beta < epsilon));
 
-        bool allGreaterEpsilon = false;
+        bool allGreaterEpsilon =
+                (ignoreC0 || (c0p->isMergeRoot && c0p->beta > oneMinusEpsilon)) &&
+                (ignoreC1 || (c1p->isMergeRoot && c1p->beta > oneMinusEpsilon)) &&
+                (ignoreC2 || (c2p->isMergeRoot && c2p->beta > oneMinusEpsilon)) &&
+                (ignoreC3 || (c3p->isMergeRoot && c3p->beta > oneMinusEpsilon)) &&
+                (ignoreC4 || (c4p->isMergeRoot && c4p->beta > oneMinusEpsilon)) &&
+                (ignoreC5 || (c5p->isMergeRoot && c5p->beta > oneMinusEpsilon)) &&
+                (ignoreC6 || (c6p->isMergeRoot && c6p->beta > oneMinusEpsilon)) &&
+                (ignoreC7 || (c7p->isMergeRoot && c7p->beta > oneMinusEpsilon));
 
-        if(!allSmallerEpsilon)
-        {
-
-            allGreaterEpsilon =
-                    (ignoreC0 || (c0p->isMergeRoot && c0p->beta > oneMinusEpsilon)) &&
-                    (ignoreC1 || (c1p->isMergeRoot && c1p->beta > oneMinusEpsilon)) &&
-                    (ignoreC2 || (c2p->isMergeRoot && c2p->beta > oneMinusEpsilon)) &&
-                    (ignoreC3 || (c3p->isMergeRoot && c3p->beta > oneMinusEpsilon)) &&
-                    (ignoreC4 || (c4p->isMergeRoot && c4p->beta > oneMinusEpsilon)) &&
-                    (ignoreC5 || (c5p->isMergeRoot && c5p->beta > oneMinusEpsilon)) &&
-                    (ignoreC6 || (c6p->isMergeRoot && c6p->beta > oneMinusEpsilon)) &&
-                    (ignoreC7 || (c7p->isMergeRoot && c7p->beta > oneMinusEpsilon));
-        }
 
         if(allSmallerEpsilon || allGreaterEpsilon)
         {
@@ -376,6 +371,7 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
             float beta = allGreaterEpsilon?1.f:0.f;
 
             nodePointer->isMergeRoot = true;
+            nodePointer->isIgnored = allSmallerEpsilon && allGreaterEpsilon;
             nodePointer->beta = beta;
 
             setMergeChild(c0p->index,beta);

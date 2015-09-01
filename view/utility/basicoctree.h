@@ -40,6 +40,7 @@ struct octreeNode {
 
       isMergeRoot = false;
       isMergeChild = false;
+      isIgnored = false;
 
       // random float between 0 and 1
       beta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -98,6 +99,7 @@ struct octreeNode {
   bool leaf;
   bool isMergeRoot;
   bool isMergeChild;
+  bool isIgnored;
   bool isVoid;
 
   QVector3D p0; //(-x,-y,-z)
