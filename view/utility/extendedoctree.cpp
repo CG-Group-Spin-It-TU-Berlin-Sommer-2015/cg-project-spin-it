@@ -744,6 +744,7 @@ void ExtendedOctree::deleteNodeMeshes()
         if(nodePointer->mesh != NULL)
         {
             delete nodePointer->mesh;
+            nodePointer = NULL;
         }
 
     }

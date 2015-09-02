@@ -475,6 +475,14 @@ void GLWidget::loadNewMesh()
 
 void GLWidget::makeItSpin()
 {
+
+    if(rebuildOctree)
+    {
+        this->calculateOctree();
+    }
+
+    rebuildOctree = true;
+
     Model::hollow();
 }
 
@@ -713,6 +721,8 @@ void GLWidget::calculateOctree()
     Model::octree->deleteNodeMeshes();
 
     //*/
+
+    rebuildOctree = false;
 
     emit shellIsSet(true);
 

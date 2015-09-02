@@ -100,6 +100,8 @@ private:
     bool topOptimized;
     bool tippeTopOptimized;
 
+    bool rebuildOctree;
+
 public:
     explicit GLWidget(QWidget *parent = 0);
     ~GLWidget();
