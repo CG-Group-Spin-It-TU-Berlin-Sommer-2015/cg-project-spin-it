@@ -20,12 +20,11 @@ public:
     static float w_I;
 
 private:
-    static Mesh* mesh;
     static float* mesh_volume;
 
 public:
 
-    static Mesh* modifiedMesh;
+    static Mesh* mesh;
     static Mesh* shellMesh;
     static ExtendedOctree* octree;
 
@@ -33,6 +32,7 @@ public:
 
 public:
     static void initialize(Mesh *mesh);
+    static void testSplitAndMerge();
     static void hollow();
 
     static void initializeOctree(

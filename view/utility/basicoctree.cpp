@@ -7,7 +7,7 @@ BasicOctree::BasicOctree():
 isDirty(true),
 mesh(NULL),
 startMaxDepth(6),
-optimationMaxDepth(6),
+optimizationMaxDepth(6),
 rootNodeIndex(-1)
 {
 
@@ -34,12 +34,12 @@ void BasicOctree::setStartMaxDepth(GLint depth)
 }
 
 /**
- * @brief BasicOctree::setMaxDepth Set a new maximal depth
+ * @brief BasicOctree::setOptimizationMaxDepth Set a new maximal depth
  * @param depth the maximal depth
  */
-void BasicOctree::setOptimationMaxDepth(GLint depth)
+void BasicOctree::setOptimizationMaxDepth(GLint depth)
 {
-    this->optimationMaxDepth = depth;
+    this->optimizationMaxDepth = depth;
 }
 
 //-------------------------------------------------- quantizing mesh
@@ -317,7 +317,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
 {
     octreeNode* nodePointer = &this->octreeNodes.data()[nodeIndex];
 
-    if(nodePointer->leaf)
+    if(nodePointer->isLeaf)
     {
         return nodePointer;
     }
@@ -358,13 +358,13 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
-    GLfloat cell_length = this->cell_length*(pow(2,this->optimationMaxDepth-depth));
+    GLfloat cell_length = this->cell_length*(pow(2,this->optimizationMaxDepth-depth));
 
     octreeNode node;
 
     node.isSet = true;
 
-    node.leaf = true;
+    node.isLeaf = true;
     node.isInside = isInside;
     node.isShell = false;
 
@@ -373,7 +373,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     node.x = x;
     node.y = y;
     node.z = z;
-    node.cell_length = pow(2,this->optimationMaxDepth-depth);
+    node.cell_length = pow(2,this->optimizationMaxDepth-depth);
     node.nodeDepth = depth;
 
     // add node to octree node vector
@@ -848,7 +848,7 @@ void BasicOctree::setInnerNodes()
 
          nodePointer = &this->octreeNodes.data()[i];
 
-         if(!nodePointer->leaf || nodePointer->isSet || nodePointer->isShell)
+         if(!nodePointer->isLeaf || nodePointer->isSet || nodePointer->isShell)
          {
            continue;
          }
@@ -940,7 +940,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 
         // set node data
         node.isShell = this->startMaxDepth<=depth && end-start>0;
-        node.leaf = true;
+        node.isLeaf = true;
 
         node.setPoints(xf,yf,zf,cell_length);
         node.x = x;
@@ -984,7 +984,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 
     // set node data
     node.isShell = true;
-    node.leaf = false;
+    node.isLeaf = false;
 
     node.setPoints(xf,yf,zf,cell_length);
     node.x = x;
@@ -1010,11 +1010,11 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 }
 
 /**
- * @brief BasicOctree::adjustMaxDepth Adjust the octree to the maximal depth
+ * @brief BasicOctree::adjustToOptimizationMaxDepth Adjust the octree to the maximal depth
  */
-void BasicOctree::adjustMaxDepth()
+void BasicOctree::adjustToOptimizationMaxDepth()
 {
-    GLint diff = this->optimationMaxDepth-startMaxDepth;
+    GLint diff = this->optimizationMaxDepth-startMaxDepth;
 
     this->cell_length = this->cell_length/pow(2,diff);
 
@@ -1067,7 +1067,7 @@ void BasicOctree::render(QGLShaderProgram* shader)
 
             octreeNode node = this->octreeNodes.at(i);
 
-            if( !node.isSet || !node.isInside || !node.leaf || node.isShell )
+            if( !node.isSet || !node.isInside || !node.isLeaf || node.isShell )
             {
                 continue;
             }
@@ -1164,7 +1164,7 @@ void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->isInside && nodePointer->leaf)
+        if(nodePointer->isInside && nodePointer->isLeaf)
         {
            indices->push_back(nodePointer->index);
         }
@@ -1187,7 +1187,7 @@ void BasicOctree::getShellLeaves(QVector<GLint>* indices)
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->leaf && nodePointer->isShell)
+        if(nodePointer->isLeaf && nodePointer->isShell)
         {
             indices->push_back(nodePointer->index);
         }
@@ -1234,7 +1234,7 @@ void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)
         nodePointer = &this->octreeNodes.data()[i];
 
         if(
-                !nodePointer->leaf &&
+                !nodePointer->isLeaf &&
                 !nodePointer->isMergeRoot &&
                 !nodePointer->isMergeChild &&
                 !(nodePointer->isInside && nodePointer->isShell))
@@ -1244,4 +1244,9 @@ void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)
 
     }
 
+}
+
+void BasicOctree::setDirty()
+{
+    this->isDirty = true;
 }

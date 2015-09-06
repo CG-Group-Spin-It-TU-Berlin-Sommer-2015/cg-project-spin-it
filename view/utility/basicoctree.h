@@ -35,15 +35,14 @@ struct octreeNode {
       isSet = false;
       isInside = false;
       isShell = false;
-      leaf = false;
+      isLeaf = false;
       isVoid = true;
 
       isMergeRoot = false;
       isMergeChild = false;
       isIgnored = false;
 
-      // random float between 0 and 1
-      beta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+      beta = 0.0;
 
       mesh = NULL;
 
@@ -96,7 +95,7 @@ struct octreeNode {
   bool isSet;
   bool isInside;
   bool isShell;
-  bool leaf;
+  bool isLeaf;
   bool isMergeRoot;
   bool isMergeChild;
   bool isIgnored;
@@ -135,10 +134,12 @@ public:
     void setMesh(Mesh* mesh);
     bool hasMesh();
 
-    void setStartMaxDepth(GLint depth);
-    void setOptimationMaxDepth(GLint depth);
+    void setDirty();
 
-    void adjustMaxDepth();
+    void setStartMaxDepth(GLint depth);
+    void setOptimizationMaxDepth(GLint depth);
+
+    void adjustToOptimizationMaxDepth();
 
     void quantizeSurface();
     bool hasQantizedSurface();
@@ -196,7 +197,7 @@ protected:
     GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
     GLint startMaxDepth;
-    GLint optimationMaxDepth;
+    GLint optimizationMaxDepth;
     GLint rootNodeIndex;
 
     QVector3D mean;

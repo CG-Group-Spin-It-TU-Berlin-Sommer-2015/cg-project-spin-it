@@ -2,6 +2,8 @@
 
 #define DEFAULT_SCALE_FACTOR 1.66238999
 
+#define Y_DEFAULT_VALUE 2.f
+
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {   
@@ -40,14 +42,14 @@ void GLWidget::resetGLWidget()
     this->rot_cam_phi = 0;
 
     this->trans_x = 0.f;
-    this->trans_y = 2.f;
+    this->trans_y = 4.f;
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
-    this->startDepth = 2;
-    this->maximumDepth = 2;
-    emit setStartDepthSpinBoxValue(this->startDepth);
-    emit setMaximumDepthSpinBoxValue(this->maximumDepth);
+    this->startMaximalDepth = 2;
+    this->optimizationMaximalDepth = 2;
+    emit setStartDepthSpinBoxValue(this->startMaximalDepth);
+    emit setMaximumDepthSpinBoxValue(this->optimizationMaximalDepth);
 
     shellExtensionValue = 0;
     emit setShellExtensionSpinBoxValue(shellExtensionValue);
@@ -438,7 +440,7 @@ void GLWidget::loadInitialMesh()
     middle = object->getMiddle();
     scaleFactor = object->getMaxDistance2Middle();
 
-    trans_y = 3.5;
+    //trans_y = 2.f;
 
     emit modelLoaded(true);
 
@@ -483,7 +485,15 @@ void GLWidget::makeItSpin()
 
     rebuildOctree = true;
 
-    Model::hollow();
+    Model::mesh->swapYZ();
+
+    //Model::hollow();
+
+    Model::testSplitAndMerge();
+
+    Model::mesh->swapYZ();
+
+    this->updateGL();
 }
 
 /* ----------------------------------------------- */
@@ -549,10 +559,10 @@ void GLWidget::setViewXY()
     // bird eye view
 
     camera_position.setX(0);
-    camera_position.setY(-0.75+1);
+    camera_position.setY(0.25);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(Y_DEFAULT_VALUE);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -570,10 +580,10 @@ void GLWidget::setViewZ()
     // view from the front
 
     camera_position.setX(0);
-    camera_position.setY(0+2);
+    camera_position.setY(Y_DEFAULT_VALUE);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(Y_DEFAULT_VALUE);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -590,10 +600,10 @@ void GLWidget::setViewRotationScale()
 {
 
     camera_position.setX(1);
-    camera_position.setY(-0.75+2);
+    camera_position.setY(-0.75+Y_DEFAULT_VALUE);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(Y_DEFAULT_VALUE);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -609,10 +619,10 @@ void GLWidget::setViewRotationScale()
 void GLWidget::setViewDefault()
 {
     camera_position.setX(1);
-    camera_position.setY(-0.75+2);
+    camera_position.setY(-0.75+Y_DEFAULT_VALUE);
     camera_position.setZ(1);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(Y_DEFAULT_VALUE);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -634,7 +644,7 @@ void GLWidget::resetXY()
 
 void GLWidget::resetZ()
 {
-    this->trans_y = 0;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->updateGL();
 }
 
@@ -650,7 +660,7 @@ void GLWidget::resetAll()
 {
 
     this->trans_x = 0;
-    this->trans_y = 0;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->trans_z = 0;
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
@@ -661,22 +671,22 @@ void GLWidget::resetAll()
 void GLWidget::setStartDepthValue(int value)
 {
 
-    this->startDepth = value;
-    if(this->maximumDepth<this->startDepth)
+    this->startMaximalDepth = value;
+    if(this->optimizationMaximalDepth<this->startMaximalDepth)
     {
-       this->maximumDepth = this->startDepth;
-       emit setMaximumDepthSpinBoxValue(this->maximumDepth);
+       this->optimizationMaximalDepth = this->startMaximalDepth;
+       emit setMaximumDepthSpinBoxValue(this->optimizationMaximalDepth);
     }
 
 }
 
 void GLWidget::setMaximumDepthValue(int value)
 {
-    this->maximumDepth = value;
-    if(this->maximumDepth<this->startDepth)
+    this->optimizationMaximalDepth = value;
+    if(this->optimizationMaximalDepth<this->startMaximalDepth)
     {
-       this->startDepth = this->maximumDepth;
-       emit setStartDepthSpinBoxValue(this->startDepth);
+       this->startMaximalDepth = this->optimizationMaximalDepth;
+       emit setStartDepthSpinBoxValue(this->startMaximalDepth);
     }
 }
 
@@ -704,8 +714,8 @@ void GLWidget::calculateOctree()
 
     Model::initializeOctree(
                 newModifiedMesh,
-                this->startDepth,
-                this->maximumDepth,
+                this->startMaximalDepth,
+                this->optimizationMaximalDepth,
                 this->shellExtensionValue);
 
 
@@ -763,7 +773,7 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
 
-    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,half_sphere);
+    Mesh* mesh1 = booleanUnion(Model::mesh,half_sphere);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
@@ -781,7 +791,7 @@ void GLWidget::saveMeshAsTop(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
 
-    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,rot_axis);
+    Mesh* mesh1 = booleanUnion(Model::mesh,rot_axis);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
@@ -798,7 +808,7 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
 
-    Mesh* mesh1 = booleanDifference(Model::modifiedMesh,yoyo_area);
+    Mesh* mesh1 = booleanDifference(Model::mesh,yoyo_area);
     Mesh* mesh2 = booleanUnion(mesh1,yoyo_connection);
     Mesh* mesh3 = mergeMeshes(mesh2,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh3);

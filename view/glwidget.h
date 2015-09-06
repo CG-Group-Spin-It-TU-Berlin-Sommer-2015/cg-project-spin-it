@@ -90,8 +90,8 @@ private:
     bool showInnerSurface;
     bool showGrid;
 
-    GLint startDepth;
-    GLint maximumDepth;
+    GLint startMaximalDepth;
+    GLint optimizationMaximalDepth;
     GLint shellExtensionValue;
 
     GLfloat lowest_y_rot_axis;

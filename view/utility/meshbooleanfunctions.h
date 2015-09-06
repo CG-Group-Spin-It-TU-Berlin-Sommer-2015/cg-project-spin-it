@@ -3,7 +3,7 @@
 
 #include "view/utility/mesh.h"
 
-//#include <cork.h>
+#include <cork.h>
 
 #define UNION_BOOLEAN 0
 #define DIFFERENCE_BOOLEAN 1

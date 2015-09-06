@@ -35,41 +35,6 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
 
     octreeNode* nodePointer = &this->octreeNodes.data()[index];
 
-    // set the vertices
-    /*
-    geometry->push_back(nodePointer->p0.x());
-    geometry->push_back(nodePointer->p0.y());
-    geometry->push_back(nodePointer->p0.z());
-
-    geometry->push_back(nodePointer->p1.x());
-    geometry->push_back(nodePointer->p1.y());
-    geometry->push_back(nodePointer->p1.z());
-
-    geometry->push_back(nodePointer->p2.x());
-    geometry->push_back(nodePointer->p2.y());
-    geometry->push_back(nodePointer->p2.z());
-
-    geometry->push_back(nodePointer->p3.x());
-    geometry->push_back(nodePointer->p3.y());
-    geometry->push_back(nodePointer->p3.z());
-
-    geometry->push_back(nodePointer->p4.x());
-    geometry->push_back(nodePointer->p4.y());
-    geometry->push_back(nodePointer->p4.z());
-
-    geometry->push_back(nodePointer->p5.x());
-    geometry->push_back(nodePointer->p5.y());
-    geometry->push_back(nodePointer->p5.z());
-
-    geometry->push_back(nodePointer->p6.x());
-    geometry->push_back(nodePointer->p6.y());
-    geometry->push_back(nodePointer->p6.z());
-
-    geometry->push_back(nodePointer->p7.x());
-    geometry->push_back(nodePointer->p7.y());
-    geometry->push_back(nodePointer->p7.z());
-    */
-
     geometry->push_back(nodePointer->p0.x());
     geometry->push_back(nodePointer->p0.z());
     geometry->push_back(nodePointer->p0.y());
@@ -184,7 +149,7 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
         if(nodePointer->mesh == NULL)
         {
 
-            if(nodePointer->leaf)
+            if(nodePointer->isLeaf)
             {
 
                    // allocate and reserve storage for the geometry of a cube
@@ -234,6 +199,7 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
     }
 
     mergeIndices.clear();
+    childIndices.clear();
 
     return &cubeVector;
 }
@@ -275,7 +241,7 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
             nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
 
             // check whether the node has been splitted
-            if(!nodePointer->leaf)
+            if(!nodePointer->isLeaf)
             {
 
                 // all children get the beta value of their parent
@@ -323,6 +289,8 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
     for(int i=0;i<mergeCandidates.length();i++)
     {
 
+        break;
+
         nodePointer = &this->octreeNodes.data()[mergeCandidates.at(i)];
 
         c0p = &this->octreeNodes.data()[nodePointer->childIndex0];
@@ -334,14 +302,14 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
         c6p = &this->octreeNodes.data()[nodePointer->childIndex6];
         c7p = &this->octreeNodes.data()[nodePointer->childIndex7];
 
-        bool ignoreC0 =(c0p->isShell && c0p->leaf) || (!c0p->isShell && !c0p->isInside) || c0p->isIgnored;
-        bool ignoreC1 =(c1p->isShell && c1p->leaf) || (!c1p->isShell && !c1p->isInside) || c0p->isIgnored;
-        bool ignoreC2 =(c2p->isShell && c2p->leaf) || (!c2p->isShell && !c2p->isInside) || c0p->isIgnored;
-        bool ignoreC3 =(c3p->isShell && c3p->leaf) || (!c3p->isShell && !c3p->isInside) || c0p->isIgnored;
-        bool ignoreC4 =(c4p->isShell && c4p->leaf) || (!c4p->isShell && !c4p->isInside) || c0p->isIgnored;
-        bool ignoreC5 =(c5p->isShell && c5p->leaf) || (!c5p->isShell && !c5p->isInside) || c0p->isIgnored;
-        bool ignoreC6 =(c6p->isShell && c6p->leaf) || (!c6p->isShell && !c6p->isInside) || c0p->isIgnored;
-        bool ignoreC7 =(c7p->isShell && c7p->leaf) || (!c7p->isShell && !c7p->isInside) || c0p->isIgnored;
+        bool ignoreC0 =(c0p->isShell && c0p->isLeaf) || (!c0p->isShell && !c0p->isInside) || c0p->isIgnored;
+        bool ignoreC1 =(c1p->isShell && c1p->isLeaf) || (!c1p->isShell && !c1p->isInside) || c0p->isIgnored;
+        bool ignoreC2 =(c2p->isShell && c2p->isLeaf) || (!c2p->isShell && !c2p->isInside) || c0p->isIgnored;
+        bool ignoreC3 =(c3p->isShell && c3p->isLeaf) || (!c3p->isShell && !c3p->isInside) || c0p->isIgnored;
+        bool ignoreC4 =(c4p->isShell && c4p->isLeaf) || (!c4p->isShell && !c4p->isInside) || c0p->isIgnored;
+        bool ignoreC5 =(c5p->isShell && c5p->isLeaf) || (!c5p->isShell && !c5p->isInside) || c0p->isIgnored;
+        bool ignoreC6 =(c6p->isShell && c6p->isLeaf) || (!c6p->isShell && !c6p->isInside) || c0p->isIgnored;
+        bool ignoreC7 =(c7p->isShell && c7p->isLeaf) || (!c7p->isShell && !c7p->isInside) || c0p->isIgnored;
 
 
         bool allSmallerEpsilon =
@@ -456,7 +424,7 @@ void ExtendedOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
     octreeNode* nodePointer = &this->octreeNodes.data()[index];
 
     // break recursion because current node is a leaf
-    if(nodePointer->leaf)
+    if(nodePointer->isLeaf)
     {
 
         if(nodePointer->isInside && !nodePointer->isShell)
@@ -488,13 +456,13 @@ void ExtendedOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
 void ExtendedOctree::split(octreeNode* nodePointer){
 
     // the node has to be a leaf and
-    if(!nodePointer->leaf)
+    if(!nodePointer->isLeaf)
     {
         return;
     }
 
     // the node has not to have the maximal depth
-    if( (nodePointer->nodeDepth + 1) > this->optimationMaxDepth)
+    if( (nodePointer->nodeDepth + 1) > this->optimizationMaxDepth)
     {
         return;
     }
@@ -505,7 +473,7 @@ void ExtendedOctree::split(octreeNode* nodePointer){
 
     GLint newDepth = nodePointer->nodeDepth+1;
 
-    nodePointer->leaf = false;
+    nodePointer->isLeaf = false;
 
     bool isInside = nodePointer->isInside;
 
@@ -549,20 +517,20 @@ bool ExtendedOctree::allChildrenAreLeaves(GLint nodeIndex)
 
     octreeNode* nodePointer = &this->octreeNodes.data()[nodeIndex];
 
-    if(nodePointer->leaf)
+    if(nodePointer->isLeaf)
     {
         return false;
     }
 
     return
-        this->octreeNodes.data()[nodePointer->childIndex0].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex1].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex2].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex3].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex4].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex5].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex6].leaf &&
-        this->octreeNodes.data()[nodePointer->childIndex7].leaf;
+        this->octreeNodes.data()[nodePointer->childIndex0].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex1].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex2].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex3].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex4].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex5].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex6].isLeaf &&
+        this->octreeNodes.data()[nodePointer->childIndex7].isLeaf;
 
 }
 
@@ -685,10 +653,41 @@ void ExtendedOctree::increaseShell(GLint loopNumber)
 void ExtendedOctree::setVoids()
 {
 
+    octreeNode* nodePointer;
+    octreeNode* tempNodePointer;
+
+    QVector<GLint> childIndices;
+
+    // get a vector of the indices of all inner nodes
+    QVector<GLint> mergeIndices;
+    this->getMergeRoots(&mergeIndices);
+
+    for(int i=0;i<mergeIndices.length();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[mergeIndices.data()[i]];
+        if(!nodePointer->isLeaf)
+        {
+
+            childIndices.clear();
+            this->getInnerLeavesForNode(nodePointer->index,&childIndices);
+
+            for(int j=0;j<childIndices.length();j++)
+            {
+                tempNodePointer = &this->octreeNodes.data()[childIndices.data()[j]];
+                tempNodePointer->beta = nodePointer->beta;
+            }
+
+        }
+
+    }
+
+    mergeIndices.clear();
+    childIndices.clear();
+
     // get a vector of the indices of all inner nodes
     QVector<GLint> innerLeafIndices;
     this->getInnerLeaves(&innerLeafIndices);
-    octreeNode* nodePointer;
 
     // iterate about all inner leaves
     for(int i=0;i<innerLeafIndices.length();i++)
@@ -736,7 +735,6 @@ void ExtendedOctree::deleteNodeMeshes()
     this->getMergeRoots(&mergeIndices);
     octreeNode* nodePointer;
 
-    // iterate about indices of all inner nodes and create a cube
     for(int i=0;i<mergeIndices.length();i++)
     {
 
