@@ -130,6 +130,7 @@ class BasicOctree
 {
 public:
     BasicOctree();
+    ~BasicOctree();
 
     void setMesh(Mesh* mesh);
     bool hasMesh();
@@ -181,15 +182,22 @@ private:
 
     GLint sortHalf(GLint start,GLint end,GLint coor, GLint prior);
 
+    Mesh* mesh;
+
+
     bool isDirty;
     QOpenGLBuffer* vbo;
     QOpenGLBuffer* cbo;
     QOpenGLBuffer* ibo;
+
+    QOpenGLBuffer* vbo_line;
+    QOpenGLBuffer* ibo_line;
+
     QVector<int> indexBuffer;
+    QVector<int> indexBuffer_line;
 
     QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
-    Mesh* mesh;
 
     void propageDownMergeChildHelper(GLint index);
     void propageDownMergeChild(GLint index);

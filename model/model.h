@@ -31,7 +31,7 @@ public:
     static QVector<int>* J;
 
 public:
-    static void initialize(Mesh *mesh);
+    static void testSimpleSplitAndMerge();
     static void testSplitAndMerge();
     static void hollow();
 

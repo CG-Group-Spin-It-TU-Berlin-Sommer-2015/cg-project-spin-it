@@ -6,8 +6,13 @@ using namespace octree;
 const int GEOMETRY_DATA_SIZE    = 3;
 
 BasicOctree::BasicOctree():
-isDirty(true),
 mesh(NULL),
+isDirty(true),
+vbo(NULL),
+cbo(NULL),
+ibo(NULL),
+vbo_line(NULL),
+ibo_line(NULL),
 startMaxDepth(6),
 optimizationMaxDepth(6),
 basicMaxDepth(6),
@@ -15,6 +20,40 @@ rootNodeIndex(-1)
 {
 
 }
+
+BasicOctree::~BasicOctree()
+{
+
+    this->indexBuffer.clear();
+    this->indexBuffer_line.clear();
+
+    if(vbo != NULL)
+    {
+        vbo->destroy();
+    }
+
+    if(cbo != NULL)
+    {
+        cbo->destroy();
+    }
+
+    if(ibo != NULL)
+    {
+        ibo->destroy();
+    }
+
+    if(vbo_line != NULL)
+    {
+        vbo_line->destroy();
+    }
+
+    if(ibo_line != NULL)
+    {
+        ibo_line->destroy();
+    }
+
+}
+
 
 //-------------------------------------------------- setup parameters
 
@@ -34,7 +73,8 @@ void BasicOctree::setMesh(Mesh* mesh)
 void BasicOctree::setStartMaxDepth(GLint depth)
 {
     this->startMaxDepth = depth;
-    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?this->startMaxDepth:this->optimizationMaxDepth;
+    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?
+                this->startMaxDepth:this->optimizationMaxDepth;
 }
 
 /**
@@ -44,7 +84,8 @@ void BasicOctree::setStartMaxDepth(GLint depth)
 void BasicOctree::setOptimizationMaxDepth(GLint depth)
 {
     this->optimizationMaxDepth = depth;
-    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?this->startMaxDepth:this->optimizationMaxDepth;
+    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?
+                this->startMaxDepth:this->optimizationMaxDepth;
 }
 
 //-------------------------------------------------- quantizing mesh
@@ -1080,11 +1121,11 @@ void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
  */
 void BasicOctree::adjustToBasicMaxDepth()
 {
-    if(this->basicMaxDepth<this->startMaxDepth)
+    if(this->optimizationMaxDepth<this->startMaxDepth)
     {
 
        QVector<GLint> nodeIndices;
-       getNodesOfDepth(basicMaxDepth,&nodeIndices);
+       getNodesOfDepth(this->optimizationMaxDepth,&nodeIndices);
 
        for(int i=0;i<nodeIndices.length();i++){
          makeExplicitMergeRoot(nodeIndices.data()[i]);
@@ -1094,7 +1135,8 @@ void BasicOctree::adjustToBasicMaxDepth()
 
 
     }
-    else
+
+    if(this->optimizationMaxDepth>this->startMaxDepth)
     {
 
         GLint diff = this->basicMaxDepth-startMaxDepth;
@@ -1220,13 +1262,17 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
     /* if needed needed variables are set for painting */
     if (isDirty) {
-        QVector<GLfloat> buffer_vertices,buffer_colors;
+        QVector<GLfloat> buffer_vertices,buffer_colors,buffer_vertices_line;
 
         buffer_vertices.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
         buffer_colors.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
+        buffer_vertices_line.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
 
         indexBuffer.clear();
+        indexBuffer_line.clear();
+
         GLint index = 0;
+        GLint index_line = 0;
 
         GLint length = this->octreeNodes.length();
 
@@ -1338,33 +1384,58 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
             indexBuffer.push_back(index+4);
             indexBuffer.push_back(index+0);
 
-            /*
-            cubeLineIndices.push_back(index+0);cubeLineIndices.push_back(index+1);
-            cubeLineIndices.push_back(index+2);cubeLineIndices.push_back(index+3);
-            cubeLineIndices.push_back(index+4);cubeLineIndices.push_back(index+5);
-            cubeLineIndices.push_back(index+6);cubeLineIndices.push_back(index+7);
-
-            cubeLineIndices.push_back(index+0);cubeLineIndices.push_back(index+2);
-            cubeLineIndices.push_back(index+4);cubeLineIndices.push_back(index+6);
-            cubeLineIndices.push_back(index+0);cubeLineIndices.push_back(index+4);
-            cubeLineIndices.push_back(index+2);cubeLineIndices.push_back(index+6);
-
-            cubeLineIndices.push_back(index+1);cubeLineIndices.push_back(index+3);
-            cubeLineIndices.push_back(index+5);cubeLineIndices.push_back(index+7);
-            cubeLineIndices.push_back(index+1);cubeLineIndices.push_back(index+5);
-            cubeLineIndices.push_back(index+3);cubeLineIndices.push_back(index+7);
-            */
-
             index +=8;
+
+            if(node.nodeDepth<=7)
+            {
+                buffer_vertices_line.push_back(node.p0.x());buffer_vertices_line.push_back(node.p0.y());buffer_vertices_line.push_back(node.p0.z());
+                buffer_vertices_line.push_back(node.p1.x());buffer_vertices_line.push_back(node.p1.y());buffer_vertices_line.push_back(node.p1.z());
+                buffer_vertices_line.push_back(node.p2.x());buffer_vertices_line.push_back(node.p2.y());buffer_vertices_line.push_back(node.p2.z());
+                buffer_vertices_line.push_back(node.p3.x());buffer_vertices_line.push_back(node.p3.y());buffer_vertices_line.push_back(node.p3.z());
+
+                buffer_vertices_line.push_back(node.p4.x());buffer_vertices_line.push_back(node.p4.y());buffer_vertices_line.push_back(node.p4.z());
+                buffer_vertices_line.push_back(node.p5.x());buffer_vertices_line.push_back(node.p5.y());buffer_vertices_line.push_back(node.p5.z());
+                buffer_vertices_line.push_back(node.p6.x());buffer_vertices_line.push_back(node.p6.y());buffer_vertices_line.push_back(node.p6.z());
+                buffer_vertices_line.push_back(node.p7.x());buffer_vertices_line.push_back(node.p7.y());buffer_vertices_line.push_back(node.p7.z());
+
+                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+1);
+                indexBuffer_line.push_back(index_line+2);indexBuffer_line.push_back(index_line+3);
+                indexBuffer_line.push_back(index_line+4);indexBuffer_line.push_back(index_line+5);
+                indexBuffer_line.push_back(index_line+6);indexBuffer_line.push_back(index_line+7);
+
+                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+2);
+                indexBuffer_line.push_back(index_line+4);indexBuffer_line.push_back(index_line+6);
+                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+4);
+                indexBuffer_line.push_back(index_line+2);indexBuffer_line.push_back(index_line+6);
+
+                indexBuffer_line.push_back(index_line+1);indexBuffer_line.push_back(index_line+3);
+                indexBuffer_line.push_back(index_line+5);indexBuffer_line.push_back(index_line+7);
+                indexBuffer_line.push_back(index_line+1);indexBuffer_line.push_back(index_line+5);
+                indexBuffer_line.push_back(index_line+3);indexBuffer_line.push_back(index_line+7);
+
+                index_line +=8;
+            }
+        }
+
+        if(vbo != NULL)
+        {
+            vbo->destroy();
+            vbo = NULL;
         }
 
         vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         vbo->create();
         vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
         vbo->bind();
-        vbo->allocate( buffer_vertices.size() * sizeof(GLfloat) );
+        vbo->allocate(buffer_vertices.size() * sizeof(GLfloat));
         vbo->write(0, buffer_vertices.constData(), buffer_vertices.size() * sizeof(GLfloat));
         vbo->release();
+
+        if(cbo != NULL)
+        {
+            cbo->destroy();
+            cbo = NULL;
+        }
 
         cbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         cbo->create();
@@ -1374,6 +1445,12 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
         cbo->write(0, buffer_colors.constData(), buffer_colors.size() * sizeof(GLfloat));
         cbo->release();
 
+        if(ibo != NULL)
+        {
+            ibo->destroy();
+            ibo = NULL;
+        }
+
         ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         ibo->create();
         ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -1382,27 +1459,33 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
         ibo->write(0, indexBuffer.constData(), indexBuffer.size() * sizeof(GLint));
         ibo->release();
 
-        /* create vertex buffer */
-        /*
-        vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        vbo->create();
-        vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        vbo->bind();
-        vbo->allocate(index * 3 * sizeof(GLfloat));
-        vbo->write(0, buffer.constData(), buffer.size() * sizeof(GLfloat));
-        vbo->release();
-        */
+        if(vbo_line != NULL)
+        {
+            vbo_line->destroy();
+            vbo_line = NULL;
+        }
 
-        /* create index buffer */
-        /*
-        ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        ibo->create();
-        ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        ibo->bind();
-        ibo->allocate(cubeLineIndices.size() * sizeof(GLint));
-        ibo->write(0, cubeLineIndices.constData(), cubeLineIndices.size() * sizeof(GLint));
-        ibo->release();
-        */
+        vbo_line = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+        vbo_line->create();
+        vbo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        vbo_line->bind();
+        vbo_line->allocate(buffer_vertices_line.size() * 3 * sizeof(GLfloat));
+        vbo_line->write(0, buffer_vertices_line.constData(), buffer_vertices_line.size() * sizeof(GLfloat));
+        vbo_line->release();
+
+        if(ibo_line != NULL)
+        {
+            ibo_line->destroy();
+            ibo_line = NULL;
+        }
+
+        ibo_line = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+        ibo_line->create();
+        ibo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        ibo_line->bind();
+        ibo_line->allocate(indexBuffer_line.size() * sizeof(GLint));
+        ibo_line->write(0, indexBuffer_line.constData(), indexBuffer_line.size() * sizeof(GLint));
+        ibo_line->release();
 
         isDirty = false;
 
@@ -1427,23 +1510,22 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
     shader->disableAttributeArray("geometry");
     shader->disableAttributeArray("color");
 
-    //GLint stride = sizeof(GLfloat) * (3);
+    shader->setAttributeValue("color",QColor(Qt::black));
 
-    /* use vertex buffer */
-    /*
-    vbo->bind();
+    glLineWidth(2);
+
+    vbo_line->bind();
     shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
     shader->enableAttributeArray("geometry");
-    vbo->release();
-    */
-    /* use index buffer */
-    /*
-    ibo->bind();
-    glDrawElements(primitive, cubeLineIndices.length(), GL_UNSIGNED_INT, (void*) 0);
-    ibo->release();
+    vbo_line->release();
+
+    ibo_line->bind();
+    glDrawElements(primitive, indexBuffer_line.length(), GL_UNSIGNED_INT, (void*) 0);
+    ibo_line->release();
+
+    glLineWidth(1);
 
     shader->disableAttributeArray("geometry");
-    */
 
 }
 

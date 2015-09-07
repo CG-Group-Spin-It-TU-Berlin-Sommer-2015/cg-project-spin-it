@@ -2,7 +2,7 @@
 
 #define DEFAULT_SCALE_FACTOR 1.66238999
 
-#define Y_DEFAULT_VALUE 2.f
+#define Y_DEFAULT_VALUE 4.f
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
@@ -28,21 +28,23 @@ GLWidget::GLWidget(QWidget *parent)
 GLWidget::~GLWidget()
 {
     delete shader;
+    delete colorshader;
 
     delete object;
     delete grid;
     delete rot_axis;
+    delete half_sphere;
 }
 
 void GLWidget::resetGLWidget()
 {
 
-    this->rot_obj_phi = 0;
-    this->rot_obj_psy = 0;
-    this->rot_cam_phi = 0;
+    this->rot_obj_phi = 0.f;
+    this->rot_obj_psy = 0.f;
+    this->rot_cam_phi = 0.f;
 
     this->trans_x = 0.f;
-    this->trans_y = 4.f;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
@@ -56,6 +58,41 @@ void GLWidget::resetGLWidget()
 
     emit shellIsNotSet();
     emit shellIsNotSet(true);
+
+}
+
+void GLWidget::createGrid()
+{
+
+    QVector<GLfloat>* geometry = new QVector<GLfloat>();
+    QVector<GLfloat>* normals = new QVector<GLfloat>();
+    QVector<GLint>* indices = new QVector<GLint>();
+
+    int idx = 0;
+    for (float x = -3; x <= 3; x += 0.5) {
+        for (float z = -3; z <= 3; z += 0.5) {
+            geometry->push_back(x);
+            geometry->push_back(0);
+            geometry->push_back(z);
+
+            normals->push_back(0);
+            normals->push_back(1);
+            normals->push_back(0);
+
+            if (z < 3) {
+                indices->push_back(idx);
+                indices->push_back(idx + 1);
+
+            }
+            if (x < 3) {
+                indices->push_back(idx);
+                indices->push_back(idx + 13);
+            }
+            idx += 1;
+        }
+    }
+
+    grid = new Mesh(geometry, normals, indices);
 
 }
 
@@ -104,73 +141,34 @@ void GLWidget::initializeGL()
     // load helper meshes
     rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
     half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
-    yoyo_area  = readMeshFromObjFileDirectory("yoyo_area");
-    yoyo_connection  = readMeshFromObjFileDirectory("yoyo_connection");
-
-    GLfloat lowest_y;
-
-    // search for lowest y for rotation axis
-    lowest_y = 0.0;
-    for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
-        if (rot_axis->getGeometry()->at(i) < lowest_y) {
-            lowest_y = rot_axis->getGeometry()->at(i);
-        }
-    }
-    lowest_y_rot_axis = lowest_y;
-
-    // search for lowest y for half sphere
-    lowest_y = 0.0;
-    for (int i = 1; i < half_sphere->getGeometry()->size(); i += 3) {
-        if (half_sphere->getGeometry()->at(i) < lowest_y) {
-            lowest_y = half_sphere->getGeometry()->at(i);
-        }
-    }
-    lowest_y_half_sphere = lowest_y;
-
-    last_object_model_matrix.setToIdentity();
+    yoyo_center = readMeshFromObjFileDirectory("yoyo_center_object");
 
     QMatrix4x4 mat;
 
     // align rotation axis to touch point
+    QVector3D lowestPointRotAxis = rot_axis->getLowestPoint();
     mat.setToIdentity();
-    mat.translate(QVector3D(0,0.0-lowest_y_rot_axis,0));
+    mat.translate(-lowestPointRotAxis);
     rot_axis->transform(mat);
 
     // align half sphere to touch point
+    QVector3D lowestPointHalfSphere = half_sphere->getLowestPoint();
     mat.setToIdentity();
-    mat.translate(QVector3D(0,0.0-lowest_y_half_sphere,0));
+    mat.translate(-lowestPointHalfSphere);
     half_sphere->transform(mat);
 
-    QVector<GLfloat>* geometry = new QVector<GLfloat>();
-    QVector<GLfloat>* normals = new QVector<GLfloat>();
-    QVector<GLint>* indices = new QVector<GLint>();
+    // align yoyo center to origin
+    QVector3D lowestPointYoyoCenter = yoyo_center->getLowestPoint();
+    lowestPointYoyoCenter.setY(lowestPointYoyoCenter.y()-4.0);
+    mat.setToIdentity();
+    mat.translate(-lowestPointYoyoCenter);
+    yoyo_center->transform(mat);
 
-    int idx = 0;
-    for (float x = -3; x <= 3; x += 0.5) {
-        for (float z = -3; z <= 3; z += 0.5) {
-            geometry->push_back(x);
-            geometry->push_back(0);
-            geometry->push_back(z);
+    createGrid();
 
-            normals->push_back(0);
-            normals->push_back(1);
-            normals->push_back(0);
+    last_object_model_matrix.setToIdentity();
 
-            if (z < 3) {
-                indices->push_back(idx);
-                indices->push_back(idx + 1);
-
-            }
-            if (x < 3) {
-                indices->push_back(idx);
-                indices->push_back(idx + 13);
-            }
-            idx += 1;
-        }
-    }
-
-    grid = new Mesh(geometry, normals, indices);
-
+    /* test loading start */
     loadInitialMesh();
 
     model_matrix.setToIdentity();
@@ -187,6 +185,8 @@ void GLWidget::initializeGL()
     last_object_model_matrix = model_matrix;
 
     calculateOctree();
+    /* test loading end */
+
 }
 
 void GLWidget::paintGL()
@@ -288,7 +288,7 @@ void GLWidget::paintGL()
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
         shader->setUniformValue("color", QColor(Qt::blue));
-        yoyo_area->render(shader, GL_TRIANGLES);
+        yoyo_center->render(shader, GL_TRIANGLES);
 
     }
     }
@@ -505,6 +505,7 @@ void GLWidget::makeItSpin()
 
     Model::hollow();
 
+    //Model::testSimpleSplitAndMerge();
     //Model::testSplitAndMerge();
 
     Model::mesh->swapYZ();
@@ -575,7 +576,7 @@ void GLWidget::setViewXY()
     // bird eye view
 
     camera_position.setX(0);
-    camera_position.setY(20);
+    camera_position.setY(15);
     camera_position.setZ(0);
     camera_direction.setX(0);
     camera_direction.setY(0);

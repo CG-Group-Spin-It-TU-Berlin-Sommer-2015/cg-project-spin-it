@@ -65,8 +65,7 @@ private:
     Mesh* grid;
     Mesh* rot_axis;
     Mesh* half_sphere;
-    Mesh* yoyo_area;
-    Mesh* yoyo_connection;
+    Mesh* yoyo_center;
 
     bool left_pressed;
     bool right_pressed;
@@ -167,6 +166,9 @@ protected:
     void saveMeshAsYoyo(QString fileName);
 
     void resetGLWidget();
+
+    void createGrid();
+
 
 };
 

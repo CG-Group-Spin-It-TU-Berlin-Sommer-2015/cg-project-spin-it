@@ -23,6 +23,43 @@ void ExtendedOctree::updateBetaValues()
 
 }
 
+void ExtendedOctree::propagateBeta(GLint index, GLfloat beta)
+{
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
+
+    nodePointer->beta = beta;
+
+    if(!nodePointer->isLeaf)
+    {
+        propagateBeta(nodePointer->childIndex0,beta);
+        propagateBeta(nodePointer->childIndex1,beta);
+        propagateBeta(nodePointer->childIndex2,beta);
+        propagateBeta(nodePointer->childIndex3,beta);
+
+        propagateBeta(nodePointer->childIndex4,beta);
+        propagateBeta(nodePointer->childIndex5,beta);
+        propagateBeta(nodePointer->childIndex6,beta);
+        propagateBeta(nodePointer->childIndex7,beta);
+
+    }
+
+}
+
+void ExtendedOctree::updateBetaValuesWithPropagation()
+{
+
+    // iterate about all cubes
+    for(int i=0;i<cubeVector.length();i++)
+    {
+        cubeObject* obj = &cubeVector.data()[i];
+        (&octreeNodes.data()[obj->index])->beta = obj->beta;
+
+        propagateBeta(obj->index,obj->beta);
+
+    }
+
+}
+
 /**
  * @brief ExtendedOctree::addCubeMesh Add the vertices and indices to the mesh
  * @param index index of the node
@@ -119,6 +156,53 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
 
 }
 
+void ExtendedOctree::createMeshForNode(GLint index)
+{
+
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
+
+    QVector<GLfloat>* geometry;
+    QVector<GLint>* indices;
+
+    QVector<GLint> childIndices;
+
+    if(nodePointer->isLeaf)
+    {
+
+           // allocate and reserve storage for the geometry of a cube
+           geometry = new QVector<GLfloat>();
+           indices = new QVector<GLint>();
+           geometry->reserve(8*3);
+           indices->reserve(12*3);
+
+           addCubeMesh(nodePointer->index,geometry,indices,0);
+
+           nodePointer->mesh = new Mesh(geometry,indices);
+
+    }
+    else
+    {
+        childIndices.clear();
+        this->getInnerLeavesForNode(nodePointer->index,&childIndices);
+
+        geometry = new QVector<GLfloat>();
+        indices = new QVector<GLint>();
+        geometry->reserve(8*3*childIndices.length());
+        indices->reserve(12*3*childIndices.length());
+
+        for(int i=0;i<childIndices.length();i++)
+        {
+            addCubeMesh(childIndices.at(i),geometry,indices,8*i);
+        }
+
+        nodePointer->mesh = new Mesh(geometry,indices);
+    }
+
+    childIndices.clear();
+
+}
+
+
 /**
  * @brief ExtendedOctree::getInnerCubes Get a pointer of a vector of cubes which represent the geometry of all inner leaf nodes.
  * @return pointer of vector
@@ -132,13 +216,8 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
     // get a vector of the indices of all inner nodes
     QVector<GLint> mergeIndices;
     this->getMergeRoots(&mergeIndices);
+
     octreeNode* nodePointer;
-
-
-    QVector<GLfloat>* geometry;
-    QVector<GLint>* indices;
-
-    QVector<GLint> childIndices;
 
     // iterate about indices of all inner nodes and create a cube
     for(int i=0;i<mergeIndices.length();i++)
@@ -148,39 +227,7 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
 
         if(nodePointer->mesh == NULL)
         {
-
-            if(nodePointer->isLeaf)
-            {
-
-                   // allocate and reserve storage for the geometry of a cube
-                   geometry = new QVector<GLfloat>();
-                   indices = new QVector<GLint>();
-                   geometry->reserve(8*3);
-                   indices->reserve(12*3);
-
-                   addCubeMesh(nodePointer->index,geometry,indices,0);
-
-                   nodePointer->mesh = new Mesh(geometry,indices);
-
-            }
-            else
-            {
-                childIndices.clear();
-                this->getInnerLeavesForNode(nodePointer->index,&childIndices);
-
-                geometry = new QVector<GLfloat>();
-                indices = new QVector<GLint>();
-                geometry->reserve(8*3*childIndices.length());
-                indices->reserve(12*3*childIndices.length());
-
-                for(int i=0;i<childIndices.length();i++)
-                {
-                    addCubeMesh(childIndices.at(i),geometry,indices,8*i);
-                }
-
-                nodePointer->mesh = new Mesh(geometry,indices);
-            }
-
+            createMeshForNode(mergeIndices.data()[i]);
         }
 
         if(nodePointer->mesh->getGeometry()->length()<1)
@@ -199,7 +246,99 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
     }
 
     mergeIndices.clear();
-    childIndices.clear();
+
+    return &cubeVector;
+}
+
+QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth()
+{
+
+    // reset the default state
+    cubeVector.clear();
+
+    QVector<GLint> nodeIndices;
+    octreeNode* nodePointer;
+
+    for(int i=1;i<this->optimizationMaxDepth-3;i++)
+    {
+
+        /* ------------------------ */
+
+        getNodesOfDepth(i,&nodeIndices);
+
+        for(int j=0;j<nodeIndices.length();j++)
+        {
+            nodePointer = &this->octreeNodes.data()[nodeIndices.at(j)];
+
+            if(!nodePointer->isMergeRoot)
+            {
+
+                if(nodePointer->mesh == NULL)
+                {
+                    createMeshForNode(nodeIndices.at(j));
+                }
+
+                if(nodePointer->mesh->getGeometry()->length()<1)
+                {
+                    continue;
+                }
+
+                // set the values of the cube
+                cubeObject obj;
+                obj.mesh = nodePointer->mesh;
+                obj.beta = nodePointer->beta;
+                obj.index = nodePointer->index;
+
+                // add the cube to the vector
+                cubeVector.push_back(obj);
+
+            }
+
+        }
+
+        nodeIndices.clear();
+
+        /* ------------------------ */
+
+    }
+
+    /* ------------------------ */
+
+    getNodesOfDepth(this->optimizationMaxDepth-3,&nodeIndices);
+
+    for(int j=0;j<nodeIndices.length();j++)
+    {
+        nodePointer = &this->octreeNodes.data()[nodeIndices.at(j)];
+
+        if(nodePointer->isMergeRoot || (!nodePointer->isMergeChild && nodePointer->isShell))
+        {
+
+            if(nodePointer->mesh == NULL)
+            {
+                createMeshForNode(nodeIndices.at(j));
+            }
+
+            if(nodePointer->mesh->getGeometry()->length()<1)
+            {
+                continue;
+            }
+
+            // set the values of the cube
+            cubeObject obj;
+            obj.mesh = nodePointer->mesh;
+            obj.beta = nodePointer->beta;
+            obj.index = nodePointer->index;
+
+            // add the cube to the vector
+            cubeVector.push_back(obj);
+
+        }
+
+    }
+
+    nodeIndices.clear();
+
+    /* ------------------------ */
 
     return &cubeVector;
 }
@@ -671,23 +810,18 @@ void ExtendedOctree::setMergeNodes()
 void ExtendedOctree::deleteNodeMeshes()
 {
 
-    // get a vector of the indices of all inner nodes
-    QVector<GLint> mergeIndices;
-    this->getMergeRoots(&mergeIndices);
     octreeNode* nodePointer;
 
-    for(int i=0;i<mergeIndices.length();i++)
+    for(int i=0;i<this->octreeNodes.length();i++)
     {
 
-        nodePointer = &this->octreeNodes.data()[mergeIndices.data()[i]];
+        nodePointer = &this->octreeNodes.data()[i];
         if(nodePointer->mesh != NULL)
         {
             delete nodePointer->mesh;
-            nodePointer = NULL;
+            nodePointer->mesh = NULL;
         }
 
     }
-
-    mergeIndices.clear();
 
 }
