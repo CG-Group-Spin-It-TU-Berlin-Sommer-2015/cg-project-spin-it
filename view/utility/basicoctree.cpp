@@ -3,11 +3,14 @@
 using namespace std;
 using namespace octree;
 
+const int GEOMETRY_DATA_SIZE    = 3;
+
 BasicOctree::BasicOctree():
 isDirty(true),
 mesh(NULL),
 startMaxDepth(6),
 optimizationMaxDepth(6),
+basicMaxDepth(6),
 rootNodeIndex(-1)
 {
 
@@ -31,6 +34,7 @@ void BasicOctree::setMesh(Mesh* mesh)
 void BasicOctree::setStartMaxDepth(GLint depth)
 {
     this->startMaxDepth = depth;
+    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?this->startMaxDepth:this->optimizationMaxDepth;
 }
 
 /**
@@ -40,6 +44,7 @@ void BasicOctree::setStartMaxDepth(GLint depth)
 void BasicOctree::setOptimizationMaxDepth(GLint depth)
 {
     this->optimizationMaxDepth = depth;
+    this->basicMaxDepth = this->startMaxDepth>this->optimizationMaxDepth?this->startMaxDepth:this->optimizationMaxDepth;
 }
 
 //-------------------------------------------------- quantizing mesh
@@ -358,7 +363,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
-    GLfloat cell_length = this->cell_length*(pow(2,this->optimizationMaxDepth-depth));
+    GLfloat cell_length = this->cell_length*(pow(2,this->basicMaxDepth-depth));
 
     octreeNode node;
 
@@ -373,7 +378,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     node.x = x;
     node.y = y;
     node.z = z;
-    node.cell_length = pow(2,this->optimizationMaxDepth-depth);
+    node.cell_length = pow(2,this->basicMaxDepth-depth);
     node.nodeDepth = depth;
 
     // add node to octree node vector
@@ -1010,37 +1015,201 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 }
 
 /**
- * @brief BasicOctree::adjustToOptimizationMaxDepth Adjust the octree to the maximal depth
+ * @brief BasicOctree::getInnerNodesForNode Get the indices of all inner leaf nodes which are predecessors of a specific node.
+ * @param index index of the specific node
+ * @param indices a pointer of th vector which get the indices of the found nodes
  */
-void BasicOctree::adjustToOptimizationMaxDepth()
+void BasicOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
 {
-    GLint diff = this->optimizationMaxDepth-startMaxDepth;
 
-    this->cell_length = this->cell_length/pow(2,diff);
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
 
-    this->axis_length = this->axis_length<<diff;
-    this->plane_length = this->axis_length*this->axis_length;
+    // break recursion because current node is a leaf
+    if(nodePointer->isLeaf)
+    {
+
+        if(nodePointer->isInside && !nodePointer->isShell)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+        return;
+    }
+
+    // check every child of the current node
+
+    getInnerLeavesForNode(nodePointer->childIndex0,indices);
+    getInnerLeavesForNode(nodePointer->childIndex1,indices);
+    getInnerLeavesForNode(nodePointer->childIndex2,indices);
+    getInnerLeavesForNode(nodePointer->childIndex3,indices);
+
+    getInnerLeavesForNode(nodePointer->childIndex4,indices);
+    getInnerLeavesForNode(nodePointer->childIndex5,indices);
+    getInnerLeavesForNode(nodePointer->childIndex6,indices);
+    getInnerLeavesForNode(nodePointer->childIndex7,indices);
+
+}
+
+/**
+ * @brief BasicOctree::getNodesOfDepth Get the indices of all nodes which lay a specific depth.
+ * @param depth the depth of the searched nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
+{
 
     octreeNode* nodePointer;
-    for(int i=0;i<this->octreeNodes.length();i++){
+
+    // iterate about all nodes
+    for(int i=0;i<this->octreeNodes.length();i++)
+    {
+
         nodePointer = &this->octreeNodes.data()[i];
 
-        nodePointer->x = nodePointer->x<<diff;
-        nodePointer->y = nodePointer->y<<diff;
-        nodePointer->z = nodePointer->z<<diff;
+        if(nodePointer->nodeDepth>=depth)
+        {
+            indices->push_back(nodePointer->index);
+        }
 
-        nodePointer->cell_length = nodePointer->cell_length<<diff;
     }
+
+}
+
+/**
+ * @brief BasicOctree::adjustToBasicMaxDepth Adjust the octree to the maximal depth
+ */
+void BasicOctree::adjustToBasicMaxDepth()
+{
+    if(this->basicMaxDepth<this->startMaxDepth)
+    {
+
+       QVector<GLint> nodeIndices;
+       getNodesOfDepth(basicMaxDepth,&nodeIndices);
+
+       for(int i=0;i<nodeIndices.length();i++){
+         makeExplicitMergeRoot(nodeIndices.data()[i]);
+       }
+
+       nodeIndices.clear();
+
+
+    }
+    else
+    {
+
+        GLint diff = this->basicMaxDepth-startMaxDepth;
+
+        this->cell_length = this->cell_length/pow(2,diff);
+
+        this->axis_length = this->axis_length<<diff;
+        this->plane_length = this->axis_length*this->axis_length;
+
+        octreeNode* nodePointer;
+        for(int i=0;i<this->octreeNodes.length();i++){
+            nodePointer = &this->octreeNodes.data()[i];
+
+            nodePointer->x = nodePointer->x<<diff;
+            nodePointer->y = nodePointer->y<<diff;
+            nodePointer->z = nodePointer->z<<diff;
+
+            nodePointer->cell_length = nodePointer->cell_length<<diff;
+        }
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::propageDownMergeChildHelper
+ * @param index
+ */
+void BasicOctree::propageDownMergeChildHelper(GLint index)
+{
+
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
+
+    if(nodePointer->isShell || nodePointer->isInside)
+    {
+        nodePointer->isMergeChild = true;
+        nodePointer->isMergeRoot = false;
+    }
+
+    if(!nodePointer->isLeaf)
+    {
+
+        propageDownMergeChildHelper(nodePointer->childIndex0);
+        propageDownMergeChildHelper(nodePointer->childIndex1);
+        propageDownMergeChildHelper(nodePointer->childIndex2);
+        propageDownMergeChildHelper(nodePointer->childIndex3);
+        propageDownMergeChildHelper(nodePointer->childIndex4);
+        propageDownMergeChildHelper(nodePointer->childIndex5);
+        propageDownMergeChildHelper(nodePointer->childIndex6);
+        propageDownMergeChildHelper(nodePointer->childIndex7);
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::propageDownMergeChild
+ * @param index
+ */
+void BasicOctree::propageDownMergeChild(GLint index)
+{
+
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
+
+    if(!nodePointer->isLeaf)
+    {
+
+        propageDownMergeChildHelper(nodePointer->childIndex0);
+        propageDownMergeChildHelper(nodePointer->childIndex1);
+        propageDownMergeChildHelper(nodePointer->childIndex2);
+        propageDownMergeChildHelper(nodePointer->childIndex3);
+        propageDownMergeChildHelper(nodePointer->childIndex4);
+        propageDownMergeChildHelper(nodePointer->childIndex5);
+        propageDownMergeChildHelper(nodePointer->childIndex6);
+        propageDownMergeChildHelper(nodePointer->childIndex7);
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::makeExplicitMergeRoot
+ * @param index
+ */
+void BasicOctree::makeExplicitMergeRoot(GLint index)
+{
+
+    octreeNode* nodePointer = &this->octreeNodes.data()[index];
+
+    if( !(nodePointer->isShell || nodePointer->isInside))
+    {
+        return;
+    }
+
+    QVector<GLint> nodeIndices;
+    getInnerLeavesForNode(index,&nodeIndices);
+
+    nodePointer->isIgnored = nodeIndices.length()<=0;
+
+    nodeIndices.clear();
+
+    nodePointer->isMergeChild = false;
+    nodePointer->isMergeRoot = true;
+
+    propageDownMergeChild(index);
 
 }
 
 //-------------------------------------------------- draw octree grid
 
 /**
- * @brief BasicOctree::render Render the grid of the octree
+ * @brief BasicOctree::renderOctreeGrid Render the grid of the octree
  * @param shader the shader
  */
-void BasicOctree::render(QGLShaderProgram* shader)
+void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
 {
 
     if(this->octreeNodes.length()<0){
@@ -1051,17 +1220,17 @@ void BasicOctree::render(QGLShaderProgram* shader)
 
     /* if needed needed variables are set for painting */
     if (isDirty) {
-        QVector<GLfloat> buffer;
+        QVector<GLfloat> buffer_vertices,buffer_colors;
 
-        buffer.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
+        buffer_vertices.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
+        buffer_colors.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
 
-        cubeLineIndices.clear();
+        indexBuffer.clear();
         GLint index = 0;
 
         GLint length = this->octreeNodes.length();
 
-        //GLint viewIndex1 = (this->axis_length>>1);
-        //GLint viewIndex2 = (this->axis_length>>1)+1;
+        GLint viewIndex = (this->axis_length>>1);
 
         for (int i = 0; i < length; i++) {
 
@@ -1072,25 +1241,104 @@ void BasicOctree::render(QGLShaderProgram* shader)
                 continue;
             }
 
-            /*
-            if(node.x<viewIndex1 || node.x>viewIndex2)
+            if(node.x>=viewIndex)
             {
                 continue;
             }
-            */
 
-            /* add the vertices the lines */
-            buffer.push_back(node.p0.x());buffer.push_back(node.p0.y());buffer.push_back(node.p0.z());
-            buffer.push_back(node.p1.x());buffer.push_back(node.p1.y());buffer.push_back(node.p1.z());
-            buffer.push_back(node.p2.x());buffer.push_back(node.p2.y());buffer.push_back(node.p2.z());
-            buffer.push_back(node.p3.x());buffer.push_back(node.p3.y());buffer.push_back(node.p3.z());
+            /* add vertices*/
+            buffer_vertices.push_back(node.p0.x());buffer_vertices.push_back(node.p0.y());buffer_vertices.push_back(node.p0.z());
+            buffer_vertices.push_back(node.p1.x());buffer_vertices.push_back(node.p1.y());buffer_vertices.push_back(node.p1.z());
+            buffer_vertices.push_back(node.p2.x());buffer_vertices.push_back(node.p2.y());buffer_vertices.push_back(node.p2.z());
+            buffer_vertices.push_back(node.p3.x());buffer_vertices.push_back(node.p3.y());buffer_vertices.push_back(node.p3.z());
 
-            buffer.push_back(node.p4.x());buffer.push_back(node.p4.y());buffer.push_back(node.p4.z());
-            buffer.push_back(node.p5.x());buffer.push_back(node.p5.y());buffer.push_back(node.p5.z());
-            buffer.push_back(node.p6.x());buffer.push_back(node.p6.y());buffer.push_back(node.p6.z());
-            buffer.push_back(node.p7.x());buffer.push_back(node.p7.y());buffer.push_back(node.p7.z());
+            buffer_vertices.push_back(node.p4.x());buffer_vertices.push_back(node.p4.y());buffer_vertices.push_back(node.p4.z());
+            buffer_vertices.push_back(node.p5.x());buffer_vertices.push_back(node.p5.y());buffer_vertices.push_back(node.p5.z());
+            buffer_vertices.push_back(node.p6.x());buffer_vertices.push_back(node.p6.y());buffer_vertices.push_back(node.p6.z());
+            buffer_vertices.push_back(node.p7.x());buffer_vertices.push_back(node.p7.y());buffer_vertices.push_back(node.p7.z());
 
-            /* add the indices for the lines */
+            QColor color;
+
+            if(node.beta>1)
+            {
+                color.setRedF(0);
+                color.setGreenF(0);
+                color.setBlueF(0);
+            }
+            else
+            if(node.beta<0)
+            {
+                color.setRedF(1);
+                color.setGreenF(1);
+                color.setBlueF(1);
+            }
+            else
+            {
+                QVector3D fillColor(255/(float)255,255/(float)255,224/(float)255);
+                QVector3D voidColor(128/(float)255,128/(float)255,0/(float)255);
+
+                QVector3D col = fillColor+(voidColor-fillColor)*node.beta;
+
+                color.setRedF(col.x());
+                color.setGreenF(col.y());
+                color.setBlueF(col.z());
+            }
+
+            /* add colors*/
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
+
+            /* add indices*/
+            indexBuffer.push_back(index+0);
+            indexBuffer.push_back(index+1);
+            indexBuffer.push_back(index+2);
+            indexBuffer.push_back(index+1);
+            indexBuffer.push_back(index+3);
+            indexBuffer.push_back(index+2);
+
+            indexBuffer.push_back(index+6);
+            indexBuffer.push_back(index+7);
+            indexBuffer.push_back(index+4);
+            indexBuffer.push_back(index+7);
+            indexBuffer.push_back(index+5);
+            indexBuffer.push_back(index+4);
+
+            indexBuffer.push_back(index+2);
+            indexBuffer.push_back(index+3);
+            indexBuffer.push_back(index+6);
+            indexBuffer.push_back(index+3);
+            indexBuffer.push_back(index+7);
+            indexBuffer.push_back(index+6);
+
+            indexBuffer.push_back(index+4);
+            indexBuffer.push_back(index+5);
+            indexBuffer.push_back(index+0);
+            indexBuffer.push_back(index+5);
+            indexBuffer.push_back(index+1);
+            indexBuffer.push_back(index+0);
+
+            indexBuffer.push_back(index+1);
+            indexBuffer.push_back(index+5);
+            indexBuffer.push_back(index+3);
+            indexBuffer.push_back(index+5);
+            indexBuffer.push_back(index+7);
+            indexBuffer.push_back(index+3);
+
+            indexBuffer.push_back(index+2);
+            indexBuffer.push_back(index+6);
+            indexBuffer.push_back(index+0);
+            indexBuffer.push_back(index+6);
+            indexBuffer.push_back(index+4);
+            indexBuffer.push_back(index+0);
+
+            /*
             cubeLineIndices.push_back(index+0);cubeLineIndices.push_back(index+1);
             cubeLineIndices.push_back(index+2);cubeLineIndices.push_back(index+3);
             cubeLineIndices.push_back(index+4);cubeLineIndices.push_back(index+5);
@@ -1105,11 +1353,37 @@ void BasicOctree::render(QGLShaderProgram* shader)
             cubeLineIndices.push_back(index+5);cubeLineIndices.push_back(index+7);
             cubeLineIndices.push_back(index+1);cubeLineIndices.push_back(index+5);
             cubeLineIndices.push_back(index+3);cubeLineIndices.push_back(index+7);
+            */
 
             index +=8;
         }
 
+        vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+        vbo->create();
+        vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        vbo->bind();
+        vbo->allocate( buffer_vertices.size() * sizeof(GLfloat) );
+        vbo->write(0, buffer_vertices.constData(), buffer_vertices.size() * sizeof(GLfloat));
+        vbo->release();
+
+        cbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+        cbo->create();
+        cbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        cbo->bind();
+        cbo->allocate(buffer_colors.size() * 3 * sizeof(GLfloat));
+        cbo->write(0, buffer_colors.constData(), buffer_colors.size() * sizeof(GLfloat));
+        cbo->release();
+
+        ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+        ibo->create();
+        ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        ibo->bind();
+        ibo->allocate(indexBuffer.size() * sizeof(GLint));
+        ibo->write(0, indexBuffer.constData(), indexBuffer.size() * sizeof(GLint));
+        ibo->release();
+
         /* create vertex buffer */
+        /*
         vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         vbo->create();
         vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -1117,8 +1391,10 @@ void BasicOctree::render(QGLShaderProgram* shader)
         vbo->allocate(index * 3 * sizeof(GLfloat));
         vbo->write(0, buffer.constData(), buffer.size() * sizeof(GLfloat));
         vbo->release();
+        */
 
         /* create index buffer */
+        /*
         ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         ibo->create();
         ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -1126,32 +1402,55 @@ void BasicOctree::render(QGLShaderProgram* shader)
         ibo->allocate(cubeLineIndices.size() * sizeof(GLint));
         ibo->write(0, cubeLineIndices.constData(), cubeLineIndices.size() * sizeof(GLint));
         ibo->release();
+        */
 
         isDirty = false;
 
     }
 
-    GLint stride = sizeof(GLfloat) * (3);
+    GLint stride = sizeof(GLfloat) * (GEOMETRY_DATA_SIZE);
+
+    vbo->bind();
+    shader->enableAttributeArray("geometry");
+    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
+    vbo->release();
+
+    cbo->bind();
+    shader->enableAttributeArray("color");
+    shader->setAttributeBuffer("color", GL_FLOAT, 0, 3, stride);
+    cbo->release();
+
+    ibo->bind();
+    glDrawElements(GL_TRIANGLES, indexBuffer.length(), GL_UNSIGNED_INT, (void*) 0);
+    ibo->release();
+
+    shader->disableAttributeArray("geometry");
+    shader->disableAttributeArray("color");
+
+    //GLint stride = sizeof(GLfloat) * (3);
 
     /* use vertex buffer */
+    /*
     vbo->bind();
     shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
     shader->enableAttributeArray("geometry");
     vbo->release();
-
+    */
     /* use index buffer */
+    /*
     ibo->bind();
     glDrawElements(primitive, cubeLineIndices.length(), GL_UNSIGNED_INT, (void*) 0);
     ibo->release();
 
     shader->disableAttributeArray("geometry");
+    */
 
 }
 
 //-------------------------------------------------- vector getters
 
 /**
- * @brief ExtendedOctree::getInnerLeaves Get the indices of all inner leaf nodes
+ * @brief BasicOctree::getInnerLeaves Get the indices of all inner leaf nodes
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
@@ -1174,7 +1473,7 @@ void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief ExtendedOctree::getShellLeaves Get the indices of all shell leaf nodes
+ * @brief BasicOctree::getShellLeaves Get the indices of all shell leaf nodes
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getShellLeaves(QVector<GLint>* indices)
@@ -1197,7 +1496,7 @@ void BasicOctree::getShellLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief ExtendedOctree::getMergeIndices Get the indices of all merge nodes
+ * @brief BasicOctree::getMergeIndices Get the indices of all merge nodes
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeRoots(QVector<GLint>* indices)
@@ -1220,7 +1519,7 @@ void BasicOctree::getMergeRoots(QVector<GLint>* indices)
 }
 
 /**
- * @brief ExtendedOctree::getMergeCandidateIndices Get the indices of all nodes which are merge candidates
+ * @brief BasicOctree::getMergeCandidateIndices Get the indices of all nodes which are merge candidates
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)

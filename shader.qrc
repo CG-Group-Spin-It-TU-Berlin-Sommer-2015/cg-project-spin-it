@@ -2,6 +2,8 @@
     <qresource prefix="/shader">
         <file>simple.fsh</file>
         <file>simple.vsh</file>
+        <file>colorshader.fsh</file>
+        <file>colorshader.vsh</file>
     </qresource>
     <qresource prefix="/obj">
         <file>test.obj</file>

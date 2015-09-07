@@ -27,13 +27,11 @@ public:
     void updateBetaValues();
     QVector<octree::cubeObject>* getInnerCubes();
 
-    void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
-    void getInnerLeavesForNode(GLint index,QVector<GLint>* indices);
 
     bool splitAndMerge(GLfloat epsilon);
 
-    void split(octree::octreeNode* nodePointer);
-    void split(GLint nodeIndex);
+    void split(octree::octreeNode* nodePointer, GLint maxDepht);
+    void split(GLint nodeIndex, GLint maxDepht);
 
     void increaseShell(GLint loopAmount);
 

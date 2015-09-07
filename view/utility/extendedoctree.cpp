@@ -236,7 +236,7 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
         // if the beta value is in the set (0,epsilon)^(1-epsilon,1)
         if( epsilon < nodePointer->beta && nodePointer->beta < oneMinusEpsilon )
         {
-            this->split(innerLeafIndices.at(i));
+            this->split(innerLeafIndices.at(i),this->optimizationMaxDepth);
 
             nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
 
@@ -387,73 +387,12 @@ void ExtendedOctree::setMergeChild(GLint index, GLfloat beta)
     }
 }
 
-
-/**
- * @brief ExtendedOctree::getNodesOfDepth Get the indices of all nodes which lay a specific depth.
- * @param depth the depth of the searched nodes
- * @param indices a pointer of th vector which get the indices of the found nodes
- */
-void ExtendedOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
-{
-
-    octreeNode* nodePointer;
-
-    // iterate about all nodes
-    for(int i=0;i<this->octreeNodes.length();i++)
-    {
-
-        nodePointer = &this->octreeNodes.data()[i];
-
-        if(nodePointer->nodeDepth>=depth)
-        {
-            indices->push_back(nodePointer->index);
-        }
-
-    }
-
-}
-
-/**
- * @brief ExtendedOctree::getInnerNodesForNode Get the indices of all inner leaf nodes which are predecessors of a specific node.
- * @param index index of the specific node
- * @param indices a pointer of th vector which get the indices of the found nodes
- */
-void ExtendedOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
-{
-
-    octreeNode* nodePointer = &this->octreeNodes.data()[index];
-
-    // break recursion because current node is a leaf
-    if(nodePointer->isLeaf)
-    {
-
-        if(nodePointer->isInside && !nodePointer->isShell)
-        {
-            indices->push_back(nodePointer->index);
-        }
-
-        return;
-    }
-
-    // check every child of the current node
-
-    getInnerLeavesForNode(nodePointer->childIndex0,indices);
-    getInnerLeavesForNode(nodePointer->childIndex1,indices);
-    getInnerLeavesForNode(nodePointer->childIndex2,indices);
-    getInnerLeavesForNode(nodePointer->childIndex3,indices);
-
-    getInnerLeavesForNode(nodePointer->childIndex4,indices);
-    getInnerLeavesForNode(nodePointer->childIndex5,indices);
-    getInnerLeavesForNode(nodePointer->childIndex6,indices);
-    getInnerLeavesForNode(nodePointer->childIndex7,indices);
-
-}
-
 /**
  * @brief ExtendedOctree::split Split a specific node.
  * @param nodePointer pointer of the specific node
+ * @param maxDepth maximal depht
  */
-void ExtendedOctree::split(octreeNode* nodePointer){
+void ExtendedOctree::split(octreeNode* nodePointer, GLint maxDepth){
 
     // the node has to be a leaf and
     if(!nodePointer->isLeaf)
@@ -462,7 +401,7 @@ void ExtendedOctree::split(octreeNode* nodePointer){
     }
 
     // the node has not to have the maximal depth
-    if( (nodePointer->nodeDepth + 1) > this->optimizationMaxDepth)
+    if( (nodePointer->nodeDepth + 1) > maxDepth)
     {
         return;
     }
@@ -495,11 +434,12 @@ void ExtendedOctree::split(octreeNode* nodePointer){
 /**
  * @brief ExtendedOctree::split Split a specific node.
  * @param nodeIndex index of the specific node
+ * @param maxDepht maximal depht
  */
-void ExtendedOctree::split(GLint nodeIndex)
+void ExtendedOctree::split(GLint nodeIndex, GLint maxDepth)
 {
     octreeNode node = this->octreeNodes.data()[nodeIndex];
-    split(&node);
+    split(&node,maxDepth);
     this->octreeNodes.data()[nodeIndex] = node;
 }
 
@@ -562,7 +502,7 @@ void inline ExtendedOctree::handleShellNeighbor(GLint x, GLint y, GLint z, QVect
     {
         GLint index = nodePointer->index;
 
-        this->split(index);
+        this->split(index,basicMaxDepth);
         nodePointer = this->getLeafNodeByCoordinate(x,y,z,index);
     }
 
@@ -578,6 +518,7 @@ void inline ExtendedOctree::handleShellNeighbor(GLint x, GLint y, GLint z, QVect
  */
 void ExtendedOctree::increaseShell(GLint loopNumber)
 {
+
     // get a vector of the indices of all inner nodes
     QVector<GLint> shellLeafIndices;
     this->getShellLeaves(&shellLeafIndices);

@@ -53,7 +53,7 @@ void Model::initializeOctree(
     octree->setupOctree();
     octree->setOuterNodes();
     octree->setInnerNodes();
-    octree->adjustToOptimizationMaxDepth();
+    octree->adjustToBasicMaxDepth();
     octree->increaseShell(shellExtensionValue);
     octree->setMergeNodes();
 
@@ -114,7 +114,7 @@ void Model::testSplitAndMerge()
                 GLfloat y = vec->data()[i+1];
                 GLfloat z = vec->data()[i+2];
 
-                if(z>3.5+y)
+                if(z<3.5+y*2)
                 {
                     above = true;
                 }

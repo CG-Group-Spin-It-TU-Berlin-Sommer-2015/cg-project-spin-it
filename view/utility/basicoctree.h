@@ -139,7 +139,7 @@ public:
     void setStartMaxDepth(GLint depth);
     void setOptimizationMaxDepth(GLint depth);
 
-    void adjustToOptimizationMaxDepth();
+    void adjustToBasicMaxDepth();
 
     void quantizeSurface();
     bool hasQantizedSurface();
@@ -151,7 +151,7 @@ public:
     void setOuterNodes();
     void setInnerNodes();
 
-    void render(QGLShaderProgram* shader);
+    void renderOctreeGrid(QGLShaderProgram* shader);
 
     octree::octreeNode* getLeafNodeByCoordinate(GLint x, GLint y, GLint z);
     octree::octreeNode* getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLint startNodeIndex);
@@ -183,12 +183,17 @@ private:
 
     bool isDirty;
     QOpenGLBuffer* vbo;
+    QOpenGLBuffer* cbo;
     QOpenGLBuffer* ibo;
-    QVector<int> cubeLineIndices;
+    QVector<int> indexBuffer;
 
     QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
     Mesh* mesh;
+
+    void propageDownMergeChildHelper(GLint index);
+    void propageDownMergeChild(GLint index);
+    void makeExplicitMergeRoot(GLint index);
 
 protected:
 
@@ -198,6 +203,8 @@ protected:
 
     GLint startMaxDepth;
     GLint optimizationMaxDepth;
+    GLint basicMaxDepth;
+
     GLint rootNodeIndex;
 
     QVector3D mean;
@@ -210,6 +217,9 @@ protected:
     void getShellLeaves(QVector<GLint>* indices);
     void getMergeRoots(QVector<GLint>* indices);
     void getMergeRootCandidates(QVector<GLint>* indices);
+
+    void getNodesOfDepth(GLint depth,QVector<GLint>* indices);
+    void getInnerLeavesForNode(GLint index,QVector<GLint>* indices);
 
 };
 

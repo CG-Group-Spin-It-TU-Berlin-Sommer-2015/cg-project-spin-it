@@ -41,6 +41,7 @@ private:
     int viewState;
 
     QGLShaderProgram* shader;
+    QGLShaderProgram* colorshader;
 
     QMatrix4x4 projection_matrix;
     QMatrix4x4 model_matrix;
