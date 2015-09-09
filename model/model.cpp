@@ -100,16 +100,12 @@ void Model::hollow()
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);
         for (int i = 0; i < cubeVector->size(); i++) {
-            b(i) = 0;
+            b(i) = 0.5;
             float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
             }
         }
-
-        //shifted inertia tensor
-        mesh_volume[7] = mesh_volume[7] - ((mesh_volume[3] * mesh_volume[3]) / mesh_volume[0]);
-        mesh_volume[8] = mesh_volume[8] - ((mesh_volume[3] * mesh_volume[3]) / mesh_volume[0]);
 
         b = optimize(b,S);
 
@@ -311,9 +307,27 @@ VectorXd Model::ineqVector(VectorXd b)
  */
 VectorXd Model::gradient(VectorXd b, MatrixXd S)
 {
-    double Ix = Model::mesh_volume[8] - b.dot(S.col(8)) + Model::mesh_volume[9] - b.dot(S.col(9));
-    double Iy = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[9] - b.dot(S.col(9));
-    double Iz = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[8] - b.dot(S.col(8));
+    //shifted inertia tensor
+    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+    Matrix2d I;
+    I(0,0) = Ix;
+    I(0,1) = -mesh_volume[4];
+    I(1,0) = -mesh_volume[4];
+    I(1,1) = Iy;
+
+    JacobiRotation<double> J;
+    J.makeJacobi(I, 0, 1);
+    I.applyOnTheLeft(0, 1, J.adjoint());
+    I.applyOnTheRight(0, 1, J);
+
+    Ix = I(0,0);
+    Iy = I(1,1);
+    double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
     VectorXd dIx = S.col(8) + S.col(9);
     VectorXd dIy = S.col(7) + S.col(9);
     VectorXd dIz = S.col(7) + S.col(8);
@@ -331,9 +345,28 @@ VectorXd Model::gradient(VectorXd b, MatrixXd S)
  */
 VectorXd Model::optimize(VectorXd b, MatrixXd S)
 {   
-    double Ix = Model::mesh_volume[8] - b.dot(S.col(8)) + Model::mesh_volume[9] - b.dot(S.col(9));
-    double Iy = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[9] - b.dot(S.col(9));
-    double Iz = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[8] - b.dot(S.col(8));
+    //shifted inertia tensor
+    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+    Matrix2d I;
+    I(0,0) = Ix;
+    I(0,1) = -mesh_volume[4];
+    I(1,0) = -mesh_volume[4];
+    I(1,1) = Iy;
+
+    JacobiRotation<double> J;
+    J.makeJacobi(I, 0, 1);
+    I.applyOnTheLeft(0, 1, J.adjoint());
+    I.applyOnTheRight(0, 1, J);
+
+    Ix = I(0,0);
+    Iy = I(1,1);
+    double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
+
     VectorXd dIx = S.col(8) + S.col(9);
     VectorXd dIy = S.col(7) + S.col(9);
     VectorXd dIz = S.col(7) + S.col(8);
@@ -347,9 +380,9 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     VectorXd mu = -VectorXd::Ones(1);
 
     Model::J = new QVector<int>();
-    for (int i = 0; i < b.rows(); i++) {
-        Model::J->push_back(2*i);
-    }
+//    for (int i = 0; i < b.rows(); i++) {
+//        Model::J->push_back(2*i);
+//    }
 
 //    double eps = 1000;
 
@@ -473,10 +506,28 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
         MatrixXd G = ineqMatrix(b);
         VectorXd g = ineqVector(b);
 
+        //shifted inertia tensor
+        double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+        Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
 
-        double Ix = Model::mesh_volume[8] - b.dot(S.col(8)) + Model::mesh_volume[9] - b.dot(S.col(9));
-        double Iy = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[9] - b.dot(S.col(9));
-        double Iz = Model::mesh_volume[7] - b.dot(S.col(7)) + Model::mesh_volume[8] - b.dot(S.col(8));
+        double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+        Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+        Matrix2d I;
+        I(0,0) = Ix;
+        I(0,1) = -mesh_volume[4];
+        I(1,0) = -mesh_volume[4];
+        I(1,1) = Iy;
+
+        JacobiRotation<double> J;
+        J.makeJacobi(I, 0, 1);
+        I.applyOnTheLeft(0, 1, J.adjoint());
+        I.applyOnTheRight(0, 1, J);
+
+        Ix = I(0,0);
+        Iy = I(1,1);
+        double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
+
         VectorXd dIx = S.col(8) + S.col(9);
         VectorXd dIy = S.col(7) + S.col(9);
         VectorXd dIz = S.col(7) + S.col(8);
