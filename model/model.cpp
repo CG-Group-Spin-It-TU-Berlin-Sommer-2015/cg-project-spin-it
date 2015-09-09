@@ -229,22 +229,6 @@ void Model::hollow()
         cout << mesh_volume[i] << endl;
     }
 
-    Matrix2d I;
-    I(0,0) = Model::mesh_volume[8] + Model::mesh_volume[9];
-    I(0,1) = -Model::mesh_volume[4];
-    I(1,0) = -Model::mesh_volume[4];
-    I(1,1) = Model::mesh_volume[7] + Model::mesh_volume[9];
-
-    //shifted inertia tensor
-    I(0,0) -= (Model::mesh_volume[3] * Model::mesh_volume[3]) / Model::mesh_volume[0];
-    I(1,1) -= (Model::mesh_volume[3] * Model::mesh_volume[3]) / Model::mesh_volume[0];
-
-    //rotated components
-    Model::angle = M_PI / 4;
-    if (I(0,0) != I(1,1)) {
-        Model::angle = 0.5 * atan(2*I(0,1)/(I(0,0)-I(1,1)));
-    }
-
     QVector<octree::cubeObject>* cubeVector = NULL;
 
     bool not_converged = true;
@@ -503,6 +487,22 @@ VectorXd Model::gradient(VectorXd b, MatrixXd S)
  */
 VectorXd Model::optimize(VectorXd b, MatrixXd S)
 {   
+    Matrix2d I;
+    I(0,0) = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    I(0,1) = -(Model::mesh_volume[4] - b.dot(S.col(4)));
+    I(1,0) = -(Model::mesh_volume[4] - b.dot(S.col(4)));
+    I(1,1) = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+
+    //shifted inertia tensor
+    I(0,0) -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+    I(1,1) -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+    //rotated components
+    Model::angle = M_PI / 4;
+    if (I(0,0) != I(1,1)) {
+        Model::angle = 0.5 * atan(2*I(0,1)/(I(0,0)-I(1,1)));
+    }
+
     double Ia = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
     double Ib = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
 
@@ -538,9 +538,9 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     VectorXd mu = -VectorXd::Ones(1);
 
     Model::J = new QVector<int>();
-//    for (int i = 0; i < 2*b.rows(); i++) {
-//        Model::J->push_back(i);
-//    }
+    for (int i = 0; i < 2*b.rows(); i++) {
+        Model::J->push_back(i);
+    }
 
 //    double eps = 1000;
 
@@ -643,6 +643,21 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
 //        }
 
         b = b + /*sigma */ d;
+
+        I(0,0) = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+        I(0,1) = -(Model::mesh_volume[4] - b.dot(S.col(4)));
+        I(1,0) = -(Model::mesh_volume[4] - b.dot(S.col(4)));
+        I(1,1) = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+
+        //shifted inertia tensor
+        I(0,0) -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+        I(1,1) -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+
+        //rotated components
+        Model::angle = M_PI / 4;
+        if (I(0,0) != I(1,1)) {
+            Model::angle = 0.5 * atan(2*I(0,1)/(I(0,0)-I(1,1)));
+        }
 
         for (int i = 0; i < 2 * b.rows(); i++) {
             if (i % 2 == 0 && b(i/2) < 0 && !Model::J->contains(i)) {

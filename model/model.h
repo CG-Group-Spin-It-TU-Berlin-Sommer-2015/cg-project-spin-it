@@ -20,7 +20,6 @@ public:
     static float w_I;
 
 private:
-    static Mesh* working_copy;
     static float* mesh_volume;
     static double angle;
 
