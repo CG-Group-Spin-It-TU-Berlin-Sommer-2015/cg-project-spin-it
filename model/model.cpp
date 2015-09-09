@@ -9,6 +9,8 @@ float Model::w_I = 1;
 Mesh* Model::mesh = 0;
 float* Model::mesh_volume = 0;
 
+double Model::angle = 0;
+
 ExtendedOctree* Model::octree = 0;
 
 QVector<int>* Model::J = 0;
@@ -227,12 +229,27 @@ void Model::hollow()
         cout << mesh_volume[i] << endl;
     }
 
+    Matrix2d I;
+    I(0,0) = Model::mesh_volume[8] + Model::mesh_volume[9];
+    I(0,1) = -Model::mesh_volume[4];
+    I(1,0) = -Model::mesh_volume[4];
+    I(1,1) = Model::mesh_volume[7] + Model::mesh_volume[9];
+
+    //shifted inertia tensor
+    I(0,0) -= (Model::mesh_volume[3] * Model::mesh_volume[3]) / Model::mesh_volume[0];
+    I(1,1) -= (Model::mesh_volume[3] * Model::mesh_volume[3]) / Model::mesh_volume[0];
+
+    //rotated components
+    Model::angle = M_PI / 4;
+    if (I(0,0) != I(1,1)) {
+        Model::angle = 0.5 * atan(2*I(0,1)/(I(0,0)-I(1,1)));
+    }
+
     QVector<octree::cubeObject>* cubeVector = NULL;
 
     bool not_converged = true;
     while (not_converged)
     {
-
         // get the inner cubes of the octree
         cubeVector = octree->getInnerCubes();
 
@@ -370,7 +387,7 @@ MatrixXd Model::eqMatrix(VectorXd b, MatrixXd S)
     MatrixXd H(5,b.rows());
     H.row(0) = S.col(1);
     H.row(1) = S.col(2);
-    H.row(2) = S.col(4);
+    H.row(2) = cos(Model::angle)*sin(Model::angle)*(-S.col(7) + S.col(8)) - (cos(Model::angle)*cos(Model::angle) - sin(Model::angle)*sin(Model::angle)) * S.col(4);
     H.row(3) = S.col(5);
     H.row(4) = S.col(6);
     return H;
@@ -387,7 +404,7 @@ VectorXd Model::eqVector(VectorXd b, MatrixXd S)
     VectorXd h(5);
     h(0) = Model::mesh_volume[1] - b.dot(S.col(1));
     h(1) = Model::mesh_volume[2] - b.dot(S.col(2));
-    h(2) = Model::mesh_volume[4] - b.dot(S.col(4));
+    h(2) = -cos(Model::angle)*sin(Model::angle)*((Model::mesh_volume[7] - b.dot(S.col(7))) - (Model::mesh_volume[8] - b.dot(S.col(8)))) - (cos(Model::angle)*cos(Model::angle) - sin(Model::angle)*sin(Model::angle)) * (mesh_volume[4] - b.dot(S.col(4)));
     h(3) = Model::mesh_volume[5] - b.dot(S.col(5));
     h(4) = Model::mesh_volume[6] - b.dot(S.col(6));
     return h;
@@ -446,30 +463,32 @@ VectorXd Model::ineqVector(VectorXd b)
  */
 VectorXd Model::gradient(VectorXd b, MatrixXd S)
 {
+    double Ia = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    double Ib = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+
     //shifted inertia tensor
-    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+    Ia -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+    Ib -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
 
-    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
-
-    Matrix2d I;
-    I(0,0) = Ix;
-    I(0,1) = -mesh_volume[4];
-    I(1,0) = -mesh_volume[4];
-    I(1,1) = Iy;
-
-    JacobiRotation<double> J;
-    J.makeJacobi(I, 0, 1);
-    I.applyOnTheLeft(0, 1, J.adjoint());
-    I.applyOnTheRight(0, 1, J);
-
-    Ix = I(0,0);
-    Iy = I(1,1);
+    double Ix = cos(Model::angle)*cos(Model::angle)*Ia;
+    Ix += sin(Model::angle)*sin(Model::angle)*Ib;
+    Ix += 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
+    double Iy = cos(Model::angle)*cos(Model::angle)*Ib;
+    Iy += sin(Model::angle)*sin(Model::angle)*Ia;
+    Iy -= 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
     double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
-    VectorXd dIx = S.col(8) + S.col(9);
-    VectorXd dIy = S.col(7) + S.col(9);
+
+    VectorXd dIc = (2*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(3))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+    dIc -= (Model::mesh_volume[3] - b.dot(S.col(3)))*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(0);
+    dIc /= (Model::mesh_volume[0] - b.dot(S.col(0)))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+    VectorXd dIx = cos(Model::angle)*cos(Model::angle)*(S.col(8) + S.col(9) + dIc);
+    dIx += sin(Model::angle)*sin(Model::angle)*(S.col(7) + S.col(9) + dIc);
+    dIx += 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
+    VectorXd dIy = cos(Model::angle)*cos(Model::angle)*(S.col(7) + S.col(9) + dIc);
+    dIy += sin(Model::angle)*sin(Model::angle)*(S.col(8) + S.col(9) + dIc);
+    dIy -= 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
     VectorXd dIz = S.col(7) + S.col(8);
+
     VectorXd grad_top = -2 * Model::w_c * (Model::mesh_volume[3] - b.dot(S.col(3))) * S.col(3);
     VectorXd grad_yoyo = -2 * Model::w_I * ((Ix*Iz*dIx - Ix*Ix*dIz) / (Iz*Iz*Iz) + (Iy*Iz*dIy - Iy*Iy*dIz) / (Iz*Iz*Iz));
     VectorXd grad = grad_top + grad_yoyo;
@@ -484,30 +503,30 @@ VectorXd Model::gradient(VectorXd b, MatrixXd S)
  */
 VectorXd Model::optimize(VectorXd b, MatrixXd S)
 {   
+    double Ia = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+    double Ib = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+
     //shifted inertia tensor
-    double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+    Ia -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+    Ib -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
 
-    double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-    Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
-
-    Matrix2d I;
-    I(0,0) = Ix;
-    I(0,1) = -mesh_volume[4];
-    I(1,0) = -mesh_volume[4];
-    I(1,1) = Iy;
-
-    JacobiRotation<double> J;
-    J.makeJacobi(I, 0, 1);
-    I.applyOnTheLeft(0, 1, J.adjoint());
-    I.applyOnTheRight(0, 1, J);
-
-    Ix = I(0,0);
-    Iy = I(1,1);
+    double Ix = cos(Model::angle)*cos(Model::angle)*Ia;
+    Ix += sin(Model::angle)*sin(Model::angle)*Ib;
+    Ix += 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
+    double Iy = cos(Model::angle)*cos(Model::angle)*Ib;
+    Iy += sin(Model::angle)*sin(Model::angle)*Ia;
+    Iy -= 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
     double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
 
-    VectorXd dIx = S.col(8) + S.col(9);
-    VectorXd dIy = S.col(7) + S.col(9);
+    VectorXd dIc = (2*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(3))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+    dIc -= (Model::mesh_volume[3] - b.dot(S.col(3)))*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(0);
+    dIc /= (Model::mesh_volume[0] - b.dot(S.col(0)))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+    VectorXd dIx = cos(Model::angle)*cos(Model::angle)*(S.col(8) + S.col(9) + dIc);
+    dIx += sin(Model::angle)*sin(Model::angle)*(S.col(7) + S.col(9) + dIc);
+    dIx += 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
+    VectorXd dIy = cos(Model::angle)*cos(Model::angle)*(S.col(7) + S.col(9) + dIc);
+    dIy += sin(Model::angle)*sin(Model::angle)*(S.col(8) + S.col(9) + dIc);
+    dIy -= 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
     VectorXd dIz = S.col(7) + S.col(8);
 
     MatrixXd A = 2 * Model::w_c * (S.col(3) * S.col(3).transpose());
@@ -519,8 +538,8 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     VectorXd mu = -VectorXd::Ones(1);
 
     Model::J = new QVector<int>();
-//    for (int i = 0; i < b.rows(); i++) {
-//        Model::J->push_back(2*i);
+//    for (int i = 0; i < 2*b.rows(); i++) {
+//        Model::J->push_back(i);
 //    }
 
 //    double eps = 1000;
@@ -553,8 +572,8 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
     lambda = x.block(b.rows(), 0, h.rows(), 1);
     mu = x.block(b.rows() + h.rows(), 0, g.rows(), 1);
 
-    while (!(/*(d.array() == 0).all()*/d.norm() <= 1e-5 && (mu.array() >= 0).all())) {
-        if (/*(d.array() == 0).all()*/d.norm() <= 1e-5 && !((mu.array() >= 0).all())) {
+    while (!(/*(d.array() == 0).all()*/d.norm() <= 1e-3 && (mu.array() >= 0).all())) {
+        if (/*(d.array() == 0).all()*/d.norm() <= 1e-3 && !((mu.array() >= 0).all())) {
             //Inactivity step
             int j = 0;
             for (int i = 1; i < mu.rows(); i++) {
@@ -645,31 +664,31 @@ VectorXd Model::optimize(VectorXd b, MatrixXd S)
         MatrixXd G = ineqMatrix(b);
         VectorXd g = ineqVector(b);
 
+        Ia = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+        Ib = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
+
         //shifted inertia tensor
-        double Ix = (Model::mesh_volume[8] - b.dot(S.col(8))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-        Ix -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+        Ia -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+        Ib -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
 
-        double Iy = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[9] - b.dot(S.col(9)));
-        Iy -= ((Model::mesh_volume[3] - b.dot(S.col(3))) * (Model::mesh_volume[3] - b.dot(S.col(3)))) / (Model::mesh_volume[0] - b.dot(S.col(0)));
+        Ix = cos(Model::angle)*cos(Model::angle)*Ia;
+        Ix += sin(Model::angle)*sin(Model::angle)*Ib;
+        Ix += 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
+        Iy = cos(Model::angle)*cos(Model::angle)*Ib;
+        Iy += sin(Model::angle)*sin(Model::angle)*Ia;
+        Iy -= 2*cos(Model::angle)*sin(Model::angle)*(Model::mesh_volume[4] - b.dot(S.col(4)));
+        Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
 
-        Matrix2d I;
-        I(0,0) = Ix;
-        I(0,1) = -mesh_volume[4];
-        I(1,0) = -mesh_volume[4];
-        I(1,1) = Iy;
-
-        JacobiRotation<double> J;
-        J.makeJacobi(I, 0, 1);
-        I.applyOnTheLeft(0, 1, J.adjoint());
-        I.applyOnTheRight(0, 1, J);
-
-        Ix = I(0,0);
-        Iy = I(1,1);
-        double Iz = (Model::mesh_volume[7] - b.dot(S.col(7))) + (Model::mesh_volume[8] - b.dot(S.col(8)));
-
-        VectorXd dIx = S.col(8) + S.col(9);
-        VectorXd dIy = S.col(7) + S.col(9);
-        VectorXd dIz = S.col(7) + S.col(8);
+        dIc = (2*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(3))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+        dIc -= (Model::mesh_volume[3] - b.dot(S.col(3)))*(Model::mesh_volume[3] - b.dot(S.col(3)))*S.col(0);
+        dIc /= (Model::mesh_volume[0] - b.dot(S.col(0)))*(Model::mesh_volume[0] - b.dot(S.col(0)));
+        dIx = cos(Model::angle)*cos(Model::angle)*(S.col(8) + S.col(9) + dIc);
+        dIx += sin(Model::angle)*sin(Model::angle)*(S.col(7) + S.col(9) + dIc);
+        dIx += 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
+        dIy = cos(Model::angle)*cos(Model::angle)*(S.col(7) + S.col(9) + dIc);
+        dIy += sin(Model::angle)*sin(Model::angle)*(S.col(8) + S.col(9) + dIc);
+        dIy -= 2*cos(Model::angle)*sin(Model::angle)*S.col(4);
+        dIz = S.col(7) + S.col(8);
 
         A = 2 * Model::w_c * (S.col(3) * S.col(3).transpose());
         A += 2 * Model::w_I * ((((dIx*Iz + Ix*dIz)*dIx.transpose() - (2*Ix*dIx)*dIz.transpose()) * Iz * Iz * Iz - (Ix*Iz*dIx - Ix*Ix*dIz) * (3 * Iz * Iz * dIz.transpose())) / (Iz*Iz*Iz*Iz*Iz*Iz));
