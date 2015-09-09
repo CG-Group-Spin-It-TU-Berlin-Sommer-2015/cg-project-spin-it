@@ -2,6 +2,8 @@
 
 #define DEFAULT_SCALE_FACTOR 1.66238999
 
+#define Y_DEFAULT_VALUE 4.f
+
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {   
@@ -26,28 +28,30 @@ GLWidget::GLWidget(QWidget *parent)
 GLWidget::~GLWidget()
 {
     delete shader;
+    delete colorshader;
 
     delete object;
     delete grid;
     delete rot_axis;
+    delete half_sphere;
 }
 
 void GLWidget::resetGLWidget()
 {
 
-    this->rot_obj_phi = 0;
-    this->rot_obj_psy = 0;
-    this->rot_cam_phi = 0;
+    this->rot_obj_phi = 0.f;
+    this->rot_obj_psy = 0.f;
+    this->rot_cam_phi = 0.f;
 
     this->trans_x = 0.f;
-    this->trans_y = 2.f;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
-    this->startDepth = 2;
-    this->maximumDepth = 2;
-    emit setStartDepthSpinBoxValue(this->startDepth);
-    emit setMaximumDepthSpinBoxValue(this->maximumDepth);
+    this->startMaximalDepth = 3;
+    this->optimizationMaximalDepth = 3;
+    emit setStartDepthSpinBoxValue(this->startMaximalDepth);
+    emit setMaximumDepthSpinBoxValue(this->optimizationMaximalDepth);
 
     shellExtensionValue = 0;
     emit setShellExtensionSpinBoxValue(shellExtensionValue);
@@ -57,85 +61,8 @@ void GLWidget::resetGLWidget()
 
 }
 
-void GLWidget::initializeGL()
+void GLWidget::createGrid()
 {
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-
-    resetGLWidget();
-
-    qglClearColor(QColor(205, 205, 255));
-
-    shader = new QGLShaderProgram();
-    shader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/simple.vsh");
-    shader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/simple.fsh");
-    shader->link();
-
-    camera_position.setX(1);
-    camera_position.setY(-0.75+2);
-    camera_position.setZ(1);
-    camera_direction.setX(0);
-    camera_direction.setY(0+2);
-    camera_direction.setZ(0);
-
-    camera_up.setX(0);
-    camera_up.setY(1);
-    camera_up.setZ(0);
-
-    ambient_light.setX(0.75);
-    ambient_light.setY(0.75);
-    ambient_light.setZ(0.75);
-    ambient_light.setW(1);
-
-    diffuse_light.setX(0.75);
-    diffuse_light.setY(0.75);
-    diffuse_light.setZ(0.75);
-    diffuse_light.setW(1);
-
-    // load helper meshes
-    rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
-    half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
-    yoyo_area  = readMeshFromObjFileDirectory("yoyo_area");
-    yoyo_connection  = readMeshFromObjFileDirectory("yoyo_connection");
-
-    GLfloat lowest_y;
-
-    // search for lowest y for rotation axis
-    lowest_y = 0.0;
-    for (int i = 1; i < rot_axis->getGeometry()->size(); i += 3) {
-        if (rot_axis->getGeometry()->at(i) < lowest_y) {
-            lowest_y = rot_axis->getGeometry()->at(i);
-        }
-    }
-    lowest_y_rot_axis = lowest_y;
-
-    // search for lowest y for half sphere
-    lowest_y = 0.0;
-    for (int i = 1; i < half_sphere->getGeometry()->size(); i += 3) {
-        if (half_sphere->getGeometry()->at(i) < lowest_y) {
-            lowest_y = half_sphere->getGeometry()->at(i);
-        }
-    }
-    lowest_y_half_sphere = lowest_y;
-
-    last_object_model_matrix.setToIdentity();
-
-    QMatrix4x4 mat;
-
-    // align rotation axis to touch point
-    mat.setToIdentity();
-    mat.translate(QVector3D(0,0.0-lowest_y_rot_axis,0));
-    rot_axis->transform(mat);
-
-    // align half sphere to touch point
-    mat.setToIdentity();
-    mat.translate(QVector3D(0,0.0-lowest_y_half_sphere,0));
-    half_sphere->transform(mat);
-
-    object = readMeshFromObjFileDirectory("test");
-    emit modelLoaded(true);
-    Model::initialize(object);
 
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLfloat>* normals = new QVector<GLfloat>();
@@ -167,7 +94,99 @@ void GLWidget::initializeGL()
 
     grid = new Mesh(geometry, normals, indices);
 
+}
+
+void GLWidget::initializeGL()
+{
+
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    resetGLWidget();
+
+    qglClearColor(QColor(205, 205, 255));
+
+    colorshader = new QGLShaderProgram();
+    colorshader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/colorshader.vsh");
+    colorshader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/colorshader.fsh");
+    colorshader->link();
+
+    shader = new QGLShaderProgram();
+    shader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/simple.vsh");
+    shader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/simple.fsh");
+    shader->link();
+
+    camera_position.setX(0);
+    camera_position.setY(10);
+    camera_position.setZ(-10);
+    camera_direction.setX(0);
+    camera_direction.setY(4);
+    camera_direction.setZ(0);
+
+    camera_up.setX(0);
+    camera_up.setY(1);
+    camera_up.setZ(0);
+
+    ambient_light.setX(0.75);
+    ambient_light.setY(0.75);
+    ambient_light.setZ(0.75);
+    ambient_light.setW(1);
+
+    diffuse_light.setX(0.75);
+    diffuse_light.setY(0.75);
+    diffuse_light.setZ(0.75);
+    diffuse_light.setW(1);
+
+    // load helper meshes
+    rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
+    half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
+    yoyo_center = readMeshFromObjFileDirectory("yoyo_center_object");
+
+    QMatrix4x4 mat;
+
+    // align rotation axis to touch point
+    QVector3D lowestPointRotAxis = rot_axis->getLowestPoint();
+    mat.setToIdentity();
+    mat.translate(-lowestPointRotAxis);
+    rot_axis->transform(mat);
+
+    // align half sphere to touch point
+    QVector3D lowestPointHalfSphere = half_sphere->getLowestPoint();
+    mat.setToIdentity();
+    mat.translate(-lowestPointHalfSphere);
+    half_sphere->transform(mat);
+
+    // align yoyo center to origin
+    QVector3D lowestPointYoyoCenter = yoyo_center->getLowestPoint();
+    lowestPointYoyoCenter.setY(lowestPointYoyoCenter.y()-4.0);
+    mat.setToIdentity();
+    mat.translate(-lowestPointYoyoCenter);
+    yoyo_center->transform(mat);
+
+    createGrid();
+
+    last_object_model_matrix.setToIdentity();
+
+    /* test loading start */
     loadInitialMesh();
+
+    model_matrix.setToIdentity();
+
+    model_matrix.translate(-trans_x,trans_y,trans_z);
+    model_matrix.translate(-middle.x(), -middle.y(), -middle.z());
+
+    model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
+    model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
+
+    model_matrix.scale(scale_xyz);
+    model_matrix.scale(DEFAULT_SCALE_FACTOR/scaleFactor);
+
+    last_object_model_matrix = model_matrix;
+
+    calculateOctree();
+    /* test loading end */
+
 }
 
 void GLWidget::paintGL()
@@ -180,7 +199,7 @@ void GLWidget::paintGL()
 
     if(this->viewState == TRANSLATION_VIEW_DEFAULT)
     {
-        view_matrix.rotate(rot_cam_phi, 0.0, 1.0, 0.0);
+        view_matrix.rotate(-rot_cam_phi, 0.0, 1.0, 0.0);
     }
 
     direction_light.setX(camera_direction.normalized().x() - camera_position.normalized().x());
@@ -194,10 +213,10 @@ void GLWidget::paintGL()
 
     model_matrix.setToIdentity();
 
-    model_matrix.translate(-trans_x,trans_y,trans_z);
+    model_matrix.translate(-trans_x,trans_y,-trans_z);
     model_matrix.translate(-middle.x(), -middle.y(), -middle.z());
 
-    model_matrix.rotate(rot_obj_phi, 0.0, 1.0, 0.0);
+    model_matrix.rotate(-rot_obj_phi, 0.0, 1.0, 0.0);
     model_matrix.rotate(rot_obj_psy, 1.0, 0.0, 0.0);
 
     model_matrix.scale(scale_xyz);
@@ -225,11 +244,20 @@ void GLWidget::paintGL()
         Model::shellMesh->render(shader, GL_TRIANGLES);
     }
 
+    shader->release();
+    colorshader->bind();
+
+    colorshader->setUniformValue("nMatrix", view_matrix * model_matrix);
+    colorshader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
+
     if(showGrid && Model::shellMesh != NULL)
     {
-        shader->setUniformValue("color", QColor(Qt::black));
-        Model::octree->render(shader);
+        colorshader->setUniformValue("color", QColor(Qt::blue));
+        Model::octree->renderOctreeGrid(colorshader);
     }
+
+    colorshader->release();
+    shader->bind();
 
     if(showOuterSurface)
     {
@@ -260,7 +288,7 @@ void GLWidget::paintGL()
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
         shader->setUniformValue("color", QColor(Qt::blue));
-        yoyo_area->render(shader, GL_TRIANGLES);
+        yoyo_center->render(shader, GL_TRIANGLES);
 
     }
     }
@@ -280,7 +308,8 @@ void GLWidget::paintGL()
 void GLWidget::resizeGL(int width, int height)
 {
     projection_matrix.setToIdentity();
-    projection_matrix.ortho(-6, 6, -6, 6, 6, -6);
+    //projection_matrix.ortho(-6, 6, -6, 6, 6, -6);
+    projection_matrix.perspective(60,1,5,200);
 
     glViewport(0,0, width, height);
 }
@@ -427,7 +456,7 @@ void GLWidget::loadInitialMesh()
     middle = object->getMiddle();
     scaleFactor = object->getMaxDistance2Middle();
 
-    trans_y = 3.5;
+    //trans_y = 2.f;
 
     emit modelLoaded(true);
 
@@ -464,7 +493,24 @@ void GLWidget::loadNewMesh()
 
 void GLWidget::makeItSpin()
 {
+
+    if(rebuildOctree)
+    {
+        this->calculateOctree();
+    }
+
+    rebuildOctree = true;
+
+    Model::mesh->swapYZ();
+
     Model::hollow();
+
+    //Model::testSimpleSplitAndMerge();
+    //Model::testSplitAndMerge();
+
+    Model::mesh->swapYZ();
+
+    this->updateGL();
 }
 
 /* ----------------------------------------------- */
@@ -530,15 +576,15 @@ void GLWidget::setViewXY()
     // bird eye view
 
     camera_position.setX(0);
-    camera_position.setY(-0.75+1);
-    camera_position.setZ(1);
+    camera_position.setY(15);
+    camera_position.setZ(0);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(0);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
-    camera_up.setY(1);
-    camera_up.setZ(0);
+    camera_up.setY(0);
+    camera_up.setZ(-1);
 
     this->viewState = TRANSLATION_VIEW_XY;
 
@@ -551,10 +597,10 @@ void GLWidget::setViewZ()
     // view from the front
 
     camera_position.setX(0);
-    camera_position.setY(0+2);
-    camera_position.setZ(1);
+    camera_position.setY(4);
+    camera_position.setZ(-10);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(4);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -570,11 +616,11 @@ void GLWidget::setViewZ()
 void GLWidget::setViewRotationScale()
 {
 
-    camera_position.setX(1);
-    camera_position.setY(-0.75+2);
-    camera_position.setZ(1);
+    camera_position.setX(0);
+    camera_position.setY(10);
+    camera_position.setZ(-10);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(4);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -589,11 +635,12 @@ void GLWidget::setViewRotationScale()
 
 void GLWidget::setViewDefault()
 {
-    camera_position.setX(1);
-    camera_position.setY(-0.75+2);
-    camera_position.setZ(1);
+
+    camera_position.setX(0);
+    camera_position.setY(10);
+    camera_position.setZ(-10);
     camera_direction.setX(0);
-    camera_direction.setY(0+2);
+    camera_direction.setY(4);
     camera_direction.setZ(0);
 
     camera_up.setX(0);
@@ -615,7 +662,7 @@ void GLWidget::resetXY()
 
 void GLWidget::resetZ()
 {
-    this->trans_y = 0;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->updateGL();
 }
 
@@ -631,7 +678,7 @@ void GLWidget::resetAll()
 {
 
     this->trans_x = 0;
-    this->trans_y = 0;
+    this->trans_y = Y_DEFAULT_VALUE;
     this->trans_z = 0;
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
@@ -641,24 +688,12 @@ void GLWidget::resetAll()
 
 void GLWidget::setStartDepthValue(int value)
 {
-
-    this->startDepth = value;
-    if(this->maximumDepth<this->startDepth)
-    {
-       this->maximumDepth = this->startDepth;
-       emit setMaximumDepthSpinBoxValue(this->maximumDepth);
-    }
-
+    this->startMaximalDepth = value;
 }
 
 void GLWidget::setMaximumDepthValue(int value)
 {
-    this->maximumDepth = value;
-    if(this->maximumDepth<this->startDepth)
-    {
-       this->startDepth = this->maximumDepth;
-       emit setStartDepthSpinBoxValue(this->startDepth);
-    }
+    this->optimizationMaximalDepth = value;
 }
 
 void GLWidget::setShellExtensionValue(int value)
@@ -676,32 +711,26 @@ void GLWidget::calculateOctree()
     newModifiedMesh->transform(this->last_object_model_matrix);
 
     // calculate the difference for the yoyo
-    if(!topOptimized)
+    if(topOptimized && tippeTopOptimized)
     {
-        Mesh* tempMesh = booleanDifference(newModifiedMesh,yoyo_area);
+        Mesh* tempMesh = booleanUnion(newModifiedMesh,half_sphere);
+        delete newModifiedMesh;
+        newModifiedMesh = tempMesh;
+    }
+    if(topOptimized)
+    {
+        Mesh* tempMesh = booleanUnion(newModifiedMesh,rot_axis);
         delete newModifiedMesh;
         newModifiedMesh = tempMesh;
     }
 
     Model::initializeOctree(
                 newModifiedMesh,
-                this->startDepth,
-                this->maximumDepth,
+                this->startMaximalDepth,
+                this->optimizationMaximalDepth,
                 this->shellExtensionValue);
 
-
-    // test
-
-    /*
-
-    QVector<octree::cubeObject>* vec;
-    vec = Model::octree->getInnerCubes();
-    Model::octree->splitAndMerge(0.01);
-    vec = Model::octree->getInnerCubes();
-
-    Model::octree->deleteNodeMeshes();
-
-    //*/
+    rebuildOctree = false;
 
     emit shellIsSet(true);
 
@@ -742,14 +771,13 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
 
-    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,half_sphere);
+    Mesh* mesh1 = booleanUnion(Model::mesh,half_sphere);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
     delete shell;
     delete mesh1;
     delete mesh2;
-
 }
 
 /**
@@ -760,7 +788,7 @@ void GLWidget::saveMeshAsTop(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
 
-    Mesh* mesh1 = booleanUnion(Model::modifiedMesh,rot_axis);
+    Mesh* mesh1 = booleanUnion(Model::mesh,rot_axis);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
 
@@ -776,17 +804,11 @@ void GLWidget::saveMeshAsTop(QString fileName)
 void GLWidget::saveMeshAsYoyo(QString fileName)
 {
     Mesh* shell = Model::octree->getShellMesh(true);
-
-    Mesh* mesh1 = booleanDifference(Model::modifiedMesh,yoyo_area);
-    Mesh* mesh2 = booleanUnion(mesh1,yoyo_connection);
-    Mesh* mesh3 = mergeMeshes(mesh2,shell);
-    writeMeshFromObjFile(fileName.toStdString(),mesh3);
+    Mesh* mesh = mergeMeshes(Model::mesh,shell);
+    writeMeshFromObjFile(fileName.toStdString(),mesh);
 
     delete shell;
-    delete mesh1;
-    delete mesh2;
-    delete mesh3;
-
+    delete mesh;
 }
 
 void GLWidget::setTippeTop(bool tippeTop)

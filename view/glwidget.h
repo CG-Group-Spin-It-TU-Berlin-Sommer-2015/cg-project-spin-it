@@ -41,6 +41,7 @@ private:
     int viewState;
 
     QGLShaderProgram* shader;
+    QGLShaderProgram* colorshader;
 
     QMatrix4x4 projection_matrix;
     QMatrix4x4 model_matrix;
@@ -64,8 +65,7 @@ private:
     Mesh* grid;
     Mesh* rot_axis;
     Mesh* half_sphere;
-    Mesh* yoyo_area;
-    Mesh* yoyo_connection;
+    Mesh* yoyo_center;
 
     bool left_pressed;
     bool right_pressed;
@@ -90,8 +90,8 @@ private:
     bool showInnerSurface;
     bool showGrid;
 
-    GLint startDepth;
-    GLint maximumDepth;
+    GLint startMaximalDepth;
+    GLint optimizationMaximalDepth;
     GLint shellExtensionValue;
 
     GLfloat lowest_y_rot_axis;
@@ -99,6 +99,8 @@ private:
 
     bool topOptimized;
     bool tippeTopOptimized;
+
+    bool rebuildOctree;
 
 public:
     explicit GLWidget(QWidget *parent = 0);
@@ -164,6 +166,9 @@ protected:
     void saveMeshAsYoyo(QString fileName);
 
     void resetGLWidget();
+
+    void createGrid();
+
 
 };
 

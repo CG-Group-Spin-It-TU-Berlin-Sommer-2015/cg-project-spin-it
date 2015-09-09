@@ -13,7 +13,6 @@ ExtendedOctree* Model::octree = 0;
 
 QVector<int>* Model::J = 0;
 
-Mesh* Model::modifiedMesh = NULL;
 Mesh* Model::shellMesh = NULL;
 
 /**
@@ -30,12 +29,12 @@ void Model::initializeOctree(
         GLint shellExtensionValue)
 {
 
-    if(modifiedMesh != NULL)
+    if(mesh != NULL)
     {
-        delete modifiedMesh;
+        delete mesh;
     }
 
-    modifiedMesh = newModifiedMesh;
+    mesh = newModifiedMesh;
 
     if(octree == NULL)
     {
@@ -44,9 +43,9 @@ void Model::initializeOctree(
 
     // initialize the octree
     // set point cloud
-    octree->setMesh(modifiedMesh);
+    octree->setMesh(mesh);
     octree->setStartMaxDepth(startDepth);
-    octree->setOptimationMaxDepth(maximumDepth);
+    octree->setOptimizationMaxDepth(maximumDepth);
     octree->quantizeSurface();
     octree->setupVectors();
 
@@ -54,7 +53,7 @@ void Model::initializeOctree(
     octree->setupOctree();
     octree->setOuterNodes();
     octree->setInnerNodes();
-    octree->adjustMaxDepth();
+    octree->adjustToBasicMaxDepth();
     octree->increaseShell(shellExtensionValue);
     octree->setMergeNodes();
 
@@ -69,14 +68,154 @@ void Model::initializeOctree(
 
     shellMesh = newShellMesh;
 
-    newModifiedMesh->swapYZ();
-    Model::mesh = newModifiedMesh;
+    mesh = newModifiedMesh;
 
     return;
 }
 
-void Model::initialize(Mesh* mesh)
+
+void Model::testSimpleSplitAndMerge()
 {
+
+    QVector<octree::cubeObject>* cubeVector = NULL;
+
+    cubeVector = octree->getCubesOfLowerDepth();
+
+    VectorXd b(cubeVector->size());
+    MatrixXd S(cubeVector->size(), 10);
+    for (int i = 0; i < cubeVector->size(); i++) {
+        b(i) = 0;
+        float* s = calculateVolume(cubeVector->at(i).mesh, p);
+        for (int j = 0; j < 10; j++) {
+            S(i,j) = s[j];
+        }
+    }
+
+    for (int i = 0; i < b.rows(); i++) {
+        octree::cubeObject o = cubeVector->at(i);
+
+        QVector<GLfloat>* vec = o.mesh->getGeometry();
+
+        bool above = false;
+        bool under = false;
+
+        for(int i=0;i<vec->length();i+=3)
+        {
+            //GLfloat x = vec->data()[i+0];
+            GLfloat y = vec->data()[i+1];
+            GLfloat z = vec->data()[i+2];
+
+            if(z<3.5+y*2)
+            {
+                above = true;
+            }
+            else
+            {
+                under = true;
+            }
+
+        }
+
+        o.beta = above && !under ? 1.0 : (under && !above? 0.0 : 0.5);
+        cubeVector->replace(i, o);
+    }
+
+    octree->updateBetaValuesWithPropagation();
+
+    octree->deleteNodeMeshes();
+
+    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
+    octree->setVoids();
+
+    octree->createInnerSurface();
+    Mesh* newShellMesh = octree->getShellMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
+
+    Model::octree->setDirty();
+
+}
+
+void Model::testSplitAndMerge()
+{
+
+    QVector<octree::cubeObject>* cubeVector = NULL;
+
+    bool not_converged = true;
+    while (not_converged)
+    {
+
+        // get the inner cubes of the octree
+        cubeVector = octree->getInnerCubes();
+
+        VectorXd b(cubeVector->size());
+        MatrixXd S(cubeVector->size(), 10);
+        for (int i = 0; i < cubeVector->size(); i++) {
+            b(i) = 0;
+            float* s = calculateVolume(cubeVector->at(i).mesh, p);
+            for (int j = 0; j < 10; j++) {
+                S(i,j) = s[j];
+            }
+        }
+
+        for (int i = 0; i < b.rows(); i++) {
+            octree::cubeObject o = cubeVector->at(i);
+
+            QVector<GLfloat>* vec = o.mesh->getGeometry();
+
+            bool above = false;
+            bool under = false;
+
+            for(int i=0;i<vec->length();i+=3)
+            {
+                //GLfloat x = vec->data()[i+0];
+                GLfloat y = vec->data()[i+1];
+                GLfloat z = vec->data()[i+2];
+
+                if(z<3.5+y*2)
+                {
+                    above = true;
+                }
+                else
+                {
+                    under = true;
+                }
+
+            }
+
+            o.beta = above && !under ? 1.0 : (under && !above? 0.0 : 0.5);
+            cubeVector->replace(i, o);
+        }
+
+        // set new betas and clrea cubeVector
+        octree->updateBetaValues();
+
+        // do split and merge
+
+        not_converged = octree->splitAndMerge(0.001);
+    }
+
+    octree->deleteNodeMeshes();
+
+    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
+    octree->setVoids();
+
+    octree->createInnerSurface();
+    Mesh* newShellMesh = octree->getShellMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
+
+    Model::octree->setDirty();
 
 }
 
@@ -120,7 +259,7 @@ void Model::hollow()
 
         // do split and merge
 
-        not_converged = octree->splitAndMerge(0);
+        not_converged = octree->splitAndMerge(0.001);
     }
 
     octree->deleteNodeMeshes();

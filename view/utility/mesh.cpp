@@ -61,6 +61,9 @@ Mesh::Mesh(QVector<GLfloat>* geometry, QVector<GLint>* indices)
     }
 
     this->isDirty = true;
+
+    vbo = NULL;
+    ibo = NULL;
 }
 
 Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector<GLint>* indices)
@@ -71,6 +74,10 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector
     this->indices = indices;
 
     this->isDirty = true;
+
+    vbo = NULL;
+    ibo = NULL;
+
 }
 
 Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector<GLfloat>* surface_normals, QVector<GLint>* indices)
@@ -81,6 +88,9 @@ Mesh::Mesh(QVector<GLfloat> *geometry, QVector<GLfloat>* vertex_normals, QVector
     this->indices = indices;
 
     this->isDirty = true;
+
+    vbo = NULL;
+    ibo = NULL;
 }
 
 Mesh::~Mesh()
@@ -96,6 +106,18 @@ Mesh::~Mesh()
 
     indices->clear();
     delete indices;
+
+    if(vbo != NULL)
+    {
+        vbo->destroy();
+    }
+
+    if(ibo != NULL)
+    {
+        ibo->destroy();
+    }
+
+
 }
 
 QVector<GLfloat>* Mesh::getGeometry()
@@ -134,6 +156,12 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
             buffer.push_back(vertex_normals->at(3*i + 2));
         }
 
+        if(vbo != NULL)
+        {
+            vbo->destroy();
+            vbo = NULL;
+        }
+
         vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
         vbo->create();
         vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -141,6 +169,12 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
         vbo->allocate(geometry->size() * sizeof(GLfloat) + vertex_normals->size() * sizeof(GLfloat));
         vbo->write(0, buffer.constData(), buffer.size() * sizeof(GLfloat));
         vbo->release();
+
+        if(ibo != NULL)
+        {
+            ibo->destroy();
+            ibo = NULL;
+        }
 
         ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         ibo->create();
@@ -391,4 +425,26 @@ void Mesh::updateNormals()
 
     this->isDirty = true;
 
+}
+
+QVector3D Mesh::getLowestPoint()
+{
+
+    GLfloat lowest_y = std::numeric_limits<float>::min();
+
+    QVector3D vec;
+
+    // search for lowest y for rotation axis
+    for (int i = 1; i < geometry->size(); i += 3) {
+        if (geometry->at(i) < lowest_y) {
+            lowest_y = geometry->at(i);
+
+            vec.setX(geometry->at(i-1));
+            vec.setY(geometry->at(i+0));
+            vec.setZ(geometry->at(i+1));
+
+        }
+    }
+
+    return vec;
 }

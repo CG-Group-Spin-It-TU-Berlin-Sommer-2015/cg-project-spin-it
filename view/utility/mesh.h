@@ -33,9 +33,10 @@ public:
 
     void render(QGLShaderProgram* shader, GLenum primitive);
 
+    QVector3D getLowestPoint();
+    QVector3D getMean();
     QVector3D getMiddle();
     GLfloat getMaxDistance2Middle();
-    QVector3D getMean();
 
     Mesh* copy();
     void transform(QMatrix4x4 matrix);
