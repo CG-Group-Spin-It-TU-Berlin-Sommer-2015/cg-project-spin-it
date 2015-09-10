@@ -148,6 +148,12 @@ void Model::testSplitAndMerge()
 
     QVector<octree::cubeObject>* cubeVector = NULL;
 
+    mesh_volume = calculateVolume(Model::mesh, p);
+    cout << "Volumnes:" << endl;
+    for (int i = 0; i < 10; i++) {
+        cout << mesh_volume[i] << endl;
+    }
+
     bool not_converged = true;
     while (not_converged)
     {
@@ -157,12 +163,19 @@ void Model::testSplitAndMerge()
 
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);
+
+        cout << endl;
+
         for (int i = 0; i < cubeVector->size(); i++) {
             b(i) = 0;
             float* s = calculateVolume(cubeVector->at(i).mesh, p);
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
+
+                cout << s[j] << endl;
             }
+
+            cout << endl;
         }
 
         for (int i = 0; i < b.rows(); i++) {
