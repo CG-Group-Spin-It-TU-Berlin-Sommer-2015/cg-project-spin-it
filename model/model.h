@@ -28,11 +28,15 @@ public:
     static Mesh* shellMesh;
     static ExtendedOctree* octree;
 
+    static VectorXd S_ges;
+    static MatrixXd S_mat;
+
     static QVector<int>* J;
 
 public:
     static void testSimpleSplitAndMerge();
     static void testSplitAndMerge();
+    static void testOptimizer();
     static void hollow();
 
     static void initializeOctree(

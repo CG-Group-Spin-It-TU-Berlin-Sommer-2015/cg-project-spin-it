@@ -68,6 +68,29 @@ DEPENDPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/lib/x86_64-linux-gnu/libgmp.a
 
+
+unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lopt
+
+INCLUDEPATH += $$PWD/../../../../usr/local/include/
+DEPENDPATH += $$PWD/../../../../usr/local/include/
+
+unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libopt.a
+
+#unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnewmat
+#INCLUDEPATH += $$PWD/../../../../usr/local/include/
+#DEPENDPATH += $$PWD/../../../../usr/local/include/
+#unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libnewmat.a
+
+#unix:!macx: LIBS += -L$$PWD/../dlib-18.17/dlib/build/ -ldlib
+#INCLUDEPATH += $$PWD/../dlib-18.17/
+#DEPENDPATH += $$PWD/../dlib-18.17/
+#unix:!macx: PRE_TARGETDEPS += $$PWD/../dlib-18.17/dlib/build/libdlib.a
+
+unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnlopt
+INCLUDEPATH += $$PWD/../../../../usr/local/include/
+DEPENDPATH += $$PWD/../../../../usr/local/include/
+unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libnlopt.a
+
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../cork/lib/release/ -lcork
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../cork/lib/debug/ -lcork
 #else:unix: LIBS += -L$$PWD/../cork/lib/ -lcork

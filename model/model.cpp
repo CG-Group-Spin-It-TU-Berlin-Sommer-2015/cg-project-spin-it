@@ -1,5 +1,12 @@
 #include "model.h"
 
+
+#include <math.h>
+#include <nlopt.h>
+
+
+#define PI 3.14159265359
+
 float Model::p = 1.00;
 QVector3D Model::cp;
 
@@ -16,6 +23,37 @@ ExtendedOctree* Model::octree = 0;
 QVector<int>* Model::J = 0;
 
 Mesh* Model::shellMesh = NULL;
+
+VectorXd Model::S_ges;
+MatrixXd Model::S_mat;
+
+//------------------------------------------------------
+
+double myfunc(unsigned n, const double *x, double *grad, void *my_func_data)
+{
+    if (grad) {
+        grad[0] = 0.0;
+        grad[1] = 0.5 / sqrt(x[1]);
+    }
+    return sqrt(x[1]);
+}
+
+typedef struct {
+    double a, b;
+} my_constraint_data;
+
+double myconstraint(unsigned n, const double *x, double *grad, void *data)
+{
+    my_constraint_data *d = (my_constraint_data *) data;
+    double a = d->a, b = d->b;
+    if (grad) {
+        grad[0] = 3 * a * (a*x[0] + b) * (a*x[0] + b);
+        grad[1] = -1.0;
+    }
+    return ((a*x[0] + b) * (a*x[0] + b) * (a*x[0] + b) - x[1]);
+ }
+
+//------------------------------------------------------
 
 /**
  * @brief Model::initializeOctree Initialize the octree for the optimation
@@ -139,7 +177,7 @@ void Model::testSimpleSplitAndMerge()
 
     shellMesh = newShellMesh;
 
-    Model::octree->setDirty();
+    Model::octree->setDirty();    
 
 }
 
@@ -149,10 +187,12 @@ void Model::testSplitAndMerge()
     QVector<octree::cubeObject>* cubeVector = NULL;
 
     mesh_volume = calculateVolume(Model::mesh, p);
+    /*
     cout << "Volumnes:" << endl;
     for (int i = 0; i < 10; i++) {
         cout << mesh_volume[i] << endl;
     }
+    */
 
     bool not_converged = true;
     while (not_converged)
@@ -164,7 +204,7 @@ void Model::testSplitAndMerge()
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);
 
-        cout << endl;
+        //cout << endl;
 
         for (int i = 0; i < cubeVector->size(); i++) {
             b(i) = 0;
@@ -172,10 +212,10 @@ void Model::testSplitAndMerge()
             for (int j = 0; j < 10; j++) {
                 S(i,j) = s[j];
 
-                cout << s[j] << endl;
+                //cout << s[j] << endl;
             }
 
-            cout << endl;
+            //cout << endl;
         }
 
         for (int i = 0; i < b.rows(); i++) {
@@ -231,6 +271,244 @@ void Model::testSplitAndMerge()
     shellMesh = newShellMesh;
 
     Model::octree->setDirty();
+
+}
+
+double spin_it_function(unsigned n, const double *x, double *grad, void *my_func_data)
+{
+
+    VectorXd b(n-1);
+    GLdouble phi = x[0];
+    for(int i=1;i<n;i++){
+        b(i-1) = x[i];
+    }
+    MatrixXd S = Model::S_ges - Model::S_mat*b;
+
+    MatrixXd I(3,3);
+    I(0,0) = S(8)+S(9);
+    I(1,0) = -S(4);
+    I(2,0) = -S(6);
+    I(0,1) = -S(4);
+    I(1,1) = S(7)+S(9);
+    I(2,1) = -S(5);
+    I(0,2) = -S(6);
+    I(1,2) = -S(5);
+    I(2,2) = S(7)+S(8);
+
+    MatrixXd I_2(3,3);
+    I_2(0,0) = 1;
+    I_2(1,0) = 0;
+    I_2(2,0) = 0;
+    I_2(0,1) = 0;
+    I_2(1,1) = 1;
+    I_2(2,1) = 0;
+    I_2(0,2) = 0;
+    I_2(1,2) = 0;
+    I_2(2,2) = 0;
+
+    I_2 = I_2 * pow(S(3),2)/S(0);
+
+    MatrixXd I_com = I-I_2;
+
+    MatrixXd I_part(2,2);
+    I_part(0,0) = I_com(0,0);
+    I_part(1,0) = I_com(0,1);
+    I_part(0,1) = I_com(1,0);
+    I_part(1,1) = I_com(1,1);
+
+    MatrixXd R(2,2);
+    R(0,0) = +cos(phi);
+    R(1,0) = +sin(phi);
+    R(0,1) = -sin(phi);
+    R(1,1) = +cos(phi);
+
+    MatrixXd mat = R*I_part*R;
+
+    double IX = mat(0,0);
+    double IY = mat(1,1);
+    double IZ = I(2,2);
+
+    double p1,p2;
+
+    p1 = 0.3;
+    p2 = 0.7;
+
+    double M = S(0);
+    double l = S(3)/S(0);
+
+    double f = p1*pow(l*M,2)+p2*(pow(IX/IZ,2)+pow(IY/IZ,2));
+
+    return f;
+}
+
+typedef struct {
+    int index;
+} spin_it_constraint_data;
+
+double spin_it_constraint(unsigned n, const double *x, double *grad, void *data)
+{
+   spin_it_constraint_data *d = (spin_it_constraint_data *) data;
+   int index = d->index;
+
+   VectorXd b(n-1);
+   GLdouble phi = x[0];
+   for(int i=1;i<n;i++){
+       b(i-1) = x[i];
+   }
+   MatrixXd S = Model::S_ges - Model::S_mat*b;
+
+   switch(index)
+   {
+   case 0:
+       return S(1);
+   case 1:
+       return S(2);
+   case 2:
+       return S(5);
+   case 3:
+       return S(6);
+   case 4:
+       return cos(phi)*sin(phi)*(S(7)-S(8))+(pow(cos(phi),2)-pow(sin(phi),2))*S(4);
+
+   }
+   return -1;
+}
+
+void Model::testOptimizer()
+{
+
+    QVector<octree::cubeObject>* cubeVector = NULL;
+
+    cubeVector = octree->getInnerCubes();
+
+    VectorXd b(cubeVector->size());
+    Model::S_ges.resize(10);
+    Model::S_mat.resize(10,cubeVector->size());
+
+    mesh_volume = calculateVolume(Model::mesh, p);
+    cout << "Volumnes:" << endl;
+    for (int i = 0; i < 10; i++) {
+        Model::S_ges(i) = mesh_volume[i];
+    }
+
+    for (int i = 0; i < cubeVector->size(); i++) {
+        b(i) = 0;
+        float* s = calculateVolume(cubeVector->at(i).mesh, p);
+        for (int j = 0; j < 10; j++) {
+            Model::S_mat(j,i) = s[j];
+        }
+    }
+
+    //------------------------------
+    int bs = cubeVector->size()+1;
+    //------------------------------
+    double* lb_si = new double[bs];
+    double* ub_si = new double[bs];
+    double* betas = new double[bs];
+    for(int i=1;i<bs;i++)
+    {
+        lb_si[i] = 0.0;
+        ub_si[i] = 1.0;
+        betas[i] = 0.999;
+    }
+
+    lb_si[0] = -PI;
+    ub_si[0] = +PI;
+    betas[0] = 0.0;
+
+    //------------------------------
+    nlopt_opt opt_spin_it;
+    opt_spin_it = nlopt_create(NLOPT_LN_COBYLA, bs);
+
+    nlopt_set_lower_bounds(opt_spin_it, lb_si);
+    nlopt_set_upper_bounds(opt_spin_it, ub_si);
+
+    nlopt_set_min_objective(opt_spin_it, spin_it_function, NULL);
+
+    nlopt_set_stopval(opt_spin_it, 1e-2);
+
+    spin_it_constraint_data data_si[10] = { {0},{1},{2},{3},{4} };
+
+    nlopt_add_equality_constraint(opt_spin_it, spin_it_constraint, &data_si[0], 1e-2);
+    nlopt_add_equality_constraint(opt_spin_it, spin_it_constraint, &data_si[1], 1e-2);
+    nlopt_add_equality_constraint(opt_spin_it, spin_it_constraint, &data_si[2], 1e-2);
+    nlopt_add_equality_constraint(opt_spin_it, spin_it_constraint, &data_si[3], 1e-2);
+    nlopt_add_equality_constraint(opt_spin_it, spin_it_constraint, &data_si[4], 1e-2);
+
+    double minf;
+
+    if (nlopt_optimize(opt_spin_it, betas, &minf) < 0) {
+        printf("nlopt failed!\n");
+    }
+    else {
+        printf("found minimum %0.10g\n", minf);
+    }
+
+    for (int i = 1; i < bs; i++) {
+
+        cout << betas[i] << endl;
+
+        octree::cubeObject o = cubeVector->at(i-1);
+        o.beta = betas[i];
+        cubeVector->replace(i-1, o);
+    }
+
+    octree->updateBetaValues();
+
+    cout << endl;
+
+    nlopt_destroy(opt_spin_it);
+    //------------------------------
+
+    double lb[2] = { -HUGE_VAL, 0 }; /* lower bounds */
+    nlopt_opt opt;
+
+    opt = nlopt_create(NLOPT_LD_MMA, 2); /* algorithm and dimensionality */
+    nlopt_set_lower_bounds(opt, lb);
+    nlopt_set_min_objective(opt, myfunc, NULL);
+
+    my_constraint_data data[2] = { {2,0}, {-1,1} };
+
+    nlopt_add_inequality_constraint(opt, myconstraint, &data[0], 1e-8);
+    nlopt_add_inequality_constraint(opt, myconstraint, &data[1], 1e-8);
+
+    nlopt_set_stopval(opt, sqrt(8./27.)+1e-3);
+    //nlopt_set_xtol_rel(opt, 1e-4);
+
+    double x[2] = { 1.234, 5.678 };  /* some initial guess */
+    minf; /* the minimum objective value, upon return */
+
+    if (nlopt_optimize(opt, x, &minf) < 0) {
+        printf("nlopt failed!\n");
+    }
+    else {
+        printf("found minimum at f(%g,%g) = %0.10g\n", x[0], x[1], minf);
+    }
+
+    nlopt_destroy(opt);
+
+    //------------------------------
+
+
+    if(cubeVector->size()<=16)
+    {
+        cout << Model::S_ges << endl << endl;
+    }
+
+    octree->deleteNodeMeshes();
+
+    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
+    octree->setVoids();
+
+    octree->createInnerSurface();
+    Mesh* newShellMesh = octree->getShellMesh();
+
+    if(shellMesh != NULL)
+    {
+       delete shellMesh;
+    }
+
+    shellMesh = newShellMesh;
 
 }
 

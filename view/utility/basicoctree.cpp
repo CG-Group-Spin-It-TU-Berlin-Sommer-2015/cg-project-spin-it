@@ -1289,7 +1289,7 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
             if(node.x>=viewIndex)
             {
-                continue;
+                //continue;
             }
 
             /* add vertices*/

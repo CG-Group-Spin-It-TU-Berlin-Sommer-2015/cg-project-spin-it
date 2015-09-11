@@ -503,7 +503,9 @@ void GLWidget::makeItSpin()
 
     Model::mesh->swapYZ();
 
-    Model::hollow();
+    //Model::hollow();
+
+    Model::testOptimizer();
 
     //Model::testSimpleSplitAndMerge();
     //Model::testSplitAndMerge();
