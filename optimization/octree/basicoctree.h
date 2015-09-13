@@ -142,6 +142,9 @@ public:
     void setStartMaxDepth(GLint depth);
     void setOptimizationMaxDepth(GLint depth);
 
+    GLint getStartMaxDepth();
+    GLint getOptimizationMaxDepth();
+
     void adjustToBasicMaxDepth();
 
     void quantizeSurface();

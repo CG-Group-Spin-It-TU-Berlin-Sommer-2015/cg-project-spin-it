@@ -275,7 +275,7 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth(int depth)
     QVector<GLint> nodeIndices;
     octreeNode* nodePointer;
 
-    int currentMaxDepth = depth>this->startMaxDepth?depth:this->startMaxDepth;
+    int currentMaxDepth = depth<this->startMaxDepth?depth:this->startMaxDepth;
 
     // get inner leaf nodes for depht smaller currentMaxDepth (depth)
     for(int i=1;i<currentMaxDepth;i++)
@@ -287,7 +287,7 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth(int depth)
         {
             nodePointer = &this->octreeNodes.data()[nodeIndices.at(j)];
 
-            if(!nodePointer->isMergeRoot)
+            if(nodePointer->isMergeRoot)
             {
 
                 if(nodePointer->mesh == NULL)

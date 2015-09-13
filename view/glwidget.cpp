@@ -37,6 +37,9 @@ GLWidget::~GLWidget()
     delete half_sphere;
 }
 
+/**
+ * @brief GLWidget::resetGLWidget
+ */
 void GLWidget::resetGLWidget()
 {
 
@@ -49,12 +52,12 @@ void GLWidget::resetGLWidget()
     this->trans_z = 0.f;
     this->scale_xyz = 1.0f;
 
-    this->startMaximalDepth = 3;
+    this->startMaximalDepth = 6;
     this->optimizationMaximalDepth = 3;
     emit setStartDepthSpinBoxValue(this->startMaximalDepth);
     emit setMaximumDepthSpinBoxValue(this->optimizationMaximalDepth);
 
-    shellExtensionValue = 0;
+    shellExtensionValue = 1;
     emit setShellExtensionSpinBoxValue(shellExtensionValue);
 
     emit shellIsNotSet();
@@ -62,6 +65,9 @@ void GLWidget::resetGLWidget()
 
 }
 
+/**
+ * @brief GLWidget::createGrid
+ */
 void GLWidget::createGrid()
 {
 
@@ -340,6 +346,8 @@ void GLWidget::resizeGL(int width, int height)
 
 void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 {
+    (void)ev;
+
     if (left_pressed) {
 
 
@@ -434,6 +442,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 
 void GLWidget::mousePressEvent(QMouseEvent *ev)
 {
+    (void)ev;
+
     if (ev->button() == Qt::LeftButton) {
         mouse_pos = ev->pos();
         left_pressed = true;
@@ -453,6 +463,8 @@ void GLWidget::mousePressEvent(QMouseEvent *ev)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
+    (void)ev;
+
     left_pressed = false;
     right_pressed = false;
     middle_pressed = false;
@@ -528,7 +540,9 @@ void GLWidget::makeItSpin()
     #ifdef USE_OPTIMIZATION
 
     BetaOptimization::mesh->swapYZ();
-    BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
+    BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TOP);
+    BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP);
+    //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
     BetaOptimization::mesh->swapYZ();
 
     //BetaOptimization::testSimpleSplitAndMerge();

@@ -24,18 +24,21 @@ public:
     static Mesh* shellMesh;
     static ExtendedOctree octree;
 
-    static Eigen::VectorXd S_ges;
+    static Eigen::VectorXd S_comp;
     static Eigen::MatrixXd S_mat;
 
     static void testSimpleSplitAndMerge();
     static void testSplitAndMerge();
-    static void optimizeBetas(int optimizationType);
 
     static void initializeOctree(
             Mesh* newModifiedMesh,
             GLint startDepth,
             GLint maximumDepth,
             GLint shellExtensionValue);
+
+    static void optimizeBetas(int optimizationType);
+    static void optimizeBetasWithSplitAndMerge(int optimizationType);
+    static void optimizeBetasBottomUp(GLint optimizationType);
 
 private:
 
@@ -46,6 +49,10 @@ private:
 
     static float* calculateVolume(Mesh* mesh, float p = 1.f);
 
+    static void  setSForCompleteMesh();
+    static void  setSMatrixForCubes(QVector<octree::cubeObject>* cubeVector);
+
+    static void finishBetaOptimization();
 };
 
 #endif // BETAOPTIMIZATION_H

@@ -25,13 +25,16 @@ using namespace std;
 #define Smat_y2(i) BetaOptimization::S_mat(8,i-1)
 #define Smat_z2(i) BetaOptimization::S_mat(9,i-1)
 
+#define MAX(v1,v2) v1>v2?v1:v2;
+#define MIN(v1,v2) v1<v2?v1:v2;
+
 Mesh* BetaOptimization::mesh = 0;
 
 ExtendedOctree BetaOptimization::octree;
 
 Mesh* BetaOptimization::shellMesh = NULL;
 
-VectorXd BetaOptimization::S_ges;
+VectorXd BetaOptimization::S_comp;
 MatrixXd BetaOptimization::S_mat;
 
 float BetaOptimization::mesh_volume[10];
@@ -111,7 +114,7 @@ double spinItContraints(unsigned n, const double *x, double *grad, void *data)
    for(unsigned int i=1;i<n;i++){
        betas(i-1) = x[i];
    }
-   MatrixXd S = BetaOptimization::S_ges - BetaOptimization::S_mat*betas;
+   MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
 
    double cosp = cos(phi);
    double sinp = sin(phi);
@@ -210,6 +213,8 @@ double spinItContraints(unsigned n, const double *x, double *grad, void *data)
 double spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
+    (void)my_func_data;
+
     VectorXd betas(n-1);
     GLdouble phi = x[0];
     for(unsigned int i=1;i<n;i++){
@@ -220,7 +225,7 @@ double spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, vo
     double sinp = sin(phi);
 
     // current model volumes
-    MatrixXd S = BetaOptimization::S_ges - BetaOptimization::S_mat*betas;
+    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
 
     // inertia tensor
     MatrixXd I(2,2);
@@ -308,6 +313,8 @@ double spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, vo
 double spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
+    (void)my_func_data;
+
     VectorXd betas(n-1);
     GLdouble phi = x[0];
     for(unsigned int i=1;i<n;i++){
@@ -318,7 +325,7 @@ double spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, voi
     double sinp = sin(phi);
 
     // current model volumes
-    MatrixXd S = BetaOptimization::S_ges - BetaOptimization::S_mat*betas;
+    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
 
     // inertia tensor
     MatrixXd I(2,2);
@@ -456,15 +463,15 @@ void BetaOptimization::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVec
     nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[5], 1e-8);
 
     if(cubeVector->size()>500){
-        cout << "denied optimization" << endl << endl;
+        cout << "optimization denied" << endl << endl;
     }
     else
     {
         if (nlopt_optimize(opt_spin_it, betas, &minf) < 0) {
-            cout << "optimizatio failed!" << endl << endl;
+            cout << "optimization failed!" << endl << endl;
         }
         else {
-            cout << "optimizatio successful (found minimum " << minf << ")" << endl << endl;
+            cout << "optimization successful (found minimum " << minf << ")" << endl << endl;
         }
     }
 
@@ -527,15 +534,15 @@ void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVect
     nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[4], 1e-8);
 
     if(cubeVector->size()>500){
-        cout << "denied optimization" << endl << endl;
+        cout << "optimization denied" << endl << endl;
     }
     else
     {
         if (nlopt_optimize(opt_spin_it, betas, &minf) < 0) {
-            cout << "optimizatio failed!" << endl << endl;
+            cout << "optimization failed!" << endl << endl;
         }
         else {
-            cout << "optimizatio successful (found minimum " << minf << ")" << endl << endl;
+            cout << "optimization successful (found minimum " << minf << ")" << endl << endl;
         }
     }
 
@@ -545,10 +552,85 @@ void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVect
     delete ub_si;
     delete betas;
 
+    cout << endl;
+
     for (int i = 1; i < bs; i++) {
         octree::cubeObject* obj = &cubeVector->data()[i-1];
         obj->beta = betas[i];
+        cout << i << ": "  << obj->beta << endl;
     }
+
+    cout << endl;
+
+}
+
+/**
+ * @brief BetaOptimization::setSForCompleteMesh
+ */
+void  BetaOptimization::setSForCompleteMesh()
+{
+    BetaOptimization::S_comp.resize(10);
+
+    float* s = calculateVolume(BetaOptimization::mesh);
+    for (int i = 0; i < 10; i++) {
+        BetaOptimization::S_comp(i) = s[i];
+    }
+
+}
+
+/**
+ * @brief BetaOptimization::setSMatrixForCubes
+ * @param cubeVector
+ */
+void  BetaOptimization::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVector)
+{
+
+    BetaOptimization::S_mat.resize(10,cubeVector->size());
+
+    for (int i = 0; i < cubeVector->size(); i++) {
+        float* s = calculateVolume(cubeVector->at(i).mesh);
+        for (int j = 0; j < 10; j++) {
+            BetaOptimization::S_mat(j,i) = s[j];
+        }
+    }
+
+}
+
+/**
+ * @brief BetaOptimization::optimizeBetasBottomUp
+ * @param optimizationType
+ */
+void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
+{
+
+    BetaOptimization::setSForCompleteMesh();
+
+    GLint depth = BetaOptimization::octree.getOptimizationMaxDepth()-1;
+
+    for (int i = 1; i < depth+1; i++) {
+
+        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
+
+        cout << "number of cubes is " << cubeVector->size() << endl;
+
+        BetaOptimization::setSMatrixForCubes(cubeVector);
+
+        switch(optimizationType)
+        {
+            case OPTIMIZATION_TYPE_YOYO:
+                optimizeBetasForYoyo(cubeVector);
+            break;
+            case OPTIMIZATION_TYPE_TOP:
+                optimizeBetasForTop(cubeVector);
+            break;
+
+        }
+
+        BetaOptimization::octree.updateBetaValuesWithPropagation();
+
+    }
+
+    BetaOptimization::finishBetaOptimization();
 
 }
 
@@ -559,30 +641,12 @@ void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVect
 void BetaOptimization::optimizeBetas(int optimizationType)
 {
 
-    QVector<octree::cubeObject>* cubeVector = NULL;
-
-    cubeVector = BetaOptimization::octree.getInnerCubes();
+    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
 
     cout << "number of cubes is " << cubeVector->size() << endl;
 
-    VectorXd b(cubeVector->size());
-    BetaOptimization::S_ges.resize(10);
-    BetaOptimization::S_mat.resize(10,cubeVector->size());
-
-    float* s;
-
-    s = calculateVolume(BetaOptimization::mesh);
-    for (int i = 0; i < 10; i++) {
-        BetaOptimization::S_ges(i) = s[i];
-    }
-
-    for (int i = 0; i < cubeVector->size(); i++) {
-        b(i) = 0;
-        float* s = calculateVolume(cubeVector->at(i).mesh);
-        for (int j = 0; j < 10; j++) {
-            BetaOptimization::S_mat(j,i) = s[j];
-        }
-    }
+    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization::setSMatrixForCubes(cubeVector);
 
     switch(optimizationType)
     {
@@ -597,22 +661,45 @@ void BetaOptimization::optimizeBetas(int optimizationType)
 
     BetaOptimization::octree.updateBetaValues();
 
-    BetaOptimization::octree.deleteNodeMeshes();
+    BetaOptimization::finishBetaOptimization();
 
-    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
-    BetaOptimization::octree.setVoids();
+}
 
-    BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
+/**
+ * @brief BetaOptimization::optimizeBetasWithSplitAndMerge
+ * @param optimizationType
+ */
+void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
+{
 
-    if(shellMesh != NULL)
+    BetaOptimization::setSForCompleteMesh();
+
+    bool notConverged =  true;
+
+    while(notConverged)
     {
-       delete shellMesh;
+        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+        cout << "number of cubes is " << cubeVector->size() << endl;
+
+        BetaOptimization::setSMatrixForCubes(cubeVector);
+
+        switch(optimizationType)
+        {
+            case OPTIMIZATION_TYPE_YOYO:
+                optimizeBetasForYoyo(cubeVector);
+            break;
+            case OPTIMIZATION_TYPE_TOP:
+                optimizeBetasForTop(cubeVector);
+            break;
+
+        }
+
+        BetaOptimization::octree.updateBetaValues();
+
+        notConverged = BetaOptimization::octree.splitAndMerge(0.00001);
     }
 
-    shellMesh = newShellMesh;
-
-    BetaOptimization::octree.setDirty();
+    BetaOptimization::finishBetaOptimization();
 
 }
 
@@ -656,22 +743,7 @@ void BetaOptimization::testSimpleSplitAndMerge()
 
     BetaOptimization::octree.updateBetaValuesWithPropagation();
 
-    BetaOptimization::octree.deleteNodeMeshes();
-
-    // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
-    BetaOptimization::octree.setVoids();
-
-    BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
-
-    if(shellMesh != NULL)
-    {
-       delete shellMesh;
-    }
-
-    shellMesh = newShellMesh;
-
-    BetaOptimization::octree.setDirty();
+    BetaOptimization::finishBetaOptimization();
 
 }
 
@@ -724,6 +796,15 @@ void BetaOptimization::testSplitAndMerge()
         // do split and merge
         not_converged = BetaOptimization::octree.splitAndMerge(0.001);
     }
+
+    BetaOptimization::finishBetaOptimization();
+}
+
+/**
+ * @brief BetaOptimization::finishBetaOptimization
+ */
+void BetaOptimization::finishBetaOptimization()
+{
 
     BetaOptimization::octree.deleteNodeMeshes();
 

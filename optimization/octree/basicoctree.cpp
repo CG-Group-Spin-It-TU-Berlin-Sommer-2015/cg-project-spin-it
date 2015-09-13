@@ -88,6 +88,16 @@ void BasicOctree::setOptimizationMaxDepth(GLint depth)
                 this->startMaxDepth:this->optimizationMaxDepth;
 }
 
+GLint BasicOctree::getStartMaxDepth()
+{
+    return this->startMaxDepth;
+}
+
+GLint BasicOctree::getOptimizationMaxDepth()
+{
+    return this->optimizationMaxDepth;
+}
+
 //-------------------------------------------------- quantizing mesh
 
 /**
