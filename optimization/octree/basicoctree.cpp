@@ -3,7 +3,7 @@
 using namespace std;
 using namespace octree;
 
-const int GEOMETRY_DATA_SIZE    = 3;
+const int GEOMETRY_DATA_SIZE = 3;
 
 BasicOctree::BasicOctree():
 mesh(NULL),
@@ -1107,7 +1107,7 @@ void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->nodeDepth>=depth)
+        if(nodePointer->nodeDepth==depth)
         {
             indices->push_back(nodePointer->index);
         }
@@ -1289,7 +1289,7 @@ void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
             if(node.x>=viewIndex)
             {
-                //continue;
+                continue;
             }
 
             /* add vertices*/

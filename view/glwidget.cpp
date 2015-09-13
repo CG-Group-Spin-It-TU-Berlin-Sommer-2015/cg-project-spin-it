@@ -1,8 +1,9 @@
 #include "glwidget.h"
 
 #define DEFAULT_SCALE_FACTOR 1.66238999
-
 #define Y_DEFAULT_VALUE 4.f
+
+#define USE_OPTIMIZATION
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
@@ -238,11 +239,23 @@ void GLWidget::paintGL()
     shader->setUniformValue("nMatrix", view_matrix * model_matrix);
     shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
+    #ifdef USE_OPTIMIZATION
+
+    if(showInnerSurface && BetaOptimization::shellMesh != NULL)
+    {
+        shader->setUniformValue("color", QColor(115, 115, 85));
+        BetaOptimization::shellMesh->render(shader, GL_TRIANGLES);
+    }
+
+    #else
+
     if(showInnerSurface && Model::shellMesh != NULL)
     {
         shader->setUniformValue("color", QColor(115, 115, 85));
         Model::shellMesh->render(shader, GL_TRIANGLES);
     }
+
+    #endif
 
     shader->release();
     colorshader->bind();
@@ -250,11 +263,23 @@ void GLWidget::paintGL()
     colorshader->setUniformValue("nMatrix", view_matrix * model_matrix);
     colorshader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
 
+    #ifdef USE_OPTIMIZATION
+
+    if(showGrid && BetaOptimization::shellMesh != NULL)
+    {
+        colorshader->setUniformValue("color", QColor(Qt::blue));
+        BetaOptimization::octree.renderOctreeGrid(colorshader);
+    }
+
+    #else
+
     if(showGrid && Model::shellMesh != NULL)
     {
         colorshader->setUniformValue("color", QColor(Qt::blue));
         Model::octree->renderOctreeGrid(colorshader);
     }
+
+    #endif
 
     colorshader->release();
     shader->bind();
@@ -308,7 +333,6 @@ void GLWidget::paintGL()
 void GLWidget::resizeGL(int width, int height)
 {
     projection_matrix.setToIdentity();
-    //projection_matrix.ortho(-6, 6, -6, 6, 6, -6);
     projection_matrix.perspective(60,1,5,200);
 
     glViewport(0,0, width, height);
@@ -501,16 +525,22 @@ void GLWidget::makeItSpin()
 
     rebuildOctree = true;
 
+    #ifdef USE_OPTIMIZATION
+
+    BetaOptimization::mesh->swapYZ();
+    BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
+    BetaOptimization::mesh->swapYZ();
+
+    //BetaOptimization::testSimpleSplitAndMerge();
+    //BetaOptimization::testSplitAndMerge();
+
+    #else
+
+    Model::mesh->swapYZ();
+    Model::hollow();
     Model::mesh->swapYZ();
 
-    //Model::hollow();
-
-    Model::testOptimizer();
-
-    //Model::testSimpleSplitAndMerge();
-    //Model::testSplitAndMerge();
-
-    Model::mesh->swapYZ();
+    #endif
 
     this->updateGL();
 }
@@ -726,11 +756,23 @@ void GLWidget::calculateOctree()
         newModifiedMesh = tempMesh;
     }
 
+    #ifdef USE_OPTIMIZATION
+
+    BetaOptimization::initializeOctree(
+                newModifiedMesh,
+                this->startMaximalDepth,
+                this->optimizationMaximalDepth,
+                this->shellExtensionValue);
+
+    #else
+
     Model::initializeOctree(
                 newModifiedMesh,
                 this->startMaximalDepth,
                 this->optimizationMaximalDepth,
                 this->shellExtensionValue);
+
+    #endif
 
     rebuildOctree = false;
 
@@ -771,11 +813,22 @@ void GLWidget::saveMesh()
  */
 void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
-    Mesh* shell = Model::octree->getShellMesh(true);
 
+    #ifdef USE_OPTIMIZATION
+
+    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+    Mesh* mesh1 = booleanUnion(BetaOptimization::mesh,half_sphere);
+    Mesh* mesh2 = mergeMeshes(mesh1,shell);
+    writeMeshFromObjFile(fileName.toStdString(),mesh2);
+
+    #else
+
+    Mesh* shell = Model::octree->getShellMesh(true);
     Mesh* mesh1 = booleanUnion(Model::mesh,half_sphere);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
+
+    #endif
 
     delete shell;
     delete mesh1;
@@ -788,11 +841,22 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
  */
 void GLWidget::saveMeshAsTop(QString fileName)
 {
-    Mesh* shell = Model::octree->getShellMesh(true);
 
+    #ifdef USE_OPTIMIZATION
+
+    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+    Mesh* mesh1 = booleanUnion(BetaOptimization::mesh,rot_axis);
+    Mesh* mesh2 = mergeMeshes(mesh1,shell);
+    writeMeshFromObjFile(fileName.toStdString(),mesh2);
+
+    #else
+
+    Mesh* shell = Model::octree->getShellMesh(true);
     Mesh* mesh1 = booleanUnion(Model::mesh,rot_axis);
     Mesh* mesh2 = mergeMeshes(mesh1,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh2);
+
+    #endif
 
     delete shell;
     delete mesh1;
@@ -805,9 +869,20 @@ void GLWidget::saveMeshAsTop(QString fileName)
  */
 void GLWidget::saveMeshAsYoyo(QString fileName)
 {
+
+    #ifdef USE_OPTIMIZATION
+
+    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+    Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
+    writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+    #else
+
     Mesh* shell = Model::octree->getShellMesh(true);
     Mesh* mesh = mergeMeshes(Model::mesh,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+    #endif
 
     delete shell;
     delete mesh;

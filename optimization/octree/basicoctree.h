@@ -8,7 +8,9 @@
 #include <QVector>
 #include <QVector3D>
 
-#include "mesh.h"
+#include "view/utility/mesh.h"
+
+#define START_DENSITY 0.99999f
 
 namespace octree
 {
@@ -42,7 +44,7 @@ struct octreeNode {
       isMergeChild = false;
       isIgnored = false;
 
-      beta = 0.0;
+      beta = START_DENSITY;
 
       mesh = NULL;
 

@@ -23,6 +23,11 @@ void ExtendedOctree::updateBetaValues()
 
 }
 
+/**
+ * @brief ExtendedOctree::propagateBeta
+ * @param index
+ * @param beta
+ */
 void ExtendedOctree::propagateBeta(GLint index, GLfloat beta)
 {
     octreeNode* nodePointer = &this->octreeNodes.data()[index];
@@ -45,6 +50,9 @@ void ExtendedOctree::propagateBeta(GLint index, GLfloat beta)
 
 }
 
+/**
+ * @brief ExtendedOctree::updateBetaValuesWithPropagation
+ */
 void ExtendedOctree::updateBetaValuesWithPropagation()
 {
 
@@ -156,6 +164,10 @@ void ExtendedOctree::addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector
 
 }
 
+/**
+ * @brief ExtendedOctree::createMeshForNode
+ * @param index
+ */
 void ExtendedOctree::createMeshForNode(GLint index)
 {
 
@@ -201,7 +213,6 @@ void ExtendedOctree::createMeshForNode(GLint index)
     childIndices.clear();
 
 }
-
 
 /**
  * @brief ExtendedOctree::getInnerCubes Get a pointer of a vector of cubes which represent the geometry of all inner leaf nodes.
@@ -250,7 +261,12 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
     return &cubeVector;
 }
 
-QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth()
+/**
+ * @brief ExtendedOctree::getCubesOfLowerDepth
+ * @param depth
+ * @return
+ */
+QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth(int depth)
 {
 
     // reset the default state
@@ -259,10 +275,11 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth()
     QVector<GLint> nodeIndices;
     octreeNode* nodePointer;
 
-    for(int i=1;i<this->optimizationMaxDepth-3;i++)
-    {
+    int currentMaxDepth = depth>this->startMaxDepth?depth:this->startMaxDepth;
 
-        /* ------------------------ */
+    // get inner leaf nodes for depht smaller currentMaxDepth (depth)
+    for(int i=1;i<currentMaxDepth;i++)
+    {
 
         getNodesOfDepth(i,&nodeIndices);
 
@@ -298,13 +315,9 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth()
 
         nodeIndices.clear();
 
-        /* ------------------------ */
-
     }
 
-    /* ------------------------ */
-
-    getNodesOfDepth(this->optimizationMaxDepth-3,&nodeIndices);
+    getNodesOfDepth(currentMaxDepth,&nodeIndices);
 
     for(int j=0;j<nodeIndices.length();j++)
     {
@@ -337,8 +350,6 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth()
     }
 
     nodeIndices.clear();
-
-    /* ------------------------ */
 
     return &cubeVector;
 }
@@ -782,7 +793,7 @@ void ExtendedOctree::setVoids()
 }
 
 /**
- * @brief ExtendedOctree::setVoids Mark every inner leaf nodes as void or not.
+ * @brief ExtendedOctree::setMergeNodes()
  */
 void ExtendedOctree::setMergeNodes()
 {

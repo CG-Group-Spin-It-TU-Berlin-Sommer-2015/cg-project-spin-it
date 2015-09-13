@@ -1,7 +1,7 @@
 #ifndef EXTENDEDOCTREE_H
 #define EXTENDEDOCTREE_H
 
-#include "basicoctree.h"
+#include "optimization/octree/basicoctree.h"
 
 namespace octree {
 
@@ -30,7 +30,7 @@ public:
     void createMeshForNode(GLint index);
 
     QVector<octree::cubeObject>* getInnerCubes();
-    QVector<octree::cubeObject>* getCubesOfLowerDepth();
+    QVector<octree::cubeObject>* getCubesOfLowerDepth(int depth);
 
     bool splitAndMerge(GLfloat epsilon);
 

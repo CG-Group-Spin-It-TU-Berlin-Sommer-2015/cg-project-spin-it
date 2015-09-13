@@ -5,7 +5,7 @@
 #include <eigen3/Eigen/Dense>
 
 #include "view/utility/mesh.h"
-#include "view/utility/extendedoctree.h"
+#include "optimization/octree/extendedoctree.h"
 
 using namespace Eigen;
 using namespace std;
@@ -28,15 +28,10 @@ public:
     static Mesh* shellMesh;
     static ExtendedOctree* octree;
 
-    static VectorXd S_ges;
-    static MatrixXd S_mat;
-
     static QVector<int>* J;
 
 public:
-    static void testSimpleSplitAndMerge();
-    static void testSplitAndMerge();
-    static void testOptimizer();
+
     static void hollow();
 
     static void initializeOctree(

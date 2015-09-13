@@ -20,10 +20,11 @@ SOURCES += main.cpp \
     view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
     view/utility/meshwriter.cpp \
-    view/utility/simplemeshmerger.cpp \
-    view/utility/basicoctree.cpp \
-    view/utility/extendedoctree.cpp \
-    view/utility/meshbooleanfunctions.cpp
+    optimization/octree/extendedoctree.cpp \
+    optimization/octree/basicoctree.cpp \
+    optimization/meshOperations/simplemeshmerger.cpp \
+    optimization/meshOperations/meshbooleanfunctions.cpp \
+    optimization/betaOptimization/betaoptimization.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -32,10 +33,11 @@ HEADERS  += view/mainwindow.h \
     view/utility/mesh.h \
     view/utility/meshreader.h \
     view/utility/meshwriter.h \
-    view/utility/simplemeshmerger.h \
-    view/utility/basicoctree.h \
-    view/utility/extendedoctree.h \
-    view/utility/meshbooleanfunctions.h
+    optimization/octree/extendedoctree.h \
+    optimization/octree/basicoctree.h \
+    optimization/meshOperations/simplemeshmerger.h \
+    optimization/meshOperations/meshbooleanfunctions.h \
+    optimization/betaOptimization/betaoptimization.h
 
 FORMS    += view/mainwindow.ui
 
@@ -46,9 +48,6 @@ OTHER_FILES += \
 RESOURCES += \
     shader.qrc
 
-#unix:!macx: LIBS += -Lusr/lib/ -lpcl_octree
-#INCLUDEPATH += /usr/include/pcl-1.7
-#DEPENDPATH += /usr/include/pcl-1.7
 
 unix:!macx: LIBS += -L$$PWD/../cork/lib/ -lcork
 
@@ -60,7 +59,6 @@ unix:!macx: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a
 INCLUDEPATH += $$PWD/../eigen
 DEPENDPATH += $$PWD/../eigen
 
-
 unix:!macx: LIBS += -L$$PWD/../../../../usr/lib/x86_64-linux-gnu/ -lgmp
 
 INCLUDEPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
@@ -68,38 +66,7 @@ DEPENDPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/lib/x86_64-linux-gnu/libgmp.a
 
-
-unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lopt
-
-INCLUDEPATH += $$PWD/../../../../usr/local/include/
-DEPENDPATH += $$PWD/../../../../usr/local/include/
-
-unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libopt.a
-
-#unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnewmat
-#INCLUDEPATH += $$PWD/../../../../usr/local/include/
-#DEPENDPATH += $$PWD/../../../../usr/local/include/
-#unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libnewmat.a
-
-#unix:!macx: LIBS += -L$$PWD/../dlib-18.17/dlib/build/ -ldlib
-#INCLUDEPATH += $$PWD/../dlib-18.17/
-#DEPENDPATH += $$PWD/../dlib-18.17/
-#unix:!macx: PRE_TARGETDEPS += $$PWD/../dlib-18.17/dlib/build/libdlib.a
-
 unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnlopt
 INCLUDEPATH += $$PWD/../../../../usr/local/include/
 DEPENDPATH += $$PWD/../../../../usr/local/include/
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libnlopt.a
-
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../cork/lib/release/ -lcork
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../cork/lib/debug/ -lcork
-#else:unix: LIBS += -L$$PWD/../cork/lib/ -lcork
-
-#INCLUDEPATH += $$PWD/../cork/include
-#DEPENDPATH += $$PWD/../cork/include
-
-#win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/libcork.a
-#else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/libcork.a
-#else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/release/cork.lib
-#else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/../cork/lib/debug/cork.lib
-#else:unix: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a

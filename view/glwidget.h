@@ -14,11 +14,13 @@
 #include "utility/mesh.h"
 #include "utility/meshreader.h"
 #include "utility/meshwriter.h"
-#include "utility/simplemeshmerger.h"
-#include "utility/meshbooleanfunctions.h"
+
 #include "utility/shader.h"
-#include "utility/basicoctree.h"
-#include "utility/extendedoctree.h"
+
+#include "optimization/meshOperations/simplemeshmerger.h"
+#include "optimization/meshOperations/meshbooleanfunctions.h"
+#include "optimization/octree/extendedoctree.h"
+#include "optimization/betaOptimization/betaoptimization.h"
 
 #define TRANSLATION_TAB 0
 #define MODEL_TAB       1
