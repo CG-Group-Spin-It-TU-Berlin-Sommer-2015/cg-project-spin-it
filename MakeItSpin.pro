@@ -24,7 +24,8 @@ SOURCES += main.cpp \
     optimization/octree/basicoctree.cpp \
     optimization/meshOperations/simplemeshmerger.cpp \
     optimization/meshOperations/meshbooleanfunctions.cpp \
-    optimization/betaOptimization/betaoptimization.cpp
+    optimization/betaOptimization/betaoptimization.cpp \
+    optimization/betaOptimization/betaoptimization2.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
@@ -37,7 +38,8 @@ HEADERS  += view/mainwindow.h \
     optimization/octree/basicoctree.h \
     optimization/meshOperations/simplemeshmerger.h \
     optimization/meshOperations/meshbooleanfunctions.h \
-    optimization/betaOptimization/betaoptimization.h
+    optimization/betaOptimization/betaoptimization.h \
+    optimization/betaOptimization/betaoptimization2.h
 
 FORMS    += view/mainwindow.ui
 

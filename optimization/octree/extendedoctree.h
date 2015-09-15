@@ -46,18 +46,18 @@ public:
 
     void deleteNodeMeshes();
 
-
-
 private:
 
     QVector<octree::cubeObject> cubeVector;
+
+private:
+
 
     void handleShellNeighbor(GLint x, GLint y, GLint z, QVector<GLint>* backVec);
     void setMergeChild(GLint index, GLfloat beta);
     void addCubeMesh(GLint index,QVector<GLfloat>* geometry, QVector<GLint>* indices, GLint offset);
 
     void propagateBeta(GLint index, GLfloat beta);
-
 
 };
 

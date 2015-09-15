@@ -430,7 +430,7 @@ void Mesh::updateNormals()
 QVector3D Mesh::getLowestPoint()
 {
 
-    GLfloat lowest_y = std::numeric_limits<float>::min();
+    GLfloat lowest_y = std::numeric_limits<float>::max();
 
     QVector3D vec;
 

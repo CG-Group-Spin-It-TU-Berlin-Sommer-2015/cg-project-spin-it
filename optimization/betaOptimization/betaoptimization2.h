@@ -1,5 +1,5 @@
-#ifndef BETAOPTIMIZATION_H
-#define BETAOPTIMIZATION_H
+#ifndef BETAOPTIMIZATION2_H
+#define BETAOPTIMIZATION2_H
 
 #include <stdio.h>
 #include <eigen3/Eigen/Dense>
@@ -19,7 +19,7 @@ typedef struct {
     int index;
 } spin_it_constraint_data;
 
-class BetaOptimization
+class BetaOptimization2
 {
 
 public:
@@ -68,4 +68,4 @@ private:
 
 };
 
-#endif // BETAOPTIMIZATION_H
+#endif // BETAOPTIMIZATION2_H

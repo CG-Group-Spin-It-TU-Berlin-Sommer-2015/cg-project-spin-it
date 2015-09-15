@@ -1264,7 +1264,7 @@ void BasicOctree::makeExplicitMergeRoot(GLint index)
 void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
 {
 
-    if(this->octreeNodes.length()<0){
+    if(this->octreeNodes.length()<1){
         return;
     }
 

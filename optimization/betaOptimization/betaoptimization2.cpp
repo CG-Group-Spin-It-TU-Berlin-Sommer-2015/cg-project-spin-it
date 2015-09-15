@@ -1,4 +1,4 @@
-#include "betaoptimization.h"
+#include "betaoptimization2.h"
 
 using namespace Eigen;
 using namespace std;
@@ -14,80 +14,80 @@ using namespace std;
 #define s_y2  S(8)
 #define s_z2  S(9)
 
-#define Smat_1(i) BetaOptimization::S_mat(0,i-1)
-#define Smat_x(i) BetaOptimization::S_mat(1,i-1)
-#define Smat_y(i) BetaOptimization::S_mat(2,i-1)
-#define Smat_z(i) BetaOptimization::S_mat(3,i-1)
-#define Smat_xy(i) BetaOptimization::S_mat(4,i-1)
-#define Smat_yz(i) BetaOptimization::S_mat(5,i-1)
-#define Smat_xz(i) BetaOptimization::S_mat(6,i-1)
-#define Smat_x2(i) BetaOptimization::S_mat(7,i-1)
-#define Smat_y2(i) BetaOptimization::S_mat(8,i-1)
-#define Smat_z2(i) BetaOptimization::S_mat(9,i-1)
+#define Smat_1(i) BetaOptimization2::S_mat(0,i-1)
+#define Smat_x(i) BetaOptimization2::S_mat(1,i-1)
+#define Smat_y(i) BetaOptimization2::S_mat(2,i-1)
+#define Smat_z(i) BetaOptimization2::S_mat(3,i-1)
+#define Smat_xy(i) BetaOptimization2::S_mat(4,i-1)
+#define Smat_yz(i) BetaOptimization2::S_mat(5,i-1)
+#define Smat_xz(i) BetaOptimization2::S_mat(6,i-1)
+#define Smat_x2(i) BetaOptimization2::S_mat(7,i-1)
+#define Smat_y2(i) BetaOptimization2::S_mat(8,i-1)
+#define Smat_z2(i) BetaOptimization2::S_mat(9,i-1)
 
 #define MAX(v1,v2) v1>v2?v1:v2;
 #define MIN(v1,v2) v1<v2?v1:v2;
 
-Mesh* BetaOptimization::mesh = 0;
+Mesh* BetaOptimization2::mesh = 0;
 
-ExtendedOctree BetaOptimization::octree;
+ExtendedOctree BetaOptimization2::octree;
 
-Mesh* BetaOptimization::shellMesh = NULL;
+Mesh* BetaOptimization2::shellMesh = NULL;
 
-VectorXd BetaOptimization::S_comp;
-MatrixXd BetaOptimization::S_mat;
+VectorXd BetaOptimization2::S_comp;
+MatrixXd BetaOptimization2::S_mat;
 
-float BetaOptimization::mesh_volume[10];
+float BetaOptimization2::mesh_volume[10];
 
 /**
- * @brief BetaOptimization::initializeOctree Initialize the octree for the optimation
+ * @brief BetaOptimization2::initializeOctree Initialize the octree for the optimation
  * @param newModifiedMesh the mesh for the optimation
  * @param startDepth the start depth
  * @param maximumDepth the maximum depth
  * @param shellExtensionValue the shell extension value
  */
-void BetaOptimization::initializeOctree(
+void BetaOptimization2::initializeOctree(
         Mesh* newModifiedMesh,
         GLint startDepth,
         GLint maximumDepth,
         GLint shellExtensionValue)
 {
 
-    if(BetaOptimization::mesh != NULL)
+    if(BetaOptimization2::mesh != NULL)
     {
-        delete BetaOptimization::mesh;
+        delete BetaOptimization2::mesh;
     }
 
-    BetaOptimization::mesh = newModifiedMesh;
+    BetaOptimization2::mesh = newModifiedMesh;
 
     // initialize the octree
     // set point cloud
-    BetaOptimization::octree.setMesh(mesh);
-    BetaOptimization::octree.setStartMaxDepth(startDepth);
-    BetaOptimization::octree.setOptimizationMaxDepth(maximumDepth);
-    BetaOptimization::octree.quantizeSurface();
-    BetaOptimization::octree.setupVectors();
+    BetaOptimization2::octree.setMesh(mesh);
+    BetaOptimization2::octree.setStartMaxDepth(startDepth);
+    BetaOptimization2::octree.setOptimizationMaxDepth(maximumDepth);
+    BetaOptimization2::octree.quantizeSurface();
+    BetaOptimization2::octree.setupVectors();
 
     // calculate outer and inner cells
-    BetaOptimization::octree.setupOctree();
-    BetaOptimization::octree.setOuterNodes();
-    BetaOptimization::octree.setInnerNodes();
-    BetaOptimization::octree.increaseShell(shellExtensionValue);
-    BetaOptimization::octree.setMergeNodes();
-    BetaOptimization::octree.adjustToBasicMaxDepth();
+    BetaOptimization2::octree.setupOctree();
+    BetaOptimization2::octree.setOuterNodes();
+    BetaOptimization2::octree.setInnerNodes();
+    BetaOptimization2::octree.increaseShell(shellExtensionValue);
+    BetaOptimization2::octree.setMergeNodes();
+    BetaOptimization2::octree.adjustToBasicMaxDepth();
 
     // get mesh for inner shell (needed for view)
-    BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
+    BetaOptimization2::octree.createInnerSurface();
+    Mesh* newShellMesh = BetaOptimization2::octree.getShellMesh();
 
-    if(BetaOptimization::shellMesh != NULL)
+    if(BetaOptimization2::shellMesh != NULL)
     {
-       delete BetaOptimization::shellMesh;
+       delete BetaOptimization2::shellMesh;
     }
 
-    BetaOptimization::shellMesh = newShellMesh;
+    BetaOptimization2::shellMesh = newShellMesh;
 
-    BetaOptimization::mesh = newModifiedMesh;
+    BetaOptimization2::mesh = newModifiedMesh;
 
 
 }
@@ -100,7 +100,7 @@ void BetaOptimization::initializeOctree(
  * @param data
  * @return
  */
-double BetaOptimization::spinItContraints(unsigned n, const double *x, double *grad, void *data)
+double BetaOptimization2::spinItContraints(unsigned n, const double *x, double *grad, void *data)
 {
    spin_it_constraint_data *d = (spin_it_constraint_data *) data;
    int index = d->index;
@@ -110,7 +110,7 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
    for(unsigned int i=1;i<n;i++){
        betas(i-1) = x[i];
    }
-   MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
+   MatrixXd S = BetaOptimization2::S_comp - BetaOptimization2::S_mat*betas;
 
    double cosp = cos(phi);
    double sinp = sin(phi);
@@ -206,7 +206,7 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
  * @param my_func_data
  * @return
  */
-double BetaOptimization::spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, void *my_func_data)
+double BetaOptimization2::spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
     (void)my_func_data;
@@ -221,7 +221,7 @@ double BetaOptimization::spinItEnergyFunctionForYoyo(unsigned n, const double *x
     double sinp = sin(phi);
 
     // current model volumes
-    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
+    MatrixXd S = BetaOptimization2::S_comp - BetaOptimization2::S_mat*betas;
 
     // inertia tensor
     MatrixXd I(2,2);
@@ -306,7 +306,7 @@ double BetaOptimization::spinItEnergyFunctionForYoyo(unsigned n, const double *x
  * @param my_func_data
  * @return
  */
-double BetaOptimization::spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, void *my_func_data)
+double BetaOptimization2::spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
     (void)my_func_data;
@@ -321,7 +321,7 @@ double BetaOptimization::spinItEnergyFunctionForTop(unsigned n, const double *x,
     double sinp = sin(phi);
 
     // current model volumes
-    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
+    MatrixXd S = BetaOptimization2::S_comp - BetaOptimization2::S_mat*betas;
 
     // inertia tensor
     MatrixXd I(2,2);
@@ -414,10 +414,10 @@ double BetaOptimization::spinItEnergyFunctionForTop(unsigned n, const double *x,
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasForYoyo
+ * @brief BetaOptimization2::optimizeBetasForYoyo
  * @param cubeVector
  */
-void BetaOptimization::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVector)
+void BetaOptimization2::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVector)
 {
 
     double minf;
@@ -485,10 +485,10 @@ void BetaOptimization::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVec
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasForTop
+ * @brief BetaOptimization2::optimizeBetasForTop
  * @param cubeVector
  */
-void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVector)
+void BetaOptimization2::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVector)
 {
 
     double minf;
@@ -561,55 +561,55 @@ void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVect
 }
 
 /**
- * @brief BetaOptimization::setSForCompleteMesh
+ * @brief BetaOptimization2::setSForCompleteMesh
  */
-void  BetaOptimization::setSForCompleteMesh()
+void  BetaOptimization2::setSForCompleteMesh()
 {
-    BetaOptimization::S_comp.resize(10);
+    BetaOptimization2::S_comp.resize(10);
 
-    float* s = calculateVolume(BetaOptimization::mesh);
+    float* s = calculateVolume(BetaOptimization2::mesh);
     for (int i = 0; i < 10; i++) {
-        BetaOptimization::S_comp(i) = s[i];
+        BetaOptimization2::S_comp(i) = s[i];
     }
 
 }
 
 /**
- * @brief BetaOptimization::setSMatrixForCubes
+ * @brief BetaOptimization2::setSMatrixForCubes
  * @param cubeVector
  */
-void  BetaOptimization::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVector)
+void  BetaOptimization2::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVector)
 {
 
-    BetaOptimization::S_mat.resize(10,cubeVector->size());
+    BetaOptimization2::S_mat.resize(10,cubeVector->size());
 
     for (int i = 0; i < cubeVector->size(); i++) {
         float* s = calculateVolume(cubeVector->at(i).mesh);
         for (int j = 0; j < 10; j++) {
-            BetaOptimization::S_mat(j,i) = s[j];
+            BetaOptimization2::S_mat(j,i) = s[j];
         }
     }
 
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasBottomUp
+ * @brief BetaOptimization2::optimizeBetasBottomUp
  * @param optimizationType
  */
-void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
+void BetaOptimization2::optimizeBetasBottomUp(GLint optimizationType)
 {
 
-    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization2::setSForCompleteMesh();
 
-    GLint depth = BetaOptimization::octree.getOptimizationMaxDepth()-1;
+    GLint depth = BetaOptimization2::octree.getOptimizationMaxDepth()-1;
 
     for (int i = 1; i < depth+1; i++) {
 
-        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
+        QVector<octree::cubeObject>* cubeVector = BetaOptimization2::octree.getCubesOfLowerDepth(i);
 
         cout << "number of cubes is " << cubeVector->size() << endl;
 
-        BetaOptimization::setSMatrixForCubes(cubeVector);
+        BetaOptimization2::setSMatrixForCubes(cubeVector);
 
         switch(optimizationType)
         {
@@ -622,27 +622,27 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 
         }
 
-        BetaOptimization::octree.updateBetaValuesWithPropagation();
+        BetaOptimization2::octree.updateBetaValuesWithPropagation();
 
     }
 
-    BetaOptimization::finishBetaOptimization();
+    BetaOptimization2::finishBetaOptimization();
 
 }
 
 /**
- * @brief BetaOptimization::optimizeBetas
+ * @brief BetaOptimization2::optimizeBetas
  * @param optimizationType
  */
-void BetaOptimization::optimizeBetas(int optimizationType)
+void BetaOptimization2::optimizeBetas(int optimizationType)
 {
 
-    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+    QVector<octree::cubeObject>* cubeVector = BetaOptimization2::octree.getInnerCubes();
 
     cout << "number of cubes is " << cubeVector->size() << endl;
 
-    BetaOptimization::setSForCompleteMesh();
-    BetaOptimization::setSMatrixForCubes(cubeVector);
+    BetaOptimization2::setSForCompleteMesh();
+    BetaOptimization2::setSMatrixForCubes(cubeVector);
 
     switch(optimizationType)
     {
@@ -655,29 +655,29 @@ void BetaOptimization::optimizeBetas(int optimizationType)
 
     }
 
-    BetaOptimization::octree.updateBetaValues();
+    BetaOptimization2::octree.updateBetaValues();
 
-    BetaOptimization::finishBetaOptimization();
+    BetaOptimization2::finishBetaOptimization();
 
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasWithSplitAndMerge
+ * @brief BetaOptimization2::optimizeBetasWithSplitAndMerge
  * @param optimizationType
  */
-void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
+void BetaOptimization2::optimizeBetasWithSplitAndMerge(int optimizationType)
 {
 
-    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization2::setSForCompleteMesh();
 
     bool notConverged =  true;
 
     while(notConverged)
     {
-        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+        QVector<octree::cubeObject>* cubeVector = BetaOptimization2::octree.getInnerCubes();
         cout << "number of cubes is " << cubeVector->size() << endl;
 
-        BetaOptimization::setSMatrixForCubes(cubeVector);
+        BetaOptimization2::setSMatrixForCubes(cubeVector);
 
         switch(optimizationType)
         {
@@ -690,24 +690,24 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 
         }
 
-        BetaOptimization::octree.updateBetaValues();
+        BetaOptimization2::octree.updateBetaValues();
 
-        notConverged = BetaOptimization::octree.splitAndMerge(0.00001);
+        notConverged = BetaOptimization2::octree.splitAndMerge(0.00001);
     }
 
-    BetaOptimization::finishBetaOptimization();
+    BetaOptimization2::finishBetaOptimization();
 
 }
 
 /**
- * @brief BetaOptimization::testSimpleSplitAndMerge
+ * @brief BetaOptimization2::testSimpleSplitAndMerge
  */
-void BetaOptimization::testSimpleSplitAndMerge()
+void BetaOptimization2::testSimpleSplitAndMerge()
 {
 
     QVector<octree::cubeObject>* cubeVector = NULL;
 
-    cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(3);
+    cubeVector = BetaOptimization2::octree.getCubesOfLowerDepth(3);
 
     for (int i = 0; i < cubeVector->size(); i++) {
         octree::cubeObject* obj = &cubeVector->data()[i];
@@ -737,16 +737,16 @@ void BetaOptimization::testSimpleSplitAndMerge()
         obj->beta = above && !under ? 1.0 : (under && !above? 0.0 : 0.5);
     }
 
-    BetaOptimization::octree.updateBetaValuesWithPropagation();
+    BetaOptimization2::octree.updateBetaValuesWithPropagation();
 
-    BetaOptimization::finishBetaOptimization();
+    BetaOptimization2::finishBetaOptimization();
 
 }
 
 /**
- * @brief BetaOptimization::testSplitAndMerge
+ * @brief BetaOptimization2::testSplitAndMerge
  */
-void BetaOptimization::testSplitAndMerge()
+void BetaOptimization2::testSplitAndMerge()
 {
 
     QVector<octree::cubeObject>* cubeVector = NULL;
@@ -756,7 +756,7 @@ void BetaOptimization::testSplitAndMerge()
     {
 
         // get the inner cubes of the octree
-        cubeVector = BetaOptimization::octree.getInnerCubes();
+        cubeVector = BetaOptimization2::octree.getInnerCubes();
 
         for (int i = 0; i < cubeVector->size(); i++) {
             octree::cubeObject* obj = &cubeVector->data()[i];
@@ -787,28 +787,28 @@ void BetaOptimization::testSplitAndMerge()
         }
 
         // set new betas and clrea cubeVector
-        BetaOptimization::octree.updateBetaValues();
+        BetaOptimization2::octree.updateBetaValues();
 
         // do split and merge
-        not_converged = BetaOptimization::octree.splitAndMerge(0.001);
+        not_converged = BetaOptimization2::octree.splitAndMerge(0.001);
     }
 
-    BetaOptimization::finishBetaOptimization();
+    BetaOptimization2::finishBetaOptimization();
 }
 
 /**
- * @brief BetaOptimization::finishBetaOptimization
+ * @brief BetaOptimization2::finishBetaOptimization2
  */
-void BetaOptimization::finishBetaOptimization()
+void BetaOptimization2::finishBetaOptimization()
 {
 
-    BetaOptimization::octree.deleteNodeMeshes();
+    BetaOptimization2::octree.deleteNodeMeshes();
 
     // set each cube of the octree either to void (beta>0.5) or not void (beta<=0.5)
-    BetaOptimization::octree.setVoids();
+    BetaOptimization2::octree.setVoids();
 
-    BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
+    BetaOptimization2::octree.createInnerSurface();
+    Mesh* newShellMesh = BetaOptimization2::octree.getShellMesh();
 
     if(shellMesh != NULL)
     {
@@ -817,20 +817,20 @@ void BetaOptimization::finishBetaOptimization()
 
     shellMesh = newShellMesh;
 
-    BetaOptimization::octree.setDirty();
+    BetaOptimization2::octree.setDirty();
 
 }
 
 /**
- * @brief BetaOptimization::calculateVolume calculates volumne integrals of an object
+ * @brief BetaOptimization2::calculateVolume calculates volumne integrals of an object
  * @param mesh triangulated surface of object
  * @param p density of object (default 1)
  * @return
  */
-float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
+float* BetaOptimization2::calculateVolume(Mesh* mesh, float p)
 {
     for (int i = 0; i < 10; i++) {
-        BetaOptimization::mesh_volume[i] = 0;
+        BetaOptimization2::mesh_volume[i] = 0;
     }
     QVector<float>* geometry = mesh->getGeometry();
     QVector<float>* normals = mesh->getSurfaceNormals();
@@ -867,35 +867,35 @@ float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
         QVector3D h8 = QVector3D(a.y(),a.z(),a.x())*h5 + QVector3D(b.y(),b.z(),b.x())*h6 + QVector3D(c.y(),c.z(),c.x())*h7;
 
         QVector3D si;
-        BetaOptimization::mesh_volume[0] += (n*h1).x();
+        BetaOptimization2::mesh_volume[0] += (n*h1).x();
         si = n*h3;
-        BetaOptimization::mesh_volume[1] += si.x();
-        BetaOptimization::mesh_volume[2] += si.y();
-        BetaOptimization::mesh_volume[3] += si.z();
+        BetaOptimization2::mesh_volume[1] += si.x();
+        BetaOptimization2::mesh_volume[2] += si.y();
+        BetaOptimization2::mesh_volume[3] += si.z();
         si = n*h8;
-        BetaOptimization::mesh_volume[4] += si.x();
-        BetaOptimization::mesh_volume[5] += si.y();
-        BetaOptimization::mesh_volume[6] += si.z();
+        BetaOptimization2::mesh_volume[4] += si.x();
+        BetaOptimization2::mesh_volume[5] += si.y();
+        BetaOptimization2::mesh_volume[6] += si.z();
         si = n*h4;
-        BetaOptimization::mesh_volume[7] += si.x();
-        BetaOptimization::mesh_volume[8] += si.y();
-        BetaOptimization::mesh_volume[9] += si.z();
+        BetaOptimization2::mesh_volume[7] += si.x();
+        BetaOptimization2::mesh_volume[8] += si.y();
+        BetaOptimization2::mesh_volume[9] += si.z();
     }
 
-    BetaOptimization::mesh_volume[0] *= (float) 1/6;
+    BetaOptimization2::mesh_volume[0] *= (float) 1/6;
     for (int i = 1; i <= 3; i++) {
-        BetaOptimization::mesh_volume[i] *= (float) 1/24;
+        BetaOptimization2::mesh_volume[i] *= (float) 1/24;
     }
     for (int i = 4; i <= 6; i++) {
-        BetaOptimization::mesh_volume[i] *= (float) 1/120;
+        BetaOptimization2::mesh_volume[i] *= (float) 1/120;
     }
     for (int i = 7; i <= 9; i++) {
-        BetaOptimization::mesh_volume[i] *= (float) 1/60;
+        BetaOptimization2::mesh_volume[i] *= (float) 1/60;
     }
 
     for (int i = 0; i < 10; i++) {
-        BetaOptimization::mesh_volume[i] *= p;
+        BetaOptimization2::mesh_volume[i] *= p;
     }
 
-    return BetaOptimization::mesh_volume;
+    return BetaOptimization2::mesh_volume;
 }

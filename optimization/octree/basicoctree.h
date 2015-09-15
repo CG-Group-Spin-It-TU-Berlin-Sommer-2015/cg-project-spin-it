@@ -129,29 +129,27 @@ struct hashItem{
 }
 
 class BasicOctree
-{
+{  
 public:
+
     BasicOctree();
     ~BasicOctree();
 
     void setMesh(Mesh* mesh);
-    bool hasMesh();
-
     void setDirty();
-
     void setStartMaxDepth(GLint depth);
-    void setOptimizationMaxDepth(GLint depth);
-
     GLint getStartMaxDepth();
+    void setOptimizationMaxDepth(GLint depth);
     GLint getOptimizationMaxDepth();
+
+    bool hasMesh();
+    bool hasQantizedSurface();
 
     void adjustToBasicMaxDepth();
 
     void quantizeSurface();
-    bool hasQantizedSurface();
 
     void setupVectors();
-
     void setupOctree();
 
     void setOuterNodes();
@@ -163,32 +161,15 @@ public:
     octree::octreeNode* getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLint startNodeIndex);
 
     void createInnerSurface();
-
     Mesh* getShellMesh(bool flip = false);
 
 private:
-
-    void setRawVoxel(GLfloat x,GLfloat y,GLfloat z);
-
-    bool addTriangle(GLint x, GLint y, GLint z);
-    void createTriangle(GLint x, GLint y, GLint z, GLint code);
 
     QVector<GLfloat> geometry;
     QVector<GLint> indices;
     QHash<GLint, octree::hashItem> geometryMap;
 
-    octree::octreeNode* getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z, GLint startNodeIndex);
-
-    GLint setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z);
-
-    void addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer);
-
-    GLint handleHashItem(GLint vertexIndex,QVector3D point);
-
-    GLint sortHalf(GLint start,GLint end,GLint coor, GLint prior);
-
     Mesh* mesh;
-
 
     bool isDirty;
     QOpenGLBuffer* vbo;
@@ -204,6 +185,24 @@ private:
     QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
 
+private:
+
+    void setRawVoxel(GLfloat x,GLfloat y,GLfloat z);
+
+    bool addTriangle(GLint x, GLint y, GLint z);
+
+    void createTriangle(GLint x, GLint y, GLint z, GLint code);
+
+    octree::octreeNode* getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z, GLint startNodeIndex);
+
+    GLint setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x, GLint y, GLint z);
+
+    void addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,QVector<GLfloat>* buffer);
+
+    GLint handleHashItem(GLint vertexIndex,QVector3D point);
+
+    GLint sortHalf(GLint start,GLint end,GLint coor, GLint prior);
+
     void propageDownMergeChildHelper(GLint index);
     void propageDownMergeChild(GLint index);
     void makeExplicitMergeRoot(GLint index);
@@ -211,8 +210,6 @@ private:
 protected:
 
     QVector<octree::octreeNode> octreeNodes;
-
-    GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
     GLint startMaxDepth;
     GLint optimizationMaxDepth;
@@ -225,6 +222,10 @@ protected:
     GLint axis_length;
     GLint plane_length;
     GLdouble max_g;
+
+protected:
+
+    GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
 
     void getInnerLeaves(QVector<GLint>* indices);
     void getShellLeaves(QVector<GLint>* indices);

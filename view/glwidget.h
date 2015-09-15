@@ -22,6 +22,11 @@
 #include "optimization/octree/extendedoctree.h"
 #include "optimization/betaOptimization/betaoptimization.h"
 
+#define TOP_WITH_AXIS_MODE       (topOptimized && !tippeTopOptimized &&  addSpinAxisToTop)
+#define TOP_WITHOUT_AXIS_MODE    (topOptimized && !tippeTopOptimized && !addSpinAxisToTop)
+#define TIPPE_TOP_MODE               (topOptimized &&  tippeTopOptimized)
+#define YOYO_MODE                   !topOptimized
+
 #define TRANSLATION_TAB 0
 #define MODEL_TAB       1
 #define HOLLOWING_TAB   2
@@ -78,12 +83,10 @@ private:
 
     int rot_cam_phi;
 
-    QVector3D middle;
-    GLfloat scaleFactor;
+    QVector3D alignPos;
+    QVector3D trans;
 
-    GLfloat trans_x;
-    GLfloat trans_y;
-    GLfloat trans_z;
+    GLfloat scaleFactor;
     GLfloat scale_xyz;
 
     QPoint mouse_pos;
@@ -101,6 +104,7 @@ private:
 
     bool topOptimized;
     bool tippeTopOptimized;
+    bool addSpinAxisToTop;
 
     bool rebuildOctree;
 
@@ -108,16 +112,16 @@ public:
     explicit GLWidget(QWidget *parent = 0);
     ~GLWidget();
 
-
-
 public slots:
+
     void loadNewMesh();
     void makeItSpin();
+
     void showOnlyOuterSurface();
     void showOnlyInnerSurface();
     void showOnlyOctreeGrid();
 
-    void setView(int index);
+    void setView(int);
     void setViewXY();
     void setViewZ();
     void setViewRotationScale();
@@ -129,27 +133,44 @@ public slots:
 
     void setStartDepthValue(int);
     void setMaximumDepthValue(int);
-
     void setShellExtensionValue(int);
+
     void calculateOctree();
     void saveMesh();
 
     void setYoyo();
     void setTop();
-    void setTippeTop(bool tippeTopOptimized);
+    void setAddAxis(bool);
+    void setTippeTop(bool);
 
 signals:
-    void setViewXYSignal();
+
     void setStartDepthSpinBoxValue(int);
     void setMaximumDepthSpinBoxValue(int);
     void setShellExtensionSpinBoxValue(int);
 
     void modelLoaded(bool);
+
+    void yoyoIsSet(bool);
+    void topWithoutAxisIsSet(bool);
+    void topWithAxisIsSet(bool);
+    void tippeTopIsSet(bool);
+    void resetTranformationWidget();
+
+    void activateAddAxisCheckBox(bool);
+    void activateTippeTopCheckBox(bool);
+
     void shellIsSet(bool);
     void shellIsNotSet(bool);
-    void shellIsNotSet();
+
+    void activateViewControlWidget(bool);
+    void deactivateViewControlWidget(bool);
+
+    void setAddAxisCheckBox(bool);
 
 protected:
+
+    void updateView();
 
     void setViewDefault();
 
@@ -170,6 +191,7 @@ protected:
     void resetGLWidget();
 
     void createGrid();
+    void createGridForYoyo();
 
 
 };
