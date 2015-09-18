@@ -53,10 +53,9 @@ void Model::initializeOctree(
 
     // calculate outer and inner cells
     octree->setupOctree();
-    octree->setOuterNodes();
-    octree->setInnerNodes();
+    octree->setupOuterNodes();
+    octree->setupInnerNodes();
     octree->increaseShell(shellExtensionValue);
-    octree->setMergeNodes();
     octree->adjustToBasicMaxDepth();
 
     // get mesh for inner shell (needed for view)
@@ -135,7 +134,7 @@ void Model::hollow()
 
     shellMesh = newShellMesh;
 
-    Model::octree->setDirty();
+    Model::octree->makeDirty();
 
 }
 

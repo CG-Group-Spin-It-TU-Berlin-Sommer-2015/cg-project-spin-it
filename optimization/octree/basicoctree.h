@@ -10,7 +10,11 @@
 
 #include "view/utility/mesh.h"
 
-#define START_DENSITY 0.99999f
+#define START_DENSITY 1.f
+
+#define IS_SHELL_NODE (nodePointer->isShell)
+#define IS_INNER_NODE (!nodePointer->isShell && nodePointer->isInside)
+#define IS_OUTER_NODE (!nodePointer->isShell && !nodePointer->isInside)
 
 namespace octree
 {
@@ -135,27 +139,28 @@ public:
     BasicOctree();
     ~BasicOctree();
 
+    // setters and getters
     void setMesh(Mesh* mesh);
-    void setDirty();
+
     void setStartMaxDepth(GLint depth);
-    GLint getStartMaxDepth();
     void setOptimizationMaxDepth(GLint depth);
+
+    GLint getStartMaxDepth();
     GLint getOptimizationMaxDepth();
 
+    // methods for creating the octree
+    void quantizeSurface();
+    void setupVectors();
+    void setupOctree();
+    void setupOuterNodes();
+    void setupInnerNodes();
+
+    // check out methods
     bool hasMesh();
     bool hasQantizedSurface();
 
     void adjustToBasicMaxDepth();
-
-    void quantizeSurface();
-
-    void setupVectors();
-    void setupOctree();
-
-    void setOuterNodes();
-    void setInnerNodes();
-
-    void renderOctreeGrid(QGLShaderProgram* shader);
+    void initiateMergeRoots();
 
     octree::octreeNode* getLeafNodeByCoordinate(GLint x, GLint y, GLint z);
     octree::octreeNode* getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLint startNodeIndex);
@@ -163,24 +168,15 @@ public:
     void createInnerSurface();
     Mesh* getShellMesh(bool flip = false);
 
+    void printNumberOfLeafTypes();
+
 private:
+
+    Mesh* mesh;
 
     QVector<GLfloat> geometry;
     QVector<GLint> indices;
     QHash<GLint, octree::hashItem> geometryMap;
-
-    Mesh* mesh;
-
-    bool isDirty;
-    QOpenGLBuffer* vbo;
-    QOpenGLBuffer* cbo;
-    QOpenGLBuffer* ibo;
-
-    QOpenGLBuffer* vbo_line;
-    QOpenGLBuffer* ibo_line;
-
-    QVector<int> indexBuffer;
-    QVector<int> indexBuffer_line;
 
     QVector<GLfloat> rawVoxels;
     QVector<QVector3D> voxels;
@@ -203,9 +199,7 @@ private:
 
     GLint sortHalf(GLint start,GLint end,GLint coor, GLint prior);
 
-    void propageDownMergeChildHelper(GLint index);
-    void propageDownMergeChild(GLint index);
-    void makeExplicitMergeRoot(GLint index);
+    bool mergeChildExists(GLint index);
 
 protected:
 
@@ -218,10 +212,12 @@ protected:
     GLint rootNodeIndex;
 
     QVector3D mean;
+    GLdouble max_g;
+
     GLfloat cell_length;
     GLint axis_length;
     GLint plane_length;
-    GLdouble max_g;
+
 
 protected:
 
@@ -229,7 +225,12 @@ protected:
 
     void getInnerLeaves(QVector<GLint>* indices);
     void getShellLeaves(QVector<GLint>* indices);
+    void getOuterLeaves(QVector<GLint>* indices);
+
     void getMergeRoots(QVector<GLint>* indices);
+    void getMergeChilds(QVector<GLint>* indices);
+    void getIgnoredNodes(QVector<GLint>*indices);
+
     void getMergeRootCandidates(QVector<GLint>* indices);
 
     void getNodesOfDepth(GLint depth,QVector<GLint>* indices);

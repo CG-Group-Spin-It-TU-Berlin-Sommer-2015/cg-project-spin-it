@@ -3,16 +3,8 @@
 using namespace std;
 using namespace octree;
 
-const int GEOMETRY_DATA_SIZE = 3;
-
 BasicOctree::BasicOctree():
 mesh(NULL),
-isDirty(true),
-vbo(NULL),
-cbo(NULL),
-ibo(NULL),
-vbo_line(NULL),
-ibo_line(NULL),
 startMaxDepth(6),
 optimizationMaxDepth(6),
 basicMaxDepth(6),
@@ -24,36 +16,7 @@ rootNodeIndex(-1)
 BasicOctree::~BasicOctree()
 {
 
-    this->indexBuffer.clear();
-    this->indexBuffer_line.clear();
-
-    if(vbo != NULL)
-    {
-        vbo->destroy();
-    }
-
-    if(cbo != NULL)
-    {
-        cbo->destroy();
-    }
-
-    if(ibo != NULL)
-    {
-        ibo->destroy();
-    }
-
-    if(vbo_line != NULL)
-    {
-        vbo_line->destroy();
-    }
-
-    if(ibo_line != NULL)
-    {
-        ibo_line->destroy();
-    }
-
 }
-
 
 //-------------------------------------------------- setup parameters
 
@@ -156,7 +119,7 @@ void BasicOctree::quantizeSurface()
 
     GLfloat* gvd = this->mesh->getGeometry()->data();
     GLint* ivd = this->mesh->getIndices()->data();
-    int length = this->mesh->getIndices()->length();
+    int length = this->mesh->getIndices()->size();
 
     GLdouble max_g = 0;
 
@@ -293,6 +256,11 @@ void BasicOctree::quantizeSurface()
         }
 
     }
+
+    cout << "Number of raw voxels" << endl;
+    cout << this->rawVoxels.size()/3 << endl;
+    cout << "----------------------------------------" << endl;
+
 }
 
 /**
@@ -302,26 +270,26 @@ void BasicOctree::setupVectors()
 {
 
     QVector<QVector3D> tempVoxels;
-    tempVoxels.reserve(this->rawVoxels.length()/3);
+    tempVoxels.reserve(this->rawVoxels.size()/3);
 
     this->voxels.clear();
-    this->voxels.reserve(this->rawVoxels.length()/3);
+    this->voxels.reserve(this->rawVoxels.size()/3);
 
-    GLint length;
-
-    length = this->rawVoxels.length();
-
-    for (GLint i = 0; i < length ; i+=3)
+    for (GLint i = 0; i < this->rawVoxels.size() ; i+=3)
     {
 
       QVector3D point;
 
-      point.setX(this->rawVoxels.at(i+0));
-      point.setY(this->rawVoxels.at(i+1));
-      point.setZ(this->rawVoxels.at(i+2));
+      point.setX(this->rawVoxels.data()[i+0]);
+      point.setY(this->rawVoxels.data()[i+1]);
+      point.setZ(this->rawVoxels.data()[i+2]);
 
       voxels.push_back(point);
     }
+
+    cout << "Number of voxels" << endl;
+    cout << this->voxels.size() << endl;
+    cout << "----------------------------------------" << endl;
 
 }
 
@@ -433,7 +401,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     node.nodeDepth = depth;
 
     // add node to octree node vector
-    node.index = this->octreeNodes.length();
+    node.index = this->octreeNodes.size();
     this->octreeNodes.push_back(node);
 
     this->octreeNodes.data()[node.index] = node;
@@ -629,9 +597,9 @@ void BasicOctree::createInnerSurface()
     indices.clear();
     geometryMap.clear();
 
-    for(int i=0;i<innerLeafIndices.length();i++)
+    for(int i=0;i<innerLeafIndices.size();i++)
     {
-        nodePointer = &this->octreeNodes.data()[innerLeafIndices.at(i)];
+        nodePointer = &this->octreeNodes.data()[innerLeafIndices.data()[i]];
 
         if(!nodePointer->isVoid)
         {
@@ -717,29 +685,29 @@ Mesh* BasicOctree::getShellMesh(bool flip)
     QVector<GLfloat>* geometry = new QVector<GLfloat>();
     QVector<GLint>* indices = new QVector<GLint>();
 
-    geometry->reserve(this->geometry.length());
-    indices->reserve(this->indices.length());
+    geometry->reserve(this->geometry.size());
+    indices->reserve(this->indices.size());
 
-    for (int i=0;i<this->geometry.length();i++)
+    for (int i=0;i<this->geometry.size();i++)
     {
-       geometry->push_back(this->geometry.at(i));
+       geometry->push_back(this->geometry.data()[i]);
     }
 
     // flip surface
     if(flip)
     {
-        for (int i=0;i<this->indices.length();i+=3)
+        for (int i=0;i<this->indices.size();i+=3)
         {
-            indices->push_back(this->indices.at(i+2));
-            indices->push_back(this->indices.at(i+1));
-            indices->push_back(this->indices.at(i+0));
+            indices->push_back(this->indices.data()[i+2]);
+            indices->push_back(this->indices.data()[i+1]);
+            indices->push_back(this->indices.data()[i+0]);
         }
     }
     else
     {
-        for (int i=0;i<this->indices.length();i++)
+        for (int i=0;i<this->indices.size();i++)
         {
-            indices->push_back(this->indices.at(i));
+            indices->push_back(this->indices.data()[i]);
         }
     }
 
@@ -753,7 +721,7 @@ Mesh* BasicOctree::getShellMesh(bool flip)
 /**
  * @brief BasicOctree::setOuterNodes Mark outer nodes
  */
-void BasicOctree::setOuterNodes()
+void BasicOctree::setupOuterNodes()
 {
     octreeNode* nodePointer;
 
@@ -894,12 +862,12 @@ void BasicOctree::setOuterNodes()
 /**
  * @brief BasicOctree::setInnerNodes Mark the inner nodes ( after calculating outer nodes)
  */
-void BasicOctree::setInnerNodes()
+void BasicOctree::setupInnerNodes()
 {
 
     octreeNode* nodePointer;
 
-    for(int i=1;i<this->octreeNodes.length();i++)
+    for(int i=1;i<this->octreeNodes.size();i++)
     {
 
          nodePointer = &this->octreeNodes.data()[i];
@@ -963,12 +931,16 @@ void BasicOctree::setupOctree(){
 
     this->octreeNodes.clear();
 
-    this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.length(),0,0,0);
+    cout << "Setup Octree with" << endl;
+    cout << "start depht:" << this->startMaxDepth << endl;
+    cout << "optimization depht:" << this->optimizationMaxDepth << endl;
+    cout << "----------------------------------------" << endl;
+
+    this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.size(),0,0,0);
 
     // clear obsolete data structures
     this->rawVoxels.clear();
     this->voxels.clear();
-    this->isDirty = true;
 }
 
 /**
@@ -1003,7 +975,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
         node.y = y;
         node.z = z;
         node.cell_length = pow(2,this->startMaxDepth-depth);
-        node.index = octreeNodes.length();
+        node.index = octreeNodes.size();
         node.nodeDepth = depth;
 
         octreeNodes.push_back(node);
@@ -1047,7 +1019,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
     node.y = y;
     node.z = z;
     node.cell_length = cell_length_int;
-    node.index = octreeNodes.length();
+    node.index = octreeNodes.size();
     node.nodeDepth = depth;
 
     // set parent index
@@ -1068,7 +1040,7 @@ GLint BasicOctree::setupOctreeHelper(GLint depth,GLint start, GLint end, GLint x
 /**
  * @brief BasicOctree::getInnerNodesForNode Get the indices of all inner leaf nodes which are predecessors of a specific node.
  * @param index index of the specific node
- * @param indices a pointer of th vector which get the indices of the found nodes
+ * @param indices a pointer of the vector which get the indices of the found nodes
  */
 void BasicOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
 {
@@ -1079,7 +1051,7 @@ void BasicOctree::getInnerLeavesForNode(GLint index,QVector<GLint>* indices)
     if(nodePointer->isLeaf)
     {
 
-        if(nodePointer->isInside && !nodePointer->isShell)
+        if(IS_INNER_NODE)
         {
             indices->push_back(nodePointer->index);
         }
@@ -1112,7 +1084,7 @@ void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
     octreeNode* nodePointer;
 
     // iterate about all nodes
-    for(int i=0;i<this->octreeNodes.length();i++)
+    for(int i=0;i<this->octreeNodes.size();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
@@ -1131,20 +1103,6 @@ void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
  */
 void BasicOctree::adjustToBasicMaxDepth()
 {
-    if(this->optimizationMaxDepth<this->startMaxDepth)
-    {
-
-       QVector<GLint> nodeIndices;
-       getNodesOfDepth(this->optimizationMaxDepth,&nodeIndices);
-
-       for(int i=0;i<nodeIndices.length();i++){
-         makeExplicitMergeRoot(nodeIndices.data()[i]);
-       }
-
-       nodeIndices.clear();
-
-
-    }
 
     if(this->optimizationMaxDepth>this->startMaxDepth)
     {
@@ -1152,12 +1110,12 @@ void BasicOctree::adjustToBasicMaxDepth()
         GLint diff = this->basicMaxDepth-startMaxDepth;
 
         this->cell_length = this->cell_length/pow(2,diff);
-
         this->axis_length = this->axis_length<<diff;
         this->plane_length = this->axis_length*this->axis_length;
 
         octreeNode* nodePointer;
-        for(int i=0;i<this->octreeNodes.length();i++){
+        for(int i=0;i<this->octreeNodes.size();i++){
+
             nodePointer = &this->octreeNodes.data()[i];
 
             nodePointer->x = nodePointer->x<<diff;
@@ -1166,380 +1124,272 @@ void BasicOctree::adjustToBasicMaxDepth()
 
             nodePointer->cell_length = nodePointer->cell_length<<diff;
         }
-
     }
-
 }
 
 /**
- * @brief BasicOctree::propageDownMergeChildHelper
+ * @brief BasicOctree::mergeChildExists
  * @param index
+ * @return
  */
-void BasicOctree::propageDownMergeChildHelper(GLint index)
+bool BasicOctree::mergeChildExists(GLint index)
 {
 
     octreeNode* nodePointer = &this->octreeNodes.data()[index];
 
-    if(nodePointer->isShell || nodePointer->isInside)
-    {
-        nodePointer->isMergeChild = true;
-        nodePointer->isMergeRoot = false;
-    }
-
-    if(!nodePointer->isLeaf)
-    {
-
-        propageDownMergeChildHelper(nodePointer->childIndex0);
-        propageDownMergeChildHelper(nodePointer->childIndex1);
-        propageDownMergeChildHelper(nodePointer->childIndex2);
-        propageDownMergeChildHelper(nodePointer->childIndex3);
-        propageDownMergeChildHelper(nodePointer->childIndex4);
-        propageDownMergeChildHelper(nodePointer->childIndex5);
-        propageDownMergeChildHelper(nodePointer->childIndex6);
-        propageDownMergeChildHelper(nodePointer->childIndex7);
-
-    }
+    return
+            this->octreeNodes.data()[nodePointer->childIndex0].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex1].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex2].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex3].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex4].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex5].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex6].isMergeChild ||
+            this->octreeNodes.data()[nodePointer->childIndex7].isMergeChild;
 
 }
 
-/**
- * @brief BasicOctree::propageDownMergeChild
- * @param index
- */
-void BasicOctree::propageDownMergeChild(GLint index)
-{
-
-    octreeNode* nodePointer = &this->octreeNodes.data()[index];
-
-    if(!nodePointer->isLeaf)
-    {
-
-        propageDownMergeChildHelper(nodePointer->childIndex0);
-        propageDownMergeChildHelper(nodePointer->childIndex1);
-        propageDownMergeChildHelper(nodePointer->childIndex2);
-        propageDownMergeChildHelper(nodePointer->childIndex3);
-        propageDownMergeChildHelper(nodePointer->childIndex4);
-        propageDownMergeChildHelper(nodePointer->childIndex5);
-        propageDownMergeChildHelper(nodePointer->childIndex6);
-        propageDownMergeChildHelper(nodePointer->childIndex7);
-
-    }
-
-}
 
 /**
- * @brief BasicOctree::makeExplicitMergeRoot
- * @param index
+ * @brief BasicOctree::initiateMergeRoots
  */
-void BasicOctree::makeExplicitMergeRoot(GLint index)
+void BasicOctree::initiateMergeRoots()
 {
-
-    octreeNode* nodePointer = &this->octreeNodes.data()[index];
-
-    if( !(nodePointer->isShell || nodePointer->isInside))
-    {
-        return;
-    }
 
     QVector<GLint> nodeIndices;
-    getInnerLeavesForNode(index,&nodeIndices);
+    octreeNode* nodePointer;
 
-    nodePointer->isIgnored = nodeIndices.length()<=0;
+    if(this->optimizationMaxDepth<this->startMaxDepth)
+    {
 
-    nodeIndices.clear();
+       // for start max
+       getNodesOfDepth(this->startMaxDepth,&nodeIndices);
+       for(int j=0;j<nodeIndices.size();j++)
+       {
+           nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
 
-    nodePointer->isMergeChild = false;
-    nodePointer->isMergeRoot = true;
+           if(IS_INNER_NODE)
+           {
+               nodePointer->isIgnored = false;
+               nodePointer->isMergeChild = true;
+               nodePointer->isMergeRoot = false;
+           }
+           else
+           {
+               nodePointer->isIgnored = true;
+               nodePointer->isMergeChild = false;
+               nodePointer->isMergeRoot = false;
+           }
 
-    propageDownMergeChild(index);
+       }
+       nodeIndices.clear();
+
+       // for between start and optimization
+       for(int i=this->startMaxDepth-1;i>this->optimizationMaxDepth;i--){
+           getNodesOfDepth(i,&nodeIndices);
+           for(int j=0;j<nodeIndices.size();j++)
+           {
+               nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+
+               if(nodePointer->isLeaf)
+               {
+                   if(IS_INNER_NODE)
+                   {
+                       nodePointer->isIgnored = false;
+                       nodePointer->isMergeChild = true;
+                       nodePointer->isMergeRoot = false;
+                   }
+                   else
+                   {
+                       nodePointer->isIgnored = true;
+                       nodePointer->isMergeChild = false;
+                       nodePointer->isMergeRoot = false;
+                   }
+               }
+               else
+               {
+
+                   if(mergeChildExists(nodePointer->index))
+                   {
+                       nodePointer->isIgnored = false;
+                       nodePointer->isMergeChild = true;
+                       nodePointer->isMergeRoot = false;
+                   }
+                   else
+                   {
+                       nodePointer->isIgnored = true;
+                       nodePointer->isMergeChild = false;
+                       nodePointer->isMergeRoot = false;
+                   }
+               }
+           }
+           nodeIndices.clear();
+
+       }
+
+       // for optimization max
+       getNodesOfDepth(this->optimizationMaxDepth,&nodeIndices);
+       for(int j=0;j<nodeIndices.size();j++)
+       {
+           nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+
+           if(nodePointer->isLeaf)
+           {
+               if(IS_INNER_NODE)
+               {
+                   nodePointer->isIgnored = false;
+                   nodePointer->isMergeChild = false;
+                   nodePointer->isMergeRoot = true;
+               }
+               else
+               {
+                   nodePointer->isIgnored = true;
+                   nodePointer->isMergeChild = false;
+                   nodePointer->isMergeRoot = false;
+               }
+           }
+           else
+           {
+
+               if(mergeChildExists(nodePointer->index))
+               {
+                   nodePointer->isIgnored = false;
+                   nodePointer->isMergeChild = false;
+                   nodePointer->isMergeRoot = true;
+               }
+               else
+               {
+                   nodePointer->isIgnored = true;
+                   nodePointer->isMergeChild = false;
+                   nodePointer->isMergeRoot = false;
+               }
+           }
+
+       }
+       nodeIndices.clear();
+
+       // for greater optimization
+       for(int i=this->optimizationMaxDepth-1;i>-1;i--){
+           getNodesOfDepth(i,&nodeIndices);
+           for(int j=0;j<nodeIndices.size();j++)
+           {
+               nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+
+               if(nodePointer->isLeaf)
+               {
+                   if(IS_INNER_NODE)
+                   {
+                       nodePointer->isIgnored = false;
+                       nodePointer->isMergeChild = false;
+                       nodePointer->isMergeRoot = true;
+                   }
+                   else
+                   {
+                       nodePointer->isIgnored = true;
+                       nodePointer->isMergeChild = false;
+                       nodePointer->isMergeRoot = false;
+                   }
+               }
+
+           }
+           nodeIndices.clear();
+       }
+    }
+    else
+    {
+
+        getInnerLeaves(&nodeIndices);
+        for(int j=0;j<nodeIndices.size();j++)
+        {
+            nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+            nodePointer->isIgnored = false;
+            nodePointer->isMergeChild = false;
+            nodePointer->isMergeRoot = true;
+        }
+        nodeIndices.clear();
+
+        getShellLeaves(&nodeIndices);
+        for(int j=0;j<nodeIndices.size();j++)
+        {
+            nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+            nodePointer->isIgnored = true;
+            nodePointer->isMergeChild = false;
+            nodePointer->isMergeRoot = false;
+        }
+        nodeIndices.clear();
+
+        getOuterLeaves(&nodeIndices);
+        for(int j=0;j<nodeIndices.size();j++)
+        {
+            nodePointer = &this->octreeNodes.data()[nodeIndices.data()[j]];
+            nodePointer->isIgnored = true;
+            nodePointer->isMergeChild = false;
+            nodePointer->isMergeRoot = false;
+        }
+        nodeIndices.clear();
+
+    }
+
+
+    GLint a,b,c,d;
+
+    QVector<GLint> vec;
+
+    getMergeRoots(&vec);
+    a = vec.size();
+    vec.clear();
+
+    getMergeChilds(&vec);
+    b = vec.size();
+    vec.clear();
+
+    getIgnoredNodes(&vec);
+    c = vec.size();
+    vec.clear();
+
+    getMergeRootCandidates(&vec);
+    d = vec.size();
+    vec.clear();
+
+    cout << "Merge Roots: " << a << endl;
+    cout << "Merge Children: " << b << endl;
+    cout << "Ignored Nodes: " << c << endl;
+    cout << "Merge Root Candidates: " << d << endl;
+    cout << "Sum of Nodes: " << (a+b+c+d) << endl;
+    cout << "Octree Node: " << this->octreeNodes.size() << endl;
+    cout << "----------------------------------------" << endl;
 
 }
 
-//-------------------------------------------------- draw octree grid
+//-------------------------------------------------- getters vector
 
-/**
- * @brief BasicOctree::renderOctreeGrid Render the grid of the octree
- * @param shader the shader
- */
-void BasicOctree::renderOctreeGrid(QGLShaderProgram* shader)
+void BasicOctree::printNumberOfLeafTypes()
 {
 
-    if(this->octreeNodes.length()<1){
-        return;
-    }
+    GLint a,b,c;
 
-    GLenum primitive = GL_LINES;
+    QVector<GLint> vec;
 
-    /* if needed needed variables are set for painting */
-    if (isDirty) {
-        QVector<GLfloat> buffer_vertices,buffer_colors,buffer_vertices_line;
+    getInnerLeaves(&vec);
+    a = vec.size();
+    vec.clear();
 
-        buffer_vertices.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
-        buffer_colors.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
-        buffer_vertices_line.reserve( this->octreeNodes.length() * 8 * 3 * sizeof(GLfloat));
+    getShellLeaves(&vec);
+    b = vec.size();
+    vec.clear();
 
-        indexBuffer.clear();
-        indexBuffer_line.clear();
+    getOuterLeaves(&vec);
+    c = vec.size();
+    vec.clear();
 
-        GLint index = 0;
-        GLint index_line = 0;
-
-        GLint length = this->octreeNodes.length();
-
-        GLint viewIndex = (this->axis_length>>1);
-
-        for (int i = 0; i < length; i++) {
-
-            octreeNode node = this->octreeNodes.at(i);
-
-            if( !node.isSet || !node.isInside || !node.isLeaf || node.isShell )
-            {
-                continue;
-            }
-
-            if(node.x>=viewIndex)
-            {
-                continue;
-            }
-
-            /* add vertices*/
-            buffer_vertices.push_back(node.p0.x());buffer_vertices.push_back(node.p0.y());buffer_vertices.push_back(node.p0.z());
-            buffer_vertices.push_back(node.p1.x());buffer_vertices.push_back(node.p1.y());buffer_vertices.push_back(node.p1.z());
-            buffer_vertices.push_back(node.p2.x());buffer_vertices.push_back(node.p2.y());buffer_vertices.push_back(node.p2.z());
-            buffer_vertices.push_back(node.p3.x());buffer_vertices.push_back(node.p3.y());buffer_vertices.push_back(node.p3.z());
-
-            buffer_vertices.push_back(node.p4.x());buffer_vertices.push_back(node.p4.y());buffer_vertices.push_back(node.p4.z());
-            buffer_vertices.push_back(node.p5.x());buffer_vertices.push_back(node.p5.y());buffer_vertices.push_back(node.p5.z());
-            buffer_vertices.push_back(node.p6.x());buffer_vertices.push_back(node.p6.y());buffer_vertices.push_back(node.p6.z());
-            buffer_vertices.push_back(node.p7.x());buffer_vertices.push_back(node.p7.y());buffer_vertices.push_back(node.p7.z());
-
-            QColor color;
-
-            if(node.beta>1)
-            {
-                color.setRedF(0);
-                color.setGreenF(0);
-                color.setBlueF(0);
-            }
-            else
-            if(node.beta<0)
-            {
-                color.setRedF(1);
-                color.setGreenF(1);
-                color.setBlueF(1);
-            }
-            else
-            {
-                QVector3D fillColor(255/(float)255,255/(float)255,224/(float)255);
-                QVector3D voidColor(128/(float)255,128/(float)255,0/(float)255);
-
-                QVector3D col = fillColor+(voidColor-fillColor)*node.beta;
-
-                color.setRedF(col.x());
-                color.setGreenF(col.y());
-                color.setBlueF(col.z());
-            }
-
-            /* add colors*/
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-            buffer_colors.push_back(color.redF());buffer_colors.push_back(color.greenF());buffer_colors.push_back(color.blueF());
-
-            /* add indices*/
-            indexBuffer.push_back(index+0);
-            indexBuffer.push_back(index+1);
-            indexBuffer.push_back(index+2);
-            indexBuffer.push_back(index+1);
-            indexBuffer.push_back(index+3);
-            indexBuffer.push_back(index+2);
-
-            indexBuffer.push_back(index+6);
-            indexBuffer.push_back(index+7);
-            indexBuffer.push_back(index+4);
-            indexBuffer.push_back(index+7);
-            indexBuffer.push_back(index+5);
-            indexBuffer.push_back(index+4);
-
-            indexBuffer.push_back(index+2);
-            indexBuffer.push_back(index+3);
-            indexBuffer.push_back(index+6);
-            indexBuffer.push_back(index+3);
-            indexBuffer.push_back(index+7);
-            indexBuffer.push_back(index+6);
-
-            indexBuffer.push_back(index+4);
-            indexBuffer.push_back(index+5);
-            indexBuffer.push_back(index+0);
-            indexBuffer.push_back(index+5);
-            indexBuffer.push_back(index+1);
-            indexBuffer.push_back(index+0);
-
-            indexBuffer.push_back(index+1);
-            indexBuffer.push_back(index+5);
-            indexBuffer.push_back(index+3);
-            indexBuffer.push_back(index+5);
-            indexBuffer.push_back(index+7);
-            indexBuffer.push_back(index+3);
-
-            indexBuffer.push_back(index+2);
-            indexBuffer.push_back(index+6);
-            indexBuffer.push_back(index+0);
-            indexBuffer.push_back(index+6);
-            indexBuffer.push_back(index+4);
-            indexBuffer.push_back(index+0);
-
-            index +=8;
-
-            if(node.nodeDepth<=7)
-            {
-                buffer_vertices_line.push_back(node.p0.x());buffer_vertices_line.push_back(node.p0.y());buffer_vertices_line.push_back(node.p0.z());
-                buffer_vertices_line.push_back(node.p1.x());buffer_vertices_line.push_back(node.p1.y());buffer_vertices_line.push_back(node.p1.z());
-                buffer_vertices_line.push_back(node.p2.x());buffer_vertices_line.push_back(node.p2.y());buffer_vertices_line.push_back(node.p2.z());
-                buffer_vertices_line.push_back(node.p3.x());buffer_vertices_line.push_back(node.p3.y());buffer_vertices_line.push_back(node.p3.z());
-
-                buffer_vertices_line.push_back(node.p4.x());buffer_vertices_line.push_back(node.p4.y());buffer_vertices_line.push_back(node.p4.z());
-                buffer_vertices_line.push_back(node.p5.x());buffer_vertices_line.push_back(node.p5.y());buffer_vertices_line.push_back(node.p5.z());
-                buffer_vertices_line.push_back(node.p6.x());buffer_vertices_line.push_back(node.p6.y());buffer_vertices_line.push_back(node.p6.z());
-                buffer_vertices_line.push_back(node.p7.x());buffer_vertices_line.push_back(node.p7.y());buffer_vertices_line.push_back(node.p7.z());
-
-                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+1);
-                indexBuffer_line.push_back(index_line+2);indexBuffer_line.push_back(index_line+3);
-                indexBuffer_line.push_back(index_line+4);indexBuffer_line.push_back(index_line+5);
-                indexBuffer_line.push_back(index_line+6);indexBuffer_line.push_back(index_line+7);
-
-                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+2);
-                indexBuffer_line.push_back(index_line+4);indexBuffer_line.push_back(index_line+6);
-                indexBuffer_line.push_back(index_line+0);indexBuffer_line.push_back(index_line+4);
-                indexBuffer_line.push_back(index_line+2);indexBuffer_line.push_back(index_line+6);
-
-                indexBuffer_line.push_back(index_line+1);indexBuffer_line.push_back(index_line+3);
-                indexBuffer_line.push_back(index_line+5);indexBuffer_line.push_back(index_line+7);
-                indexBuffer_line.push_back(index_line+1);indexBuffer_line.push_back(index_line+5);
-                indexBuffer_line.push_back(index_line+3);indexBuffer_line.push_back(index_line+7);
-
-                index_line +=8;
-            }
-        }
-
-        if(vbo != NULL)
-        {
-            vbo->destroy();
-            vbo = NULL;
-        }
-
-        vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        vbo->create();
-        vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        vbo->bind();
-        vbo->allocate(buffer_vertices.size() * sizeof(GLfloat));
-        vbo->write(0, buffer_vertices.constData(), buffer_vertices.size() * sizeof(GLfloat));
-        vbo->release();
-
-        if(cbo != NULL)
-        {
-            cbo->destroy();
-            cbo = NULL;
-        }
-
-        cbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        cbo->create();
-        cbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        cbo->bind();
-        cbo->allocate(buffer_colors.size() * 3 * sizeof(GLfloat));
-        cbo->write(0, buffer_colors.constData(), buffer_colors.size() * sizeof(GLfloat));
-        cbo->release();
-
-        if(ibo != NULL)
-        {
-            ibo->destroy();
-            ibo = NULL;
-        }
-
-        ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        ibo->create();
-        ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        ibo->bind();
-        ibo->allocate(indexBuffer.size() * sizeof(GLint));
-        ibo->write(0, indexBuffer.constData(), indexBuffer.size() * sizeof(GLint));
-        ibo->release();
-
-        if(vbo_line != NULL)
-        {
-            vbo_line->destroy();
-            vbo_line = NULL;
-        }
-
-        vbo_line = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        vbo_line->create();
-        vbo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        vbo_line->bind();
-        vbo_line->allocate(buffer_vertices_line.size() * 3 * sizeof(GLfloat));
-        vbo_line->write(0, buffer_vertices_line.constData(), buffer_vertices_line.size() * sizeof(GLfloat));
-        vbo_line->release();
-
-        if(ibo_line != NULL)
-        {
-            ibo_line->destroy();
-            ibo_line = NULL;
-        }
-
-        ibo_line = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        ibo_line->create();
-        ibo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        ibo_line->bind();
-        ibo_line->allocate(indexBuffer_line.size() * sizeof(GLint));
-        ibo_line->write(0, indexBuffer_line.constData(), indexBuffer_line.size() * sizeof(GLint));
-        ibo_line->release();
-
-        isDirty = false;
-
-    }
-
-    GLint stride = sizeof(GLfloat) * (GEOMETRY_DATA_SIZE);
-
-    vbo->bind();
-    shader->enableAttributeArray("geometry");
-    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
-    vbo->release();
-
-    cbo->bind();
-    shader->enableAttributeArray("color");
-    shader->setAttributeBuffer("color", GL_FLOAT, 0, 3, stride);
-    cbo->release();
-
-    ibo->bind();
-    glDrawElements(GL_TRIANGLES, indexBuffer.length(), GL_UNSIGNED_INT, (void*) 0);
-    ibo->release();
-
-    shader->disableAttributeArray("geometry");
-    shader->disableAttributeArray("color");
-
-    shader->setAttributeValue("color",QColor(Qt::black));
-
-    glLineWidth(2);
-
-    vbo_line->bind();
-    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
-    shader->enableAttributeArray("geometry");
-    vbo_line->release();
-
-    ibo_line->bind();
-    glDrawElements(primitive, indexBuffer_line.length(), GL_UNSIGNED_INT, (void*) 0);
-    ibo_line->release();
-
-    glLineWidth(1);
-
-    shader->disableAttributeArray("geometry");
+    cout << "Inner Leaves: " << a << endl;
+    cout << "Shell Leaves: " << b << endl;
+    cout << "Outer Leaves: " << c << endl;
+    cout << "Sum Leaves: " << (a+b+c) << endl;
+    cout << "Octree Node: " << this->octreeNodes.size() << endl;
+    cout << "----------------------------------------" << endl;
 
 }
-
-//-------------------------------------------------- vector getters
 
 /**
  * @brief BasicOctree::getInnerLeaves Get the indices of all inner leaf nodes
@@ -1550,12 +1400,12 @@ void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
 
     octreeNode* nodePointer;
 
-    for(int i=0;i<this->octreeNodes.length();i++)
+    for(int i=0;i<this->octreeNodes.size();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->isInside && nodePointer->isLeaf)
+        if(nodePointer->isLeaf && IS_INNER_NODE)
         {
            indices->push_back(nodePointer->index);
         }
@@ -1573,12 +1423,12 @@ void BasicOctree::getShellLeaves(QVector<GLint>* indices)
 
     octreeNode* nodePointer;
 
-    for(int i=0;i<this->octreeNodes.length();i++)
+    for(int i=0;i<this->octreeNodes.size();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(nodePointer->isLeaf && nodePointer->isShell)
+        if(nodePointer->isLeaf && IS_SHELL_NODE)
         {
             indices->push_back(nodePointer->index);
         }
@@ -1588,7 +1438,30 @@ void BasicOctree::getShellLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getMergeIndices Get the indices of all merge nodes
+ * @brief BasicOctree::getOuterLeaves Get the indices of all outer leaf nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getOuterLeaves(QVector<GLint>* indices)
+{
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->isLeaf && IS_OUTER_NODE)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::getMergeRoots Get the indices of all merge root nodes
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeRoots(QVector<GLint>* indices)
@@ -1596,12 +1469,58 @@ void BasicOctree::getMergeRoots(QVector<GLint>* indices)
 
     octreeNode* nodePointer;
 
-    for(int i=0;i<this->octreeNodes.length();i++)
+    for(int i=0;i<this->octreeNodes.size();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
 
         if(nodePointer->isMergeRoot)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::getMergeChilds Get the indices of all merge child nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getMergeChilds(QVector<GLint>* indices)
+{
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->isMergeChild)
+        {
+            indices->push_back(nodePointer->index);
+        }
+
+    }
+
+}
+
+/**
+ * @brief BasicOctree::getIgnoredNodes Get the indices of all ignored nodes
+ * @param indices a pointer of th vector which get the indices of the found nodes
+ */
+void BasicOctree::getIgnoredNodes(QVector<GLint>* indices)
+{
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        if(nodePointer->isIgnored)
         {
             indices->push_back(nodePointer->index);
         }
@@ -1619,25 +1538,16 @@ void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)
 
     octreeNode* nodePointer;
 
-    for(int i=0;i<this->octreeNodes.length();i++)
+    for(int i=0;i<this->octreeNodes.size();i++)
     {
 
         nodePointer = &this->octreeNodes.data()[i];
 
-        if(
-                !nodePointer->isLeaf &&
-                !nodePointer->isMergeRoot &&
-                !nodePointer->isMergeChild &&
-                !(nodePointer->isInside && nodePointer->isShell))
+        if(!nodePointer->isMergeRoot && !nodePointer->isMergeChild && !nodePointer->isIgnored)
         {
             indices->push_back(nodePointer->index);
         }
 
     }
 
-}
-
-void BasicOctree::setDirty()
-{
-    this->isDirty = true;
 }

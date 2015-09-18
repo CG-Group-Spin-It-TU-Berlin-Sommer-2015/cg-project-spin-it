@@ -7,6 +7,8 @@
 
 #define Y_DEFAULT_VALUE 4.f
 
+#define TEST_BO_2
+
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
 
@@ -56,8 +58,8 @@ void GLWidget::resetGLWidget()
 
     this->scale_xyz = 1.0f;
 
-    this->startMaximalDepth = 6;
-    this->optimizationMaximalDepth = 3;
+    this->startMaximalDepth = 5;
+    this->optimizationMaximalDepth = 1;
     this->shellExtensionValue = 1;
 
     rebuildOctree = true;
@@ -563,6 +565,9 @@ void GLWidget::loadNewMesh()
 
 }
 
+/**
+ * @brief GLWidget::makeItSpin
+ */
 void GLWidget::makeItSpin()
 {
 
@@ -576,39 +581,15 @@ void GLWidget::makeItSpin()
     if(TOP_WITHOUT_AXIS_MODE || TOP_WITH_AXIS_MODE)
     {
 
-        BetaOptimization::mesh->swapYZ();
+        BetaOptimization::doTopOptimization();
 
-        /*
-        BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TOP);
-        BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP);
-        */
-
-        BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
-
-        BetaOptimization::mesh->swapYZ();
-
-        // test functions
-        //BetaOptimization::testSimpleSplitAndMerge();
-        //BetaOptimization::testSplitAndMerge();
     }
     else
     if(YOYO_MODE)
     {
 
-        BetaOptimization::mesh->swapYZ();
+        BetaOptimization::doYoyoOptimization();
 
-        /*
-        BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_YOYO);
-        BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_YOYO);
-        */
-
-        BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
-
-        BetaOptimization::mesh->swapYZ();
-
-        // test functions
-        //BetaOptimization::testSimpleSplitAndMerge();
-        //BetaOptimization::testSplitAndMerge();
     }
 
     this->updateGL();
@@ -995,16 +976,22 @@ void GLWidget::resetAll()
 void GLWidget::setStartDepthValue(int value)
 {
     this->startMaximalDepth = value;
+    rebuildOctree = true;
+
 }
 
 void GLWidget::setMaximumDepthValue(int value)
 {
     this->optimizationMaximalDepth = value;
+    rebuildOctree = true;
+
 }
 
 void GLWidget::setShellExtensionValue(int value)
 {
     this->shellExtensionValue = value;
+    rebuildOctree = true;
+
 }
 
 void GLWidget::setAddAxis(bool addAxis)

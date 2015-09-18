@@ -76,7 +76,7 @@
       <enum>Qt::LeftToRight</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <property name="movable">
       <bool>false</bool>
@@ -280,7 +280,7 @@
          <set>Qt::AlignCenter</set>
         </property>
         <property name="minimum">
-         <number>2</number>
+         <number>1</number>
         </property>
         <property name="maximum">
          <number>8</number>
@@ -315,7 +315,7 @@
          <set>Qt::AlignCenter</set>
         </property>
         <property name="minimum">
-         <number>2</number>
+         <number>1</number>
         </property>
         <property name="maximum">
          <number>8</number>
