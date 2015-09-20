@@ -37,6 +37,7 @@ public:
     void createMeshForNode(GLint index);
 
     QVector<octree::cubeObject>* getInnerCubes();
+    QVector<octree::cubeObject>* getMergedCubes();
     QVector<octree::cubeObject>* getCubesOfLowerDepth(int depth);
 
     bool splitAndMerge(GLfloat epsilon);

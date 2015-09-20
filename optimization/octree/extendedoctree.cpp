@@ -559,6 +559,53 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
     cubeVector.clear();
 
     // get a vector of the indices of all inner nodes
+    QVector<GLint> innerIndices;
+    this->getInnerLeaves(&innerIndices);
+
+    octreeNode* nodePointer;
+
+    // iterate about indices of all inner nodes and create a cube
+    for(int i=0;i<innerIndices.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[innerIndices.data()[i]];
+
+        if(nodePointer->mesh == NULL)
+        {
+            createMeshForNode(innerIndices.data()[i]);
+        }
+
+        if(nodePointer->mesh->getGeometry()->size()<1)
+        {
+            continue;
+        }
+
+        // set the values of the cube
+        cubeObject obj;
+        obj.mesh = nodePointer->mesh;
+        obj.beta = nodePointer->beta;
+        obj.index = nodePointer->index;
+
+        // add the cube to the vector
+        cubeVector.push_back(obj);
+    }
+
+    innerIndices.clear();
+
+    return &cubeVector;
+}
+
+/**
+ * @brief ExtendedOctree::getMergedCubes Get a pointer of a vector of cubes which represent the geometry of all inner leaf nodes.
+ * @return pointer of vector
+ */
+QVector<cubeObject>* ExtendedOctree::getMergedCubes()
+{
+
+    // reset the default state
+    cubeVector.clear();
+
+    // get a vector of the indices of all inner nodes
     QVector<GLint> mergeIndices;
     this->getMergeRoots(&mergeIndices);
 

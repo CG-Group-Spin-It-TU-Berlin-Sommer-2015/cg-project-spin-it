@@ -39,15 +39,17 @@ using namespace std;
 #define MAX(v1,v2) (v1>v2?v1:v2);
 #define MIN(v1,v2) (v1<v2?v1:v2);
 
-#define GAMMA_C_TOP 1e+5
-#define GAMMA_I_TOP 4e+8
-#define GAMMA_L_TOP 1e+3
+#define GAMMA_C_TOP 2e+0
+#define GAMMA_I_TOP 1e+4
+#define GAMMA_L_TOP 1e+0
 
 #define GAMMA_I_YOYO 1e+8
 #define GAMMA_L_YOYO 1e+4
 
-#define MAX_TIME 120
+#define MAX_TIME 180
 
+#define OPTIMIZATION_FUNUNCTION_THRESHOLD 1e-5
+#define OPTIMIZATION_CONSTAINTS_THRESHOLD 1e-8
 
 /* weights for optimization */
 
@@ -67,17 +69,34 @@ SpMat BetaOptimization::L;
 GLfloat BetaOptimization::phi = 0.f;
 float BetaOptimization::mesh_volume[10];
 
+VectorXd BetaOptimization::S_inner_comp;
+
 /**
  * @brief BetaOptimization::doTopOptimization Execute the optimization for a top
  */
 void BetaOptimization::doTopOptimization()
 {
 
+
     BetaOptimization::mesh->swapYZ();
 
+    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization::setCheckMatrixForCubes();
+    BetaOptimization::octree.deleteNodeMeshes();
+
     BetaOptimization::resetPhi();
+
+    /*
+    testSimpleSplitAndMerge();
+    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
+    BetaOptimization::setSMatrixForCubes(cubeVector);
+    BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
+    BetaOptimization::octree.deleteNodeMeshes();
+    */
+
     BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TOP,true);
     BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP,true);
+
 
     //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP,true);
 
@@ -88,8 +107,11 @@ void BetaOptimization::doTopOptimization()
 void BetaOptimization::doYoyoOptimization()
 {
 
-
     BetaOptimization::mesh->swapYZ();
+
+    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization::setCheckMatrixForCubes();
+    BetaOptimization::octree.deleteNodeMeshes();
 
     BetaOptimization::resetPhi();
 
@@ -498,8 +520,8 @@ void BetaOptimization::optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>
     // set optimization function
     nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForYoyoWithAngle, NULL);
 
-    double val1 = 1e-4;
-    double val2 = 1e-8;
+    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
+    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
 
     // set tolerance value
     nlopt_set_xtol_rel(opt_spin_it, val1);
@@ -582,8 +604,8 @@ void BetaOptimization::optimizeBetasForTopWithAngle(QVector<octree::cubeObject>*
     // set optimization function
     nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForTopWithAngle, NULL);
 
-    double val1 = 1e-4;
-    double val2 = 1e-8;
+    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
+    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
 
     // set tolerance value
     nlopt_set_xtol_rel(opt_spin_it, val1);
@@ -945,8 +967,8 @@ void BetaOptimization::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVec
     // set optimization function
     nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForYoyo, NULL);
 
-    double val1 = 1e-4;
-    double val2 = 1e-8;
+    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
+    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
 
     // set tolerance value
     nlopt_set_xtol_rel(opt_spin_it, val1);
@@ -1022,8 +1044,8 @@ void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVect
     // set optimization function
     nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForTop, NULL);
 
-    double val1 = 1e-4;
-    double val2 = 1e-8;
+    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
+    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
 
     // set tolerance value
     nlopt_set_xtol_rel(opt_spin_it, val1);
@@ -1166,6 +1188,15 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
 
     }
 
+    if(cubeVector != NULL)
+    {
+        VectorXd onebetas(cubeVector->size());
+        onebetas.setOnes();
+        cout << "test inner volume" << endl;
+        cout << (BetaOptimization::S_inner_comp-BetaOptimization::S_mat*onebetas) << endl;
+        cout << "----------------------------------------" << endl;    }
+
+    return;
 }
 
 /**
@@ -1176,7 +1207,8 @@ void  BetaOptimization::setSForCompleteMesh()
     BetaOptimization::S_comp.resize(10);
 
     float* s = calculateVolume(BetaOptimization::mesh);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++)
+    {
         BetaOptimization::S_comp(i) = s[i];
     }
 
@@ -1191,13 +1223,41 @@ void  BetaOptimization::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVect
 
     BetaOptimization::S_mat.resize(10,cubeVector->size());
 
-    for (int i = 0; i < cubeVector->size(); i++) {
+    for (int i = 0; i < cubeVector->size(); i++)
+    {
         float* s = calculateVolume(cubeVector->at(i).mesh);
-        for (int j = 0; j < 10; j++) {
+        for (int j = 0; j < 10; j++)
+        {
             BetaOptimization::S_mat(j,i) = s[j];
         }
     }
 
+}
+
+/**
+ * @brief setCheckMatrixForCubes
+ */
+void BetaOptimization::setCheckMatrixForCubes()
+{
+    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+
+    BetaOptimization::S_inner_comp.resize(10);
+    BetaOptimization::S_inner_comp.setZero();
+
+    for (int i = 0; i < cubeVector->size(); i++)
+    {
+        float* s = calculateVolume(cubeVector->at(i).mesh);
+        for (int j = 0; j < 10; j++)
+        {
+            BetaOptimization::S_inner_comp(j) += s[j];
+        }
+    }
+
+    cout << "complete inner volume" << endl;
+    cout << BetaOptimization::S_inner_comp << endl;
+    cout << "----------------------------------------" << endl;
+
+    return;
 }
 
 /**
@@ -1230,15 +1290,14 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType, bool withPh
 {
 
     cout << "Beta Optimization Bottom Up" << endl;
-    cout << "----------------------------------------" << endl;
-
-    BetaOptimization::setSForCompleteMesh();
+    cout << "----------------------------------------" << endl;    
 
     calcInertiaTensor(S_comp,S_mat,NULL,BetaOptimization::phi);
 
     GLint depth = BetaOptimization::octree.getOptimizationMaxDepth();
+    GLint maxDepth = 4;
 
-    for (int i = 3; i < depth; i++) {
+    for (int i = 3; i < depth && i <= maxDepth; i++) {
 
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
 
@@ -1301,12 +1360,12 @@ void BetaOptimization::optimizeBetas(int optimizationType, bool withPhi)
     cout << "Beta Optimization" << endl;
     cout << "----------------------------------------" << endl;
 
-    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
 
     cout << "number of cubes is " << cubeVector->size() << endl;
     cout << "----------------------------------------" << endl;
 
-    BetaOptimization::setSForCompleteMesh();
+
     BetaOptimization::setSMatrixForCubes(cubeVector);
     BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
@@ -1357,8 +1416,6 @@ void BetaOptimization::optimizeBetas(int optimizationType, bool withPhi)
 void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType, bool withPhi)
 {
 
-    BetaOptimization::setSForCompleteMesh();
-
     bool notConverged =  true;
 
     cout << "Beta Optimization with Split and Merge Step" << endl;
@@ -1373,7 +1430,7 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType, bool
         cout << "----------------------------------------" << endl;
         counter++;
 
-        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getInnerCubes();
+        QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
         cout << "number of cubes is " << cubeVector->size() << endl;
 
         BetaOptimization::setSMatrixForCubes(cubeVector);
@@ -1478,7 +1535,7 @@ void BetaOptimization::testSplitAndMerge()
     {
 
         // get the inner cubes of the octree
-        cubeVector = BetaOptimization::octree.getInnerCubes();
+        cubeVector = BetaOptimization::octree.getMergedCubes();
 
         for (int i = 0; i < cubeVector->size(); i++) {
             octree::cubeObject* obj = &cubeVector->data()[i];

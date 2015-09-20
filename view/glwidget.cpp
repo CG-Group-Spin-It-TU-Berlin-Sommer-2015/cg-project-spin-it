@@ -58,7 +58,7 @@ void GLWidget::resetGLWidget()
 
     this->scale_xyz = 1.0f;
 
-    this->startMaximalDepth = 6;
+    this->startMaximalDepth = 7;
     this->optimizationMaximalDepth = 3;
     this->shellExtensionValue = 1;
 

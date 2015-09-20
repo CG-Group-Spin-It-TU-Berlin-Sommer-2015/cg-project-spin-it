@@ -91,7 +91,7 @@ void Model::hollow()
     while (not_converged)
     {
         // get the inner cubes of the octree
-        cubeVector = octree->getInnerCubes();
+        cubeVector = octree->getMergedCubes();
 
         VectorXd b(cubeVector->size());
         MatrixXd S(cubeVector->size(), 10);

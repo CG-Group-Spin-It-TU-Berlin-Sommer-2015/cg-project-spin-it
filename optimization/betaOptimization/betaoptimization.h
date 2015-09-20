@@ -63,6 +63,8 @@ private:
     static Eigen::VectorXd S_comp;
     static Eigen::MatrixXd S_mat;
 
+    static Eigen::VectorXd S_inner_comp;
+
 private:
 
     static GLfloat getEpsilon(GLint depth);
@@ -92,6 +94,7 @@ private:
     static double spinItEnergyFunctionForYoyoWithAngle(unsigned n, const double *x, double *grad, void *my_func_data);
     static double spinItEnergyFunctionForTopWithAngle(unsigned n, const double *x, double *grad, void *my_func_data);
 
+    static void setCheckMatrixForCubes();
 
 };
 
