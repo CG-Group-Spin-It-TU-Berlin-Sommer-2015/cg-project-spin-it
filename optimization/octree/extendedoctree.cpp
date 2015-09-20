@@ -233,7 +233,6 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
 
     for(int i=0;i<cubes->size();i++)
     {
-        //this->getInnerLeavesForNode(cubes->data()[i].index,&vec1);
 
         for(int j=i+1;j<cubes->size();j++)
         {
@@ -244,8 +243,6 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
             }
 
             GLint valueMain = getNeighborhoodValue(cubes->data()[i].index,cubes->data()[j].index);
-
-            //this->getInnerLeavesForNode(cubes->data()[j].index,&vec2);
 
             if(valueMain > 0){
 
@@ -279,9 +276,7 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
                 vec2.clear();
 
             }
-            //vec2.clear();
         }
-        //vec1.clear();
     }
 
     for(int i=0;i<cubes->size();i++)
@@ -290,10 +285,6 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
     }
 
     L.setFromTriplets(coefficients.begin(), coefficients.end());
-
-    //cout << L.toDense() << endl << endl;
-
-    cout << "finish" << endl;
 
     return L;
 }
@@ -700,11 +691,11 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth(int depth)
 }
 
 /**
- * @brief ExtendedOctree::splitAndMerge Split and merge inner nodes.
- * @param epsilon range for the merge area (0,epsilon) and (1-epsilon,1)
- * @return true, if there was a split, false, otherwise
+ * @brief ExtendedOctree::splitStep
+ * @param epsilon
+ * @return
  */
-bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
+bool ExtendedOctree::splitStep(GLfloat epsilon)
 {
 
     octreeNode* nodePointer;
@@ -713,8 +704,6 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
     bool isSplited = false;
 
     GLint splitNumber = 0;
-    GLint mergeNumber = 0;
-    GLint mergeLoops = -1;
 
     // get a vector of the indices of all inner nodes
     QVector<GLint> innerLeafIndices;
@@ -778,6 +767,25 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
     }
 
     innerLeafIndices.clear();
+
+    cout << "Number of Splits: " << splitNumber << endl;
+    cout << "----------------------------------------" << endl;
+
+    return isSplited;
+}
+
+/**
+ * @brief ExtendedOctree::mergeStep
+ * @param epsilon
+ */
+void ExtendedOctree::mergeStep(GLfloat epsilon)
+{
+
+    octreeNode* nodePointer;
+
+    GLfloat oneMinusEpsilon = 1-epsilon;
+    GLint mergeNumber = 0;
+    GLint mergeLoops = -1;
 
     bool merged = true;
 
@@ -872,10 +880,23 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
 
     }
 
-    cout << "Number of Splits: " << splitNumber << endl;
     cout << "Number of Merges: " << mergeNumber << endl;
     cout << "Number of Merges Loops: " << mergeLoops << endl;
     cout << "----------------------------------------" << endl;
+
+}
+
+/**
+ * @brief ExtendedOctree::splitAndMerge Split and merge inner nodes.
+ * @param epsilon range for the merge area (0,epsilon) and (1-epsilon,1)
+ * @return true, if there was a split, false, otherwise
+ */
+bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
+{
+
+    bool isSplited = splitStep(epsilon);
+
+    mergeStep(epsilon);
 
     return isSplited;
 

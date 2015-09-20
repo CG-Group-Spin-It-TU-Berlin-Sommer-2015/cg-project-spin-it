@@ -40,6 +40,8 @@ public:
     QVector<octree::cubeObject>* getCubesOfLowerDepth(int depth);
 
     bool splitAndMerge(GLfloat epsilon);
+    bool splitStep(GLfloat epsilon);
+    void mergeStep(GLfloat epsilon);
 
     void split(octree::octreeNode* nodePointer, GLint maxDepht);
     void split(GLint nodeIndex, GLint maxDepht);
