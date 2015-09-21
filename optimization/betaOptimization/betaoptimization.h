@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <eigen3/Eigen/Dense>
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 #include "optimization/octree/extendedoctree.h"
 
 #include <math.h>
@@ -33,20 +33,11 @@ public:
     static void doTopOptimization();
     static void doYoyoOptimization();
 
-    static void testSimpleSplitAndMerge();
-    static void testSplitAndMerge();
-
     static void initializeOctree(
             Mesh* newModifiedMesh,
             GLint startDepth,
             GLint maximumDepth,
             GLint shellExtensionValue);
-
-    static void optimizeBetas(int optimizationType, bool withPhi);
-    static void optimizeBetasWithSplitAndMerge(int optimizationType, bool withPhi);
-    static void optimizeBetasBottomUp(GLint optimizationType, bool withPhi);
-
-    static void resetPhi();
 
 private:
 
@@ -73,11 +64,7 @@ private:
 
     static GLfloat phi;
 
-    static void optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVector);
-    static void optimizeBetasForTop(QVector<octree::cubeObject>* cubeVector);
-
-    static void optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>* cubeVector);
-    static void optimizeBetasForTopWithAngle(QVector<octree::cubeObject>* cubeVector);
+    static void optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLint optimizationType);
 
     static float* calculateVolume(Mesh* mesh, float p = 1.f);
 
@@ -87,14 +74,18 @@ private:
     static void finishBetaOptimization();
 
     static double spinItContraints(unsigned n, const double *x, double *grad, void *data);
-    static double spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, void *my_func_data);
-    static double spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, void *my_func_data);
-
-    static double spinItContraintsWithAngle(unsigned n, const double *x, double *grad, void *data);
-    static double spinItEnergyFunctionForYoyoWithAngle(unsigned n, const double *x, double *grad, void *my_func_data);
-    static double spinItEnergyFunctionForTopWithAngle(unsigned n, const double *x, double *grad, void *my_func_data);
+    static double spinItEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data);
 
     static void setCheckMatrixForCubes();
+
+    static void optimizeBetasForYoyo(int optimizationType);
+    static void optimizeBetasWithSplitAndMerge(int optimizationType);
+    static void optimizeBetasBottomUp(GLint optimizationType);
+
+    static void testSimpleSplitAndMerge();
+    static void testSplitAndMerge();
+
+    static void resetPhi();
 
 };
 

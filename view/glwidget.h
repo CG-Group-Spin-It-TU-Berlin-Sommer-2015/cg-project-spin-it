@@ -11,14 +11,14 @@
 #include <QFileDialog>
 
 #include "model/model.h"
-#include "utility/mesh.h"
+#include "mesh/mesh.h"
 #include "utility/meshreader.h"
 #include "utility/meshwriter.h"
 
 #include "utility/shader.h"
 
-#include "optimization/meshOperations/simplemeshmerger.h"
-#include "optimization/meshOperations/meshbooleanfunctions.h"
+#include "mesh/meshOperations/simplemeshmerger.h"
+#include "mesh/meshOperations/meshbooleanfunctions.h"
 #include "optimization/octree/extendedoctree.h"
 #include "optimization/betaOptimization/betaoptimization.h"
 
@@ -108,6 +108,9 @@ private:
 
     bool rebuildOctree;
 
+    bool octreeIsDirty;
+    bool viewIsDirty;
+
 public:
     explicit GLWidget(QWidget *parent = 0);
     ~GLWidget();
@@ -167,6 +170,8 @@ signals:
     void deactivateViewControlWidget(bool);
 
     void setAddAxisCheckBox(bool);
+
+    void setViewBack(bool);
 
 protected:
 

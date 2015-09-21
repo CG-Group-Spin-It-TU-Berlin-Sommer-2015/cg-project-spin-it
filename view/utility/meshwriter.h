@@ -8,7 +8,7 @@
 #include <QFile>
 #include <QTextStream>
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 
 bool writeMeshFromObjFile (std::string file_name, Mesh* mesh);
 

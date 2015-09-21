@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <eigen3/Eigen/Dense>
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 #include "optimization/octree/extendedoctree.h"
 
 using namespace Eigen;

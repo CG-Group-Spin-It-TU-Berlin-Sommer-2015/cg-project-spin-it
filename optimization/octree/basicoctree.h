@@ -8,7 +8,7 @@
 #include <QVector>
 #include <QVector3D>
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 
 #define START_DENSITY 1.f
 

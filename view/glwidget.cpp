@@ -24,7 +24,9 @@ GLWidget::GLWidget(QWidget *parent)
 
     topOptimized(true),
     tippeTopOptimized(false),
-    addSpinAxisToTop(true)
+    addSpinAxisToTop(true),
+    octreeIsDirty(false),
+    viewIsDirty(false)
 
 {   
 
@@ -110,6 +112,9 @@ void GLWidget::createGrid()
 
 }
 
+/**
+ * @brief GLWidget::initializeGL
+ */
 void GLWidget::initializeGL()
 {
 
@@ -197,6 +202,9 @@ void GLWidget::initializeGL()
 
 }
 
+/**
+ * @brief GLWidget::paintGL
+ */
 void GLWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -327,6 +335,11 @@ void GLWidget::paintGL()
 
 }
 
+/**
+ * @brief GLWidget::resizeGL
+ * @param width
+ * @param height
+ */
 void GLWidget::resizeGL(int width, int height)
 {
     projection_matrix.setToIdentity();
@@ -335,6 +348,10 @@ void GLWidget::resizeGL(int width, int height)
     glViewport(0,0, width, height);
 }
 
+/**
+ * @brief GLWidget::mouseMoveEvent
+ * @param ev
+ */
 void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 {
     (void)ev;
@@ -355,6 +372,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 
                 trans.setX(trans_x);
                 trans.setZ(trans_z);
+
+                octreeIsDirty = true;
             }
             else
             // if z translation should be set
@@ -365,6 +384,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
                 trans_y += (mouse_pos.y() - ev->pos().y())/TRANSLATION_Z_RATIO;
 
                 trans.setY(trans_y);
+
+                octreeIsDirty = true;
             }
             else
             // if rotation and scale should be set
@@ -386,6 +407,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
                }
                rot_obj_psy %= 360;
 
+               octreeIsDirty = true;
             }
 
             mouse_pos = ev->pos();
@@ -415,6 +437,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
             scale_xyz = scale_xyz > 0.1f ? scale_xyz:0.1f;
             scale_xyz = scale_xyz < 3.0f ? scale_xyz:3.0f;
 
+            octreeIsDirty = true;
+
             mouse_pos = ev->pos();
             this->updateGL();
             return;
@@ -433,6 +457,10 @@ void GLWidget::mouseMoveEvent(QMouseEvent *ev)
 
 }
 
+/**
+ * @brief GLWidget::mousePressEvent
+ * @param ev
+ */
 void GLWidget::mousePressEvent(QMouseEvent *ev)
 {
     (void)ev;
@@ -454,6 +482,10 @@ void GLWidget::mousePressEvent(QMouseEvent *ev)
     }
 }
 
+/**
+ * @brief GLWidget::mouseReleaseEvent
+ * @param ev
+ */
 void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
     (void)ev;
@@ -463,6 +495,9 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
     middle_pressed = false;
 }
 
+/**
+ * @brief GLWidget::loadInitialMesh
+ */
 void GLWidget::loadInitialMesh()
 {
 
@@ -485,7 +520,8 @@ void GLWidget::loadInitialMesh()
     scaleFactor = object->getMaxDistance2Middle();
 
     emit modelLoaded(true);
-
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
 
     if(YOYO_MODE)
     {
@@ -514,6 +550,9 @@ void GLWidget::loadInitialMesh()
 
 }
 
+/**
+ * @brief GLWidget::loadNewMesh
+ */
 void GLWidget::loadNewMesh()
 {
     QString s = QFileDialog::getOpenFileName(this,tr("Open Mesh"), "../", tr("Meshes (*.obj)"));
@@ -536,7 +575,8 @@ void GLWidget::loadNewMesh()
     scaleFactor = object->getMaxDistance2Middle();
 
     emit modelLoaded(true);
-
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
 
     if(YOYO_MODE)
     {
@@ -598,6 +638,9 @@ void GLWidget::makeItSpin()
 /* ----------------------------------------------- */
 /* slots for controlling painting of the different models */
 
+/**
+ * @brief GLWidget::showOnlyOuterSurface
+ */
 void GLWidget::showOnlyOuterSurface()
 {
 
@@ -609,6 +652,9 @@ void GLWidget::showOnlyOuterSurface()
 
 }
 
+/**
+ * @brief GLWidget::showOnlyInnerSurface
+ */
 void GLWidget::showOnlyInnerSurface()
 {
 
@@ -620,6 +666,9 @@ void GLWidget::showOnlyInnerSurface()
 
 }
 
+/**
+ * @brief GLWidget::showOnlyOctreeGrid
+ */
 void GLWidget::showOnlyOctreeGrid()
 {
 
@@ -633,6 +682,10 @@ void GLWidget::showOnlyOctreeGrid()
 
 /* ----------------------------------------------- */
 
+/**
+ * @brief GLWidget::setView
+ * @param index
+ */
 void GLWidget::setView(int index)
 {
 
@@ -644,15 +697,48 @@ void GLWidget::setView(int index)
             {
                 deactivateViewControlWidget(true);
             }
+            viewIsDirty = true;
 
             emit resetTranformationWidget();
         break;
         case MODEL_TAB:
             activateViewControlWidget(true);
+            if(viewIsDirty)
+            {
+
+                viewIsDirty = false;
+
+                rot_cam_phi = 0;
+                emit setViewBack(true);
+            }
+
+            if(octreeIsDirty)
+            {
+                emit deactivateViewControlWidget(true);
+                emit shellIsNotSet(true);
+                octreeIsDirty=false;
+            }
+
             this->setViewDefault();
         break;
         case HOLLOWING_TAB:
             activateViewControlWidget(true);
+            if(viewIsDirty)
+            {
+
+                viewIsDirty = false;
+
+                rot_cam_phi = 0;
+                emit setViewBack(true);
+            }
+
+            if(octreeIsDirty)
+            {
+                emit deactivateViewControlWidget(true);
+                emit shellIsNotSet(true);
+                octreeIsDirty=false;
+            }
+
             this->setViewDefault();
         break;
 
@@ -692,12 +778,16 @@ void GLWidget::calculateOctree()
 
     rebuildOctree = false;
 
+    emit activateViewControlWidget(true);
     emit shellIsSet(true);
 
     this->updateGL();
 
 }
 
+/**
+ * @brief GLWidget::saveMesh
+ */
 void GLWidget::saveMesh()
 {
 
@@ -770,24 +860,54 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
     delete mesh;
 }
 
-void GLWidget::setTippeTop(bool tippeTop)
-{
-    this->tippeTopOptimized = tippeTop;
-    updateView();
-}
-
+/**
+ * @brief GLWidget::setYoyo
+ */
 void GLWidget::setYoyo()
 {
     this->topOptimized = false;
+    rebuildOctree = true;
+
     updateView();
 }
 
+/**
+ * @brief GLWidget::setTop
+ */
 void GLWidget::setTop()
 {
     this->topOptimized = true;
+    rebuildOctree = true;
+
     updateView();
 }
 
+/**
+ * @brief GLWidget::setTippeTop
+ * @param tippeTop
+ */
+void GLWidget::setTippeTop(bool tippeTop)
+{
+    this->tippeTopOptimized = tippeTop;
+    rebuildOctree = true;
+
+    updateView();
+}
+
+/**
+ * @brief GLWidget::setAddAxis
+ * @param addAxis
+ */
+void GLWidget::setAddAxis(bool addAxis)
+{
+    this->addSpinAxisToTop = addAxis;
+    rebuildOctree = true;
+    updateView();
+}
+
+/**
+ * @brief GLWidget::updateView
+ */
 void GLWidget::updateView()
 {
 
@@ -843,6 +963,9 @@ void GLWidget::updateView()
     setViewDefault();
 }
 
+/**
+ * @brief GLWidget::setViewXY
+ */
 void GLWidget::setViewXY()
 {
 
@@ -865,6 +988,9 @@ void GLWidget::setViewXY()
 
 }
 
+/**
+ * @brief GLWidget::setViewZ
+ */
 void GLWidget::setViewZ()
 {
     // view from the front
@@ -886,6 +1012,9 @@ void GLWidget::setViewZ()
 
 }
 
+/**
+ * @brief GLWidget::setViewRotationScale
+ */
 void GLWidget::setViewRotationScale()
 {
 
@@ -906,6 +1035,9 @@ void GLWidget::setViewRotationScale()
 
 }
 
+/**
+ * @brief GLWidget::setViewDefault
+ */
 void GLWidget::setViewDefault()
 {
 
@@ -942,27 +1074,45 @@ void GLWidget::setViewDefault()
 
 }
 
+/**
+ * @brief GLWidget::resetXY
+ */
 void GLWidget::resetXY()
 {
     trans.setX(0);
     trans.setZ(0);
+
+    octreeIsDirty = true;
     this->updateGL();
 }
 
+/**
+ * @brief GLWidget::resetZ
+ */
 void GLWidget::resetZ()
 {
-    trans.setY(0);
+    trans.setY(3);
+
+    octreeIsDirty = true;
     this->updateGL();
 }
 
+/**
+ * @brief GLWidget::resetRotationScale
+ */
 void GLWidget::resetRotationScale()
 {
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
     this->scale_xyz = 1;
+
+    octreeIsDirty = true;
     this->updateGL();
 }
 
+/**
+ * @brief GLWidget::resetAll
+ */
 void GLWidget::resetAll()
 {
 
@@ -973,6 +1123,10 @@ void GLWidget::resetAll()
     this->updateGL();
 }
 
+/**
+ * @brief GLWidget::setStartDepthValue
+ * @param value
+ */
 void GLWidget::setStartDepthValue(int value)
 {
     this->startMaximalDepth = value;
@@ -980,6 +1134,10 @@ void GLWidget::setStartDepthValue(int value)
 
 }
 
+/**
+ * @brief GLWidget::setMaximumDepthValue
+ * @param value
+ */
 void GLWidget::setMaximumDepthValue(int value)
 {
     this->optimizationMaximalDepth = value;
@@ -987,16 +1145,13 @@ void GLWidget::setMaximumDepthValue(int value)
 
 }
 
+/**
+ * @brief GLWidget::setShellExtensionValue
+ * @param value
+ */
 void GLWidget::setShellExtensionValue(int value)
 {
     this->shellExtensionValue = value;
     rebuildOctree = true;
 
 }
-
-void GLWidget::setAddAxis(bool addAxis)
-{
-    this->addSpinAxisToTop = addAxis;
-    updateView();
-}
-

@@ -17,27 +17,27 @@ SOURCES += main.cpp \
     view/mainwindow.cpp \
     view/glwidget.cpp \
     view/utility/shader.cpp \
-    view/utility/mesh.cpp \
     view/utility/meshreader.cpp \
     view/utility/meshwriter.cpp \
     optimization/octree/extendedoctree.cpp \
     optimization/octree/basicoctree.cpp \
-    optimization/meshOperations/simplemeshmerger.cpp \
-    optimization/meshOperations/meshbooleanfunctions.cpp \
-    optimization/betaOptimization/betaoptimization.cpp
+    optimization/betaOptimization/betaoptimization.cpp \
+    mesh/meshOperations/meshbooleanfunctions.cpp \
+    mesh/meshOperations/simplemeshmerger.cpp \
+    mesh/mesh.cpp
 
 HEADERS  += view/mainwindow.h \
     model/model.h \
     view/glwidget.h \
     view/utility/shader.h \
-    view/utility/mesh.h \
     view/utility/meshreader.h \
     view/utility/meshwriter.h \
     optimization/octree/extendedoctree.h \
     optimization/octree/basicoctree.h \
-    optimization/meshOperations/simplemeshmerger.h \
-    optimization/meshOperations/meshbooleanfunctions.h \
-    optimization/betaOptimization/betaoptimization.h
+    optimization/betaOptimization/betaoptimization.h \
+    mesh/meshOperations/meshbooleanfunctions.h \
+    mesh/meshOperations/simplemeshmerger.h \
+    mesh/mesh.h
 
 FORMS    += view/mainwindow.ui
 

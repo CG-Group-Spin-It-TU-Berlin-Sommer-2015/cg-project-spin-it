@@ -7,12 +7,12 @@ using namespace std;
 #define USED_ALGO NLOPT_LD_SLSQP
 
 #define DEPTH_2_EPSILON_VALUE 0
-#define DEPTH_3_EPSILON_VALUE 1e-8
-#define DEPTH_4_EPSILON_VALUE 1e-7
-#define DEPTH_5_EPSILON_VALUE 1e-6
-#define DEPTH_6_EPSILON_VALUE 1e-5
-#define DEPTH_7_EPSILON_VALUE 1e-4
-#define DEPTH_8_EPSILON_VALUE 1e-3
+#define DEPTH_3_EPSILON_VALUE 1e-3
+#define DEPTH_4_EPSILON_VALUE 1e-2
+#define DEPTH_5_EPSILON_VALUE 2e-2
+#define DEPTH_6_EPSILON_VALUE 3e-2
+#define DEPTH_7_EPSILON_VALUE 4e-2
+#define DEPTH_8_EPSILON_VALUE 5e-2
 
 #define s_1  S(0)
 #define s_x  S(1)
@@ -86,24 +86,18 @@ void BetaOptimization::doTopOptimization()
 
     BetaOptimization::resetPhi();
 
-    /*
-    testSimpleSplitAndMerge();
-    QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
-    BetaOptimization::setSMatrixForCubes(cubeVector);
-    BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
-    BetaOptimization::octree.deleteNodeMeshes();
-    */
+    BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TOP);
+    BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP);
 
-    BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TOP,true);
-    BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP,true);
-
-
-    //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP,true);
+    //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
 
     BetaOptimization::mesh->swapYZ();
 
 }
 
+/**
+ * @brief BetaOptimization::doYoyoOptimization Execute the optimization for a yoyo
+ */
 void BetaOptimization::doYoyoOptimization()
 {
 
@@ -180,14 +174,14 @@ void BetaOptimization::initializeOctree(
 }
 
 /**
- * @brief spinItContraintsWithAngle
+ * @brief spinItContraints
  * @param n dimension
  * @param x current value
  * @param grad gradient
  * @param data additional parameter for choosing constraint
  * @return new value
  */
-double BetaOptimization::spinItContraintsWithAngle(unsigned n, const double *x, double *grad, void *data)
+double BetaOptimization::spinItContraints(unsigned n, const double *x, double *grad, void *data)
 {
    spin_it_constraint_data *d = (spin_it_constraint_data *) data;
    int index = d->index;
@@ -285,18 +279,20 @@ double BetaOptimization::spinItContraintsWithAngle(unsigned n, const double *x, 
    return -1;
 }
 
+#define IS_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TOP
+
 /**
- * @brief spinItEnergyFunctionForYoyoWithAngle
+ * @brief spinItEnergyFunction
  * @param n dimension
  * @param x current value
  * @param grad gradient
  * @param my_func_data additional paramter (not used)
  * @return new value
  */
-double BetaOptimization::spinItEnergyFunctionForYoyoWithAngle(unsigned n, const double *x, double *grad, void *my_func_data)
+double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
-    (void)my_func_data;
+    GLint optimization_type = ((GLint*)my_func_data)[0];
 
     VectorXd betas(n-1);
     GLdouble phi = x[0];
@@ -314,6 +310,16 @@ double BetaOptimization::spinItEnergyFunctionForYoyoWithAngle(unsigned n, const 
     MatrixXd I(2,2);
     I(0,0) = s_y2+s_z2; I(0,1) = -s_xy;
     I(1,0) = -s_xy;     I(1,1) = s_x2+s_z2;
+
+    if(IS_TOP_OPTIMIZATION)
+    {
+        MatrixXd diag110 = MatrixXd::Zero(2,2);
+        diag110(0,0) = 1;
+        diag110(1,1) = 1;
+
+        // shifted inertia tensor
+        I = I- (pow(s_z,2)/s_1) * diag110;
+    }
 
     // rotation matrix
     MatrixXd R(2,2);
@@ -327,114 +333,19 @@ double BetaOptimization::spinItEnergyFunctionForYoyoWithAngle(unsigned n, const 
     double IY = mat(1,1);
     double IZ = s_x2+s_y2;
 
-    double gi = gamma_i_yoyo;
-    double gl = gamma_l_yoyo;
-
-    double regulator = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
-
-    double f = gi*(pow(IX/IZ,2)+pow(IY/IZ,2))+regulator;
-
-    //----------------------------------------
-
-    // gradient for yoyo energy function
-    if(grad != NULL)
-    {
-
-        // gradient depending on phi
-        double dIxdphi = 2*cosp*sinp*(pow(s_x,2)-pow(s_y,2))+(pow(cosp,2)-pow(sinp,2))*s_xy;
-        double dIydphi = 2*cosp*sinp*(pow(s_y,2)-pow(s_x,2))+(pow(sinp,2)-pow(cosp,2))*s_xy;
-        grad[0] = gi*(2/pow(IZ,2))*(dIxdphi*IX+dIydphi*IY);
-
-        //----------------------------------------
-        for(unsigned int i=0;i<n-1;i++){
-
-            SpMat vec(betas.size(),1);
-            std::vector<T> coefficients;
-            coefficients.push_back(T(i,0,1));
-            vec.setFromTriplets(coefficients.begin(), coefficients.end());
-
-            // gradient depending on beta i
-            double d_sz_2_s1 = (pow(s_z,2)*Smat_1(i)-2*s_z*Smat_z(i)*s_1)/pow(s_1,2);
-            double dIxb = 0;
-            dIxb += (-1)*pow(cosp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*pow(sinp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*cosp*sinp*Smat_xy(i);
-            double dIyb = 0;
-            dIyb += (-1)*pow(sinp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += (-1)*pow(cosp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += cosp*sinp*Smat_xy(i);
-            double dIzb = -(Smat_x2(i)+Smat_y2(i));
-
-            double dFirstPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
-            double dSecondPart = gl*(betas.transpose()*(L*vec))(0,0);
-
-            grad[i+1] = dFirstPart+dSecondPart;
-        }
-    }
-    //----------------------------------------
-
-    return f;
-}
-
-/**
- * @brief spinItEnergyFunctionForTopWithAngle
- * @param n dimension
- * @param x current value
- * @param grad gradient
- * @param my_func_data additional paramter (not used)
- * @return new value
- */
-double BetaOptimization::spinItEnergyFunctionForTopWithAngle(unsigned n, const double *x, double *grad, void *my_func_data)
-{
-
-    (void)my_func_data;
-
-    VectorXd betas(n-1);
-    GLdouble phi = x[0];
-    for(unsigned int i=1;i<n;i++){
-        betas(i-1) = x[i];
-    }
-
-    double cosp = cos(phi);
-    double sinp = sin(phi);
-
-    // current model volumes
-    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
-
-    // inertia tensor
-    MatrixXd I(2,2);
-    I(0,0) = s_y2+s_z2; I(0,1) = -s_xy;
-    I(1,0) = -s_xy;     I(1,1) = s_x2+s_z2;
-
-    MatrixXd diag110 = MatrixXd::Zero(2,2);
-    diag110(0,0) = 1;
-    diag110(1,1) = 1;
-
-    // shifted inertia tensor
-    MatrixXd I_com = I- (pow(s_z,2)/s_1) * diag110;
-
-    // rotation matrix
-    MatrixXd R(2,2);
-    R(0,0) = +cosp;R(0,1) = -sinp;
-    R(1,0) = +sinp;R(1,1) = +cosp;
-
-    // Givens Rotation representation
-    MatrixXd mat = R*I_com*R.transpose();
-
-    double IX = mat(0,0);
-    double IY = mat(1,1);
-    double IZ = s_x2+s_y2;
 
     double gc = gamma_c_top;
-    double gi = gamma_i_top;
-    double gl = gamma_l_top;
+    double gi = IS_TOP_OPTIMIZATION?gamma_i_top:gamma_i_yoyo;
+    double gl = IS_TOP_OPTIMIZATION?gamma_l_top:gamma_l_yoyo;
 
     double M = s_1;
     double l = s_z/s_1;
 
-    double regulator = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
+    double fFirstPart = IS_TOP_OPTIMIZATION?gc*pow(l*M,2):0;
+    double fSecondPart = gi*(pow(IX/IZ,2)+pow(IY/IZ,2));
+    double fThirdPart = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
 
-    double f = gc*pow(l*M,2)+gi*(pow(IX/IZ,2)+pow(IY/IZ,2))+regulator;
+    double f = fFirstPart+fSecondPart+fThirdPart;
 
     //----------------------------------------
 
@@ -468,7 +379,7 @@ double BetaOptimization::spinItEnergyFunctionForTopWithAngle(unsigned n, const d
             dIyb += cosp*sinp*Smat_xy(i);
             double dIzb = -(Smat_x2(i)+Smat_y2(i));
 
-            double dFirstPart = gc*(-2)*s_z*Smat_z(i);
+            double dFirstPart = IS_TOP_OPTIMIZATION?gc*(-2)*s_z*Smat_z(i):0;
             double dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
             double dThirdPart = gl*(betas.transpose()*(L*vec))(0,0);
 
@@ -481,10 +392,11 @@ double BetaOptimization::spinItEnergyFunctionForTopWithAngle(unsigned n, const d
 }
 
 /**
- * @brief BetaOptimization2::optimizeBetasForYoyoWithAngle
+ * @brief BetaOptimization::optimizeBetas
  * @param cubeVector
+ * @param optimizationType
  */
-void BetaOptimization::optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>* cubeVector)
+void BetaOptimization::optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLint optimizationType)
 {
 
     double minf;
@@ -517,8 +429,10 @@ void BetaOptimization::optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>
     nlopt_set_lower_bounds(opt_spin_it, lb_si);
     nlopt_set_upper_bounds(opt_spin_it, ub_si);
 
+    GLint optimization_type = optimizationType;
+
     // set optimization function
-    nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForYoyoWithAngle, NULL);
+    nlopt_set_min_objective(opt_spin_it, spinItEnergyFunction, &optimization_type);
 
     double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
     double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
@@ -526,14 +440,18 @@ void BetaOptimization::optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>
     // set tolerance value
     nlopt_set_xtol_rel(opt_spin_it, val1);
 
-    // set constraints
+
     spin_it_constraint_data data_si[10] = { {0},{1},{2},{3},{4},{5} };
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[0], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[1], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[2], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[3], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[4], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[5], val2);
+    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[0], val2);
+    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[1], val2);
+    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[2], val2);
+    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[3], val2);
+    if(optimizationType==OPTIMIZATION_TYPE_YOYO)
+    {
+        nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[4], val2);
+    }
+    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[5], val2);
+
 
     // set maximal time
     nlopt_set_maxtime(opt_spin_it,MAX_TIME);
@@ -565,529 +483,11 @@ void BetaOptimization::optimizeBetasForYoyoWithAngle(QVector<octree::cubeObject>
 }
 
 /**
- * @brief BetaOptimization2::optimizeBetasForTopWithAngle
- * @param cubeVector
+ * @brief BetaOptimization::resetPhi
  */
-void BetaOptimization::optimizeBetasForTopWithAngle(QVector<octree::cubeObject>* cubeVector)
-{
-
-    double minf;
-
-    //------------------------------
-    int bs = cubeVector->size()+1;
-    //------------------------------
-
-    // lower and upper borders (0,1) for betas
-    double* lb_si = new double[bs];
-    double* ub_si = new double[bs];
-    double* betas = new double[bs];
-    for(int i=1;i<bs;i++)
-    {
-        lb_si[i] = 0.0;
-        ub_si[i] = 1.0;
-        betas[i] = cubeVector->data()[i-1].beta;
-    }
-
-    // lower and upper borders (-pi,+pi) for phi
-    lb_si[0] = -PI;
-    ub_si[0] = +PI;
-    betas[0] = BetaOptimization::phi;
-
-    //------------------------------
-    nlopt_opt opt_spin_it;
-    opt_spin_it = nlopt_create( USED_ALGO, bs);
-
-    // set borders
-    nlopt_set_lower_bounds(opt_spin_it, lb_si);
-    nlopt_set_upper_bounds(opt_spin_it, ub_si);
-
-    // set optimization function
-    nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForTopWithAngle, NULL);
-
-    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
-    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
-
-    // set tolerance value
-    nlopt_set_xtol_rel(opt_spin_it, val1);
-
-    // set constraints
-    spin_it_constraint_data data_si[10] = { {0},{1},{2},{3},{5} };
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[0], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[1], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[2], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[3], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraintsWithAngle, &data_si[4], val2);
-
-    // set maximal time
-    nlopt_set_maxtime(opt_spin_it,MAX_TIME);
-
-    // execute optimization
-    if (nlopt_optimize(opt_spin_it, betas, &minf) < 0)
-    {
-        cout << "optimization failed!" << endl;
-    }
-    else
-    {
-        cout << "optimization successful (found minimum " << minf << ")" << endl;
-    }
-    cout << "----------------------------------------" << endl;
-
-    nlopt_destroy(opt_spin_it);
-
-    delete lb_si;
-    delete ub_si;
-    delete betas;
-
-    // update betas
-    for (int i = 1; i < bs; i++) {
-        octree::cubeObject* obj = &cubeVector->data()[i-1];
-        obj->beta = betas[i];
-    }
-    BetaOptimization::phi = betas[0];
-
-}
-
 void BetaOptimization::resetPhi()
 {
     BetaOptimization::phi = 0.f;
-}
-
-
-/**
- * @brief spinItContraints
- * @param n dimension
- * @param x current value
- * @param grad gradient
- * @param data additional parameter for choosing constraint
- * @return new value
- */
-double BetaOptimization::spinItContraints(unsigned n, const double *x, double *grad, void *data)
-{
-   spin_it_constraint_data *d = (spin_it_constraint_data *) data;
-   int index = d->index;
-
-   VectorXd betas(n);
-   GLdouble phi = BetaOptimization::phi;
-   for(unsigned int i=0;i<n;i++){
-       betas(i) = x[i];
-   }
-   MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
-
-   double cosp = cos(phi);
-   double sinp = sin(phi);
-
-   switch(index)
-   {
-   case 0:
-
-       // gradient for s_x constraint
-       if(grad != NULL)
-       {
-           for(unsigned int i=0;i<n;i++){
-               grad[i] = -Smat_x(i);
-           }
-       }
-
-       return s_x;
-   case 1:
-
-       // gradient for s_y constraint
-       if(grad != NULL)
-       {
-          for(unsigned int i=0;i<n;i++){
-              grad[i] = -Smat_y(i);
-          }
-       }
-
-       return s_y;
-   case 2:
-
-       // gradient for s_yz constraint
-       if(grad != NULL)
-       {
-          for(unsigned int i=0;i<n;i++){
-              grad[i] = -Smat_yz(i);
-          }
-       }
-
-       return s_yz;
-   case 3:
-
-       // gradient for s_xz constraint
-       if(grad != NULL)
-       {
-          for(unsigned int i=0;i<n;i++){
-               grad[i] = -Smat_xz(i);
-          }
-       }
-
-       return s_xz;
-   case 4:
-
-       // gradient for s_z constraint
-       if(grad != NULL)
-       {
-          for(unsigned int i=0;i<n;i++){
-               grad[i] = -Smat_z(i);
-          }
-       }
-
-       return s_z;
-   case 5:
-
-       // gradient for Givens Rotation constraint
-       if(grad != NULL)
-       {
-           for(unsigned int i=0;i<n;i++){
-                grad[i] = 0;
-                grad[i] += cosp*sinp*(Smat_y2(i)-Smat_x2(i));
-                grad[i] += (pow(cosp,2)-pow(sinp,2))*(-Smat_xy(i));
-           }
-       }
-
-       return cosp*sinp*(s_x2-s_y2)+(pow(cosp,2)-pow(sinp,2))*s_xy;
-   }
-   return -1;
-}
-
-/**
- * @brief spinItEnergyFunctionForYoyo
- * @param n dimension
- * @param x current value
- * @param grad gradient
- * @param my_func_data additional paramter (not used)
- * @return new value
- */
-double BetaOptimization::spinItEnergyFunctionForYoyo(unsigned n, const double *x, double *grad, void *my_func_data)
-{
-
-    (void)my_func_data;
-
-    VectorXd betas(n);
-    GLdouble phi = BetaOptimization::phi;
-    for(unsigned int i=0;i<n;i++){
-        betas(i) = x[i];
-    }
-
-    double cosp = cos(phi);
-    double sinp = sin(phi);
-
-    // current model volumes
-    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
-
-    // inertia tensor
-    MatrixXd I(2,2);
-    I(0,0) = s_y2+s_z2; I(0,1) = -s_xy;
-    I(1,0) = -s_xy;     I(1,1) = s_x2+s_z2;
-
-    // rotation matrix
-    MatrixXd R(2,2);
-    R(0,0) = +cosp;R(0,1) = -sinp;
-    R(1,0) = +sinp;R(1,1) = +cosp;
-
-    // Givens Rotation representation
-    MatrixXd mat = R*I*R.transpose();
-
-    double IX = mat(0,0);
-    double IY = mat(1,1);
-    double IZ = s_x2+s_y2;
-
-    double gi = gamma_i_yoyo;
-    double gl = gamma_l_yoyo;
-
-    double regulator = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
-
-    double f = gi*(pow(IX/IZ,2)+pow(IY/IZ,2))+regulator;
-    //----------------------------------------
-
-    // gradient for yoyo energy function
-    if(grad != NULL)
-    {
-        //----------------------------------------
-        for(unsigned int i=0;i<n;i++){
-
-            SpMat vec(betas.size(),1);
-            std::vector<T> coefficients;
-            coefficients.push_back(T(i,0,1));
-            vec.setFromTriplets(coefficients.begin(), coefficients.end());
-
-            // gradient depending on beta i
-            double d_sz_2_s1 = (pow(s_z,2)*Smat_1(i)-2*s_z*Smat_z(i)*s_1)/pow(s_1,2);
-            double dIxb = 0;
-            dIxb += (-1)*pow(cosp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*pow(sinp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*cosp*sinp*Smat_xy(i);
-            double dIyb = 0;
-            dIyb += (-1)*pow(sinp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += (-1)*pow(cosp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += cosp*sinp*Smat_xy(i);
-            double dIzb = -(Smat_x2(i)+Smat_y2(i));
-
-            double dFirstPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
-            double dSecondPart = gl*(betas.transpose()*(L*vec))(0,0);
-
-            grad[i] = dFirstPart+dSecondPart;
-
-        }
-    }
-    //----------------------------------------
-
-    return f;
-}
-
-/**
- * @brief spinItEnergyFunctionForTop
- * @param n dimension
- * @param x current value
- * @param grad gradient
- * @param my_func_data additional paramter (not used)
- * @return new value
- */
-double BetaOptimization::spinItEnergyFunctionForTop(unsigned n, const double *x, double *grad, void *my_func_data)
-{
-
-    (void)my_func_data;
-
-    VectorXd betas(n);
-    GLdouble phi = BetaOptimization::phi;
-    for(unsigned int i=0;i<n;i++){
-        betas(i) = x[i];
-    }
-
-    double cosp = cos(phi);
-    double sinp = sin(phi);
-
-    // current model volumes
-    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
-
-    // inertia tensor
-    MatrixXd I(2,2);
-    I(0,0) = s_y2+s_z2; I(0,1) = -s_xy;
-    I(1,0) = -s_xy;     I(1,1) = s_x2+s_z2;
-
-    MatrixXd diag110 = MatrixXd::Zero(2,2);
-    diag110(0,0) = 1;
-    diag110(1,1) = 1;
-
-    // shifted inertia tensor
-    MatrixXd I_com = I- (pow(s_z,2)/s_1) * diag110;
-
-    // rotation matrix
-    MatrixXd R(2,2);
-    R(0,0) = +cosp;R(0,1) = -sinp;
-    R(1,0) = +sinp;R(1,1) = +cosp;
-
-    // Givens Rotation representation
-    MatrixXd mat = R*I_com*R.transpose();
-
-    double IX = mat(0,0);
-    double IY = mat(1,1);
-    double IZ = s_x2+s_y2;
-
-    double gc = gamma_c_top;
-    double gi = gamma_i_top;
-    double gl = gamma_l_top;
-
-    double M = s_1;
-    double l = s_z/s_1;
-
-    double regulator = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
-
-    double f = gc*pow(l*M,2)+gi*(pow(IX/IZ,2)+pow(IY/IZ,2))+regulator;
-
-    //----------------------------------------
-
-    // gradient for top energy function constraint
-    if(grad != NULL)
-    {
-        //----------------------------------------
-        for(unsigned int i=0;i<n;i++){
-
-            SpMat vec(betas.size(),1);
-            std::vector<T> coefficients;
-            coefficients.push_back(T(i,0,1));
-            vec.setFromTriplets(coefficients.begin(), coefficients.end());
-
-            // gradient depending on beta i
-            double d_sz_2_s1 = (pow(s_z,2)*Smat_1(i)-2*s_z*Smat_z(i)*s_1)/pow(s_1,2);
-            double dIxb = 0;
-            dIxb += (-1)*pow(cosp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*pow(sinp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIxb += (-1)*cosp*sinp*Smat_xy(i);
-            double dIyb = 0;
-            dIyb += (-1)*pow(sinp,2)*(Smat_y2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += (-1)*pow(cosp,2)*(Smat_x2(i)+Smat_z2(i)+d_sz_2_s1);
-            dIyb += cosp*sinp*Smat_xy(i);
-            double dIzb = -(Smat_x2(i)+Smat_y2(i));
-
-            double dFirstPart = gc*(-2)*s_z*Smat_z(i);
-            double dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
-            double dThirdPart = gl*(betas.transpose()*(L*vec))(0,0);
-
-            grad[i] = dFirstPart+dSecondPart+dThirdPart;
-        }
-    }
-    //----------------------------------------
-
-    return f;
-}
-
-/**
- * @brief BetaOptimization2::optimizeBetasForYoyo
- * @param cubeVector
- */
-void BetaOptimization::optimizeBetasForYoyo(QVector<octree::cubeObject>* cubeVector)
-{
-
-    double minf;
-
-    //------------------------------
-    int bs = cubeVector->size();
-    //------------------------------
-
-    //lower and upper borders (0,1) for betas
-    double* lb_si = new double[bs];
-    double* ub_si = new double[bs];
-    double* betas = new double[bs];
-    for(int i=0;i<bs;i++)
-    {
-        lb_si[i] = 0.0;
-        ub_si[i] = 1.0;
-        betas[i] = cubeVector->data()[i].beta;
-    }
-
-    //------------------------------
-    nlopt_opt opt_spin_it;
-    opt_spin_it = nlopt_create( USED_ALGO, bs);
-
-    // set borders
-    nlopt_set_lower_bounds(opt_spin_it, lb_si);
-    nlopt_set_upper_bounds(opt_spin_it, ub_si);
-
-    // set optimization function
-    nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForYoyo, NULL);
-
-    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
-    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
-
-    // set tolerance value
-    nlopt_set_xtol_rel(opt_spin_it, val1);
-
-    // set constraints
-    spin_it_constraint_data data_si[10] = { {0},{1},{2},{3},{4},{5} };
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[0], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[1], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[2], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[3], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[4], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[5], val2);
-
-    // set maximal time
-    nlopt_set_maxtime(opt_spin_it,MAX_TIME);
-
-    // execute optimization
-    if (nlopt_optimize(opt_spin_it, betas, &minf) < 0)
-    {
-        cout << "optimization failed!" << endl;
-    }
-    else
-    {
-        cout << "optimization successful (found minimum " << minf << ")" << endl;
-    }
-    cout << "----------------------------------------" << endl;
-
-    nlopt_destroy(opt_spin_it);
-
-    delete lb_si;
-    delete ub_si;
-    delete betas;
-
-    for (int i = 0; i < bs; i++) {
-        octree::cubeObject* obj = &cubeVector->data()[i];
-        obj->beta = betas[i];
-    }
-
-}
-
-/**
- * @brief BetaOptimization2::optimizeBetasForTop
- * @param cubeVector
- */
-void BetaOptimization::optimizeBetasForTop(QVector<octree::cubeObject>* cubeVector)
-{
-
-    double minf;
-
-    //------------------------------
-    int bs = cubeVector->size();
-    //------------------------------
-
-    // lower and upper borders (0,1) for betas
-    double* lb_si = new double[bs];
-    double* ub_si = new double[bs];
-    double* betas = new double[bs];
-    for(int i=0;i<bs;i++)
-    {
-        lb_si[i] = 0.0;
-        ub_si[i] = 1.0;
-        betas[i] = cubeVector->data()[i].beta;
-    }
-
-    //------------------------------
-    nlopt_opt opt_spin_it;
-    opt_spin_it = nlopt_create( USED_ALGO, bs);
-
-    // set borders
-    nlopt_set_lower_bounds(opt_spin_it, lb_si);
-    nlopt_set_upper_bounds(opt_spin_it, ub_si);
-
-    // set optimization function
-    nlopt_set_min_objective(opt_spin_it, spinItEnergyFunctionForTop, NULL);
-
-    double val1 = OPTIMIZATION_FUNUNCTION_THRESHOLD;
-    double val2 = OPTIMIZATION_CONSTAINTS_THRESHOLD;
-
-    // set tolerance value
-    nlopt_set_xtol_rel(opt_spin_it, val1);
-
-    // set constraints
-    spin_it_constraint_data data_si[10] = { {0},{1},{2},{3},{5} };
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[0], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[1], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[2], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[3], val2);
-    nlopt_add_equality_constraint(opt_spin_it, spinItContraints, &data_si[4], val2);
-
-    // set maximal time
-    nlopt_set_maxtime(opt_spin_it,MAX_TIME);
-
-    // execute optimization
-    if (nlopt_optimize(opt_spin_it, betas, &minf) < 0)
-    {
-        cout << "optimization failed!" << endl;
-    }
-    else
-    {
-        cout << "optimization successful (found minimum " << minf << ")" << endl;
-    }
-    cout << "----------------------------------------" << endl;
-
-
-    nlopt_destroy(opt_spin_it);
-
-    delete lb_si;
-    delete ub_si;
-    delete betas;
-
-    cout << endl;
-
-    for (int i = 0; i < bs; i++) {
-        octree::cubeObject* obj = &cubeVector->data()[i];
-        obj->beta = betas[i];
-    }
-
-    cout << endl;
-
 }
 
 /**
@@ -1286,7 +686,7 @@ GLfloat BetaOptimization::getEpsilon(GLint depth)
  * @param optimizationType
  * @param withPhi
  */
-void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType, bool withPhi)
+void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 {
 
     cout << "Beta Optimization Bottom Up" << endl;
@@ -1308,34 +708,7 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType, bool withPh
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        switch(optimizationType)
-        {
-            case OPTIMIZATION_TYPE_YOYO:
-
-            if(withPhi || i==3)
-            {
-                BetaOptimization::optimizeBetasForYoyoWithAngle(cubeVector);
-            }
-            else
-            {
-                BetaOptimization::optimizeBetasForYoyo(cubeVector);
-            }
-
-            break;
-            case OPTIMIZATION_TYPE_TOP:
-
-            if(withPhi || i==3)
-            {
-                BetaOptimization::optimizeBetasForTopWithAngle(cubeVector);
-            }
-            else
-            {
-                BetaOptimization::optimizeBetasForTop(cubeVector);
-            }
-
-            break;
-
-        }
+        BetaOptimization::optimizeBetas(cubeVector,optimizationType);
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
@@ -1354,7 +727,7 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType, bool withPh
  * @param optimizationType
  * @param withPhi
  */
-void BetaOptimization::optimizeBetas(int optimizationType, bool withPhi)
+void BetaOptimization::optimizeBetasForYoyo(int optimizationType)
 {
 
     cout << "Beta Optimization" << endl;
@@ -1371,34 +744,7 @@ void BetaOptimization::optimizeBetas(int optimizationType, bool withPhi)
 
     calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-    switch(optimizationType)
-    {
-        case OPTIMIZATION_TYPE_YOYO:
-
-        if(withPhi)
-        {
-            BetaOptimization::optimizeBetasForYoyoWithAngle(cubeVector);
-        }
-        else
-        {
-            BetaOptimization::optimizeBetasForYoyo(cubeVector);
-        }
-
-        break;
-        case OPTIMIZATION_TYPE_TOP:
-
-        if(withPhi)
-        {
-            BetaOptimization::optimizeBetasForTopWithAngle(cubeVector);
-        }
-        else
-        {
-            BetaOptimization::optimizeBetasForTop(cubeVector);
-        }
-
-        break;
-
-    }
+    BetaOptimization::optimizeBetas(cubeVector,optimizationType);
 
     calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
@@ -1413,7 +759,7 @@ void BetaOptimization::optimizeBetas(int optimizationType, bool withPhi)
  * @param optimizationType
  * @param withPhi
  */
-void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType, bool withPhi)
+void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 {
 
     bool notConverged =  true;
@@ -1438,34 +784,7 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType, bool
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        switch(optimizationType)
-        {
-            case OPTIMIZATION_TYPE_YOYO:
-
-            if(withPhi)
-            {
-                BetaOptimization::optimizeBetasForYoyoWithAngle(cubeVector);
-            }
-            else
-            {
-                BetaOptimization::optimizeBetasForYoyo(cubeVector);
-            }
-
-            break;
-            case OPTIMIZATION_TYPE_TOP:
-
-            if(withPhi)
-            {
-                BetaOptimization::optimizeBetasForTopWithAngle(cubeVector);
-            }
-            else
-            {
-                BetaOptimization::optimizeBetasForTop(cubeVector);
-            }
-
-            break;
-
-        }
+        BetaOptimization::optimizeBetas(cubeVector,optimizationType);
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 

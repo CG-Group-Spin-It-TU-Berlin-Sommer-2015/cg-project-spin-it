@@ -8,7 +8,7 @@
 #include <QFile>
 #include <QTextStream>
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 
 using namespace std;
 

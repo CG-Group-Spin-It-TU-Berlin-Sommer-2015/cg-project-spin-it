@@ -1,7 +1,7 @@
 #ifndef EXTENDEDMESHMERGER_H
 #define EXTENDEDMESHMERGER_H
 
-#include "view/utility/mesh.h"
+#include "mesh/mesh.h"
 
 #include <cork.h>
 

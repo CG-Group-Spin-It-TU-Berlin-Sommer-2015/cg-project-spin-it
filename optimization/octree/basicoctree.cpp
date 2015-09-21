@@ -1363,6 +1363,9 @@ void BasicOctree::initiateMergeRoots()
 
 //-------------------------------------------------- getters vector
 
+/**
+ * @brief BasicOctree::printNumberOfLeafTypes
+ */
 void BasicOctree::printNumberOfLeafTypes()
 {
 

@@ -120,27 +120,47 @@ Mesh::~Mesh()
 
 }
 
+/**
+ * @brief Mesh::getGeometry
+ * @return
+ */
 QVector<GLfloat>* Mesh::getGeometry()
 {
     return geometry;
 }
 
-
+/**
+ * @brief Mesh::getSurfaceNormals
+ * @return
+ */
 QVector<GLfloat>* Mesh::getSurfaceNormals()
 {
     return surface_normals;
 }
 
+/**
+ * @brief Mesh::getVertexNormals
+ * @return
+ */
 QVector<GLfloat>* Mesh::getVertexNormals()
 {
     return vertex_normals;
 }
 
+/**
+ * @brief Mesh::getIndices
+ * @return
+ */
 QVector<GLint>* Mesh::getIndices()
 {
     return indices;
 }
 
+/**
+ * @brief Mesh::render
+ * @param shader
+ * @param primitive
+ */
 void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
 {
     if (isDirty) {
@@ -370,6 +390,9 @@ void Mesh::swapYZ()
 
 }
 
+/**
+ * @brief Mesh::updateNormals
+ */
 void Mesh::updateNormals()
 {
 
@@ -427,6 +450,10 @@ void Mesh::updateNormals()
 
 }
 
+/**
+ * @brief Mesh::getLowestPoint
+ * @return
+ */
 QVector3D Mesh::getLowestPoint()
 {
 
