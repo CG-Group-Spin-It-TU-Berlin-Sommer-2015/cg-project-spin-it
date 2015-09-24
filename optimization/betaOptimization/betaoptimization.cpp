@@ -14,6 +14,8 @@ using namespace std;
 #define DEPTH_7_EPSILON_VALUE 1e-1
 #define DEPTH_8_EPSILON_VALUE 1e-1
 
+#define BOTTOM_UP_START_DEPTH 4
+
 #define s_1  S(0)
 #define s_x  S(1)
 #define s_y  S(2)
@@ -732,6 +734,7 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
     cout << "phi:" << endl;
     cout << phi << endl;
 
+    /*
     if(cubeVector != NULL && cubeVector->size()<=20)
     {
 
@@ -746,6 +749,7 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
         cout << (betas.transpose()*(L*betas))(0,0) << endl;
 
     }
+    */
 
 }
 
@@ -846,7 +850,7 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 
     GLint depth = BetaOptimization::octree.getOptimizationMaxDepth();
 
-    for (int i = 4; i < depth; i++) {
+    for (int i = BOTTOM_UP_START_DEPTH; i < depth; i++) {
 
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
 
