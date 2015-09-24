@@ -1689,7 +1689,7 @@ border-radius:5px;</string>
   </connection>
   <connection>
    <sender>glWidget</sender>
-   <signal>shellIsSet(bool)</signal>
+   <signal>modelLoaded(bool)</signal>
    <receiver>hollowButton</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
@@ -1716,22 +1716,6 @@ border-radius:5px;</string>
     <hint type="destinationlabel">
      <x>325</x>
      <y>258</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>glWidget</sender>
-   <signal>shellIsNotSet(bool)</signal>
-   <receiver>hollowButton</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>325</x>
-     <y>258</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>787</x>
-     <y>272</y>
     </hint>
    </hints>
   </connection>

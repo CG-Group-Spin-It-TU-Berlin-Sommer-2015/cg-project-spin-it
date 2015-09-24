@@ -628,7 +628,7 @@ void GLWidget::loadNewMesh()
 void GLWidget::makeItSpin()
 {
 
-    if(rebuildOctree)
+    if(rebuildOctree || octreeIsDirty)
     {
         this->calculateOctree();
     }
@@ -740,7 +740,6 @@ void GLWidget::setView(int index)
             {
                 emit deactivateViewControlWidget(true);
                 emit shellIsNotSet(true);
-                octreeIsDirty=false;
             }
 
             this->setViewDefault();
@@ -760,7 +759,6 @@ void GLWidget::setView(int index)
             {
                 emit deactivateViewControlWidget(true);
                 emit shellIsNotSet(true);
-                octreeIsDirty=false;
             }
 
             this->setViewDefault();
@@ -801,6 +799,7 @@ void GLWidget::calculateOctree()
                 this->shellExtensionValue);
 
     rebuildOctree = false;
+    octreeIsDirty=false;
 
     emit activateViewControlWidget(true);
     emit shellIsSet(true);
@@ -890,7 +889,11 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
 void GLWidget::setYoyo()
 {
     this->topOptimized = false;
-    rebuildOctree = true;
+    octreeIsDirty=true;
+
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
+    emit shellIsNotSet(true);
 
     updateView();
 }
@@ -901,7 +904,11 @@ void GLWidget::setYoyo()
 void GLWidget::setTop()
 {
     this->topOptimized = true;
-    rebuildOctree = true;
+    octreeIsDirty=true;
+
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
+    emit shellIsNotSet(true);
 
     updateView();
 }
@@ -913,7 +920,11 @@ void GLWidget::setTop()
 void GLWidget::setTippeTop(bool tippeTop)
 {
     this->tippeTopOptimized = tippeTop;
-    rebuildOctree = true;
+    octreeIsDirty=true;
+
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
+    emit shellIsNotSet(true);
 
     updateView();
 }
@@ -925,7 +936,12 @@ void GLWidget::setTippeTop(bool tippeTop)
 void GLWidget::setAddAxis(bool addAxis)
 {
     this->addSpinAxisToTop = addAxis;
-    rebuildOctree = true;
+    octreeIsDirty=true;
+
+    emit setViewBack(true);
+    emit deactivateViewControlWidget(true);
+    emit shellIsNotSet(true);
+
     updateView();
 }
 
