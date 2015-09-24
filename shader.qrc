@@ -6,15 +6,10 @@
         <file>colorshader.vsh</file>
     </qresource>
     <qresource prefix="/obj">
-        <file>test.obj</file>
+        <file>ellipsoid.obj</file>
         <file>cube.obj</file>
         <file>monkey.obj</file>
         <file>rot_axis.obj</file>
-        <file>bunny.obj</file>
-        <file>half_sphere.obj</file>
-        <file>rot_axis_bold.obj</file>
-        <file>yoyo_area.obj</file>
-        <file>yoyo_connection.obj</file>
         <file>tippe_top_object.obj</file>
         <file>yoyo_center_object.obj</file>
     </qresource>

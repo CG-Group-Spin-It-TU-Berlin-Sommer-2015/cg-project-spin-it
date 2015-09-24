@@ -805,7 +805,7 @@ bool ExtendedOctree::splitStep(GLfloat epsilon)
                     nodePointer->mesh = NULL;
                 }
 
-                // konvergece is not reached
+                // convergece is not reached
                 isSplited = true;
 
                 splitNumber++;
@@ -815,8 +815,8 @@ bool ExtendedOctree::splitStep(GLfloat epsilon)
 
     innerLeafIndices.clear();
 
-    cout << "Number of Splits: " << splitNumber << endl;
     cout << "----------------------------------------" << endl;
+    cout << "Number of Splits: " << splitNumber << endl;
 
     return isSplited;
 }
@@ -927,9 +927,9 @@ void ExtendedOctree::mergeStep(GLfloat epsilon)
 
     }
 
+    cout << "----------------------------------------" << endl;
     cout << "Number of Merges: " << mergeNumber << endl;
     cout << "Number of Merges Loops: " << mergeLoops << endl;
-    cout << "----------------------------------------" << endl;
 
 }
 

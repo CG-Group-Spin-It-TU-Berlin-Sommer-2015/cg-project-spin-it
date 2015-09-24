@@ -6,13 +6,13 @@ using namespace std;
 //Sequential Quadratic Programming(local and derivative-based)
 #define USED_ALGO NLOPT_LD_SLSQP
 
-#define DEPTH_2_EPSILON_VALUE 0
-#define DEPTH_3_EPSILON_VALUE 1e-3
-#define DEPTH_4_EPSILON_VALUE 1e-2
-#define DEPTH_5_EPSILON_VALUE 2e-2
-#define DEPTH_6_EPSILON_VALUE 3e-2
-#define DEPTH_7_EPSILON_VALUE 4e-2
-#define DEPTH_8_EPSILON_VALUE 5e-2
+#define DEPTH_2_EPSILON_VALUE 1e-5
+#define DEPTH_3_EPSILON_VALUE 1e-4
+#define DEPTH_4_EPSILON_VALUE 1e-3
+#define DEPTH_5_EPSILON_VALUE 1e-2
+#define DEPTH_6_EPSILON_VALUE 0.5*1e-1
+#define DEPTH_7_EPSILON_VALUE 1e-1
+#define DEPTH_8_EPSILON_VALUE 1e-1
 
 #define s_1  S(0)
 #define s_x  S(1)
@@ -39,25 +39,25 @@ using namespace std;
 #define MAX(v1,v2) (v1>v2?v1:v2);
 #define MIN(v1,v2) (v1<v2?v1:v2);
 
-#define GAMMA_C_TOP 2e+0
-#define GAMMA_I_TOP 1e+4
-#define GAMMA_L_TOP 1e+0
+#define GAMMA_C_TOP 1e-3
+#define GAMMA_I_TOP 1e-0
+#define GAMMA_L_TOP 1e-6
 
-#define GAMMA_I_YOYO 1e+8
-#define GAMMA_L_YOYO 1e+4
+#define GAMMA_I_YOYO 1e-0
+#define GAMMA_L_YOYO 1e-6
 
-#define MAX_TIME 180
+#define MAX_TIME 240
 
-#define OPTIMIZATION_FUNUNCTION_THRESHOLD 1e-5
+#define OPTIMIZATION_FUNUNCTION_THRESHOLD 1e-4
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD 1e-8
 
 /* weights for optimization */
 
-double BetaOptimization::gamma_c_top = GAMMA_C_TOP/(GAMMA_C_TOP+GAMMA_I_TOP+GAMMA_L_TOP);
-double BetaOptimization::gamma_i_top = GAMMA_I_TOP/(GAMMA_C_TOP+GAMMA_I_TOP+GAMMA_L_TOP);
-double BetaOptimization::gamma_l_top = GAMMA_L_TOP/(GAMMA_C_TOP+GAMMA_I_TOP+GAMMA_L_TOP);
-double BetaOptimization::gamma_i_yoyo = GAMMA_I_YOYO/(GAMMA_I_YOYO+GAMMA_L_YOYO);
-double BetaOptimization::gamma_l_yoyo = GAMMA_L_YOYO/(GAMMA_I_YOYO+GAMMA_L_YOYO);
+double BetaOptimization::gamma_c_top = GAMMA_C_TOP;
+double BetaOptimization::gamma_i_top = GAMMA_I_TOP;
+double BetaOptimization::gamma_l_top = GAMMA_L_TOP;
+double BetaOptimization::gamma_i_yoyo = GAMMA_I_YOYO;
+double BetaOptimization::gamma_l_yoyo = GAMMA_L_YOYO;
 
 Mesh* BetaOptimization::mesh = NULL;
 ExtendedOctree BetaOptimization::octree;
@@ -77,6 +77,8 @@ VectorXd BetaOptimization::S_inner_comp;
 void BetaOptimization::doTopOptimization()
 {
 
+    cout << "----------------------------------------" << "----------------------------------------" << endl;
+    cout << "Top Optimization (Start)" << endl;
 
     BetaOptimization::mesh->swapYZ();
 
@@ -93,6 +95,9 @@ void BetaOptimization::doTopOptimization()
 
     BetaOptimization::mesh->swapYZ();
 
+    cout << "----------------------------------------" << endl;
+    cout << "Top Optimization (Finish)" << endl;
+
 }
 
 /**
@@ -100,6 +105,9 @@ void BetaOptimization::doTopOptimization()
  */
 void BetaOptimization::doYoyoOptimization()
 {
+
+    cout << "----------------------------------------" << "----------------------------------------" << endl;
+    cout << "Yoyo Optimization (Start)" << endl;
 
     BetaOptimization::mesh->swapYZ();
 
@@ -109,7 +117,15 @@ void BetaOptimization::doYoyoOptimization()
 
     BetaOptimization::resetPhi();
 
+    BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_YOYO);
+    BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_YOYO);
+
+    //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
+
     BetaOptimization::mesh->swapYZ();
+
+    cout << "----------------------------------------" << endl;
+    cout << "Yoyo Optimization (Finish)" << endl;
 
 }
 
@@ -131,6 +147,9 @@ void BetaOptimization::initializeOctree(
     {
         delete BetaOptimization::mesh;
     }
+
+    cout << "----------------------------------------" << "----------------------------------------" << endl;
+    cout << "Create Octree (Start)" << endl;
 
     BetaOptimization::mesh = newModifiedMesh;
 
@@ -170,6 +189,8 @@ void BetaOptimization::initializeOctree(
 
     BetaOptimization::mesh = newModifiedMesh;
 
+    cout << "----------------------------------------" << endl;
+    cout << "Create Octree (Finish)" << endl;
 
 }
 
@@ -313,12 +334,12 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
 
     if(IS_TOP_OPTIMIZATION)
     {
-        MatrixXd diag110 = MatrixXd::Zero(2,2);
-        diag110(0,0) = 1;
-        diag110(1,1) = 1;
+        MatrixXd diag11 = MatrixXd::Zero(2,2);
+        diag11(0,0) = 1;
+        diag11(1,1) = 1;
 
         // shifted inertia tensor
-        I = I- (pow(s_z,2)/s_1) * diag110;
+        I = I- (pow(s_z,2)/s_1) * diag11;
     }
 
     // rotation matrix
@@ -392,11 +413,11 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
 }
 
 /**
- * @brief BetaOptimization::optimizeBetas
+ * @brief BetaOptimization::executeBetasOptimization
  * @param cubeVector
  * @param optimizationType
  */
-void BetaOptimization::optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLint optimizationType)
+void BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType)
 {
 
     double minf;
@@ -457,21 +478,71 @@ void BetaOptimization::optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLi
     nlopt_set_maxtime(opt_spin_it,MAX_TIME);
 
     // execute optimization
-    if (nlopt_optimize(opt_spin_it, betas, &minf) < 0)
+    nlopt_result result =  nlopt_optimize(opt_spin_it, betas, &minf);
+
+    cout << "----------------------------------------" << endl;
+    if ( result < 0)
     {
+
         cout << "optimization failed!" << endl;
+
+        if(result == NLOPT_FAILURE)
+        {
+            cout << "Generic failure code!" << endl;
+        }
+        else
+        if(result == NLOPT_INVALID_ARGS)
+        {
+            cout << "Invalid arguments (e.g. lower bounds are bigger than upper bounds, an unknown algorithm was specified, etcetera)!" << endl;
+        }
+        else
+        if(result == NLOPT_OUT_OF_MEMORY)
+        {
+            cout << "Ran out of memory!" << endl;
+        }
+        else
+        if(result == NLOPT_ROUNDOFF_LIMITED)
+        {
+            cout << "Halted because roundoff errors limited progress! (In this case, the optimization still typically returns a useful result.)" << endl;
+        }
+        else
+        if(result == NLOPT_FORCED_STOP)
+        {
+            cout << "Forced stop!" << endl;
+        }
+
     }
     else
     {
         cout << "optimization successful (found minimum " << minf << ")" << endl;
+
+        if(result == NLOPT_SUCCESS){
+            cout << "Generic success return value!" << endl;
+        }
+        else
+        if(result == NLOPT_STOPVAL_REACHED){
+            cout << "Optimization stopped because stopval (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_FTOL_REACHED){
+            cout << "Optimization stopped because ftol_rel or ftol_abs (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_XTOL_REACHED){
+            cout << "Optimization stopped because xtol_rel or xtol_abs (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_MAXEVAL_REACHED){
+            cout << "Optimization stopped because maxeval (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_MAXTIME_REACHED){
+            cout << "Optimization stopped because maxtime (above) was reached!" << endl;
+        }
+
     }
-    cout << "----------------------------------------" << endl;
 
     nlopt_destroy(opt_spin_it);
-
-    delete lb_si;
-    delete ub_si;
-    delete betas;
 
     // update betas
     for (int i = 1; i < bs; i++) {
@@ -479,6 +550,10 @@ void BetaOptimization::optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLi
         obj->beta = betas[i];
     }
     BetaOptimization::phi = betas[0];
+
+    delete lb_si;
+    delete ub_si;
+    delete betas;
 
 }
 
@@ -500,8 +575,9 @@ void BetaOptimization::resetPhi()
 void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<octree::cubeObject>* cubeVector, double phi)
 {
 
+    cout << "----------" << "----------" << endl;
     cout << "Inertia Properties:" << endl;
-    cout << "----------" << endl;
+
 
     double cosp = cos(phi);
     double sinp = sin(phi);
@@ -524,9 +600,11 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
     I(1,0) = -s_xy;     I(1,1) = s_x2+s_z2; I(1,2) = -s_yz;
     I(2,0) = -s_xz;     I(2,1) = -s_yz;     I(2,2) = s_x2+s_y2;
 
+    /*
+    cout << "----------" << endl;
     cout << "Inertia Matrix:" << endl;
     cout << I << endl;
-    cout << "----------" << endl;
+    */
 
     // rotation matrix
     MatrixXd R(2,2);
@@ -540,9 +618,9 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
     // shifted inertia tensor
     MatrixXd I_com = I - (pow(s_z,2)/s_1) * diag110;
 
+    cout << "----------" << endl;
     cout << "Shifted Inertia Matrix:" << endl;
     cout << I_com << endl;
-    cout << "----------" << endl;
 
     MatrixXd I_2(2,2);
     I_2(0,0) = I_com(0,0);    I_2(0,1) = I_com(0,1);
@@ -551,9 +629,11 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
     // Givens Rotation representation
     MatrixXd mat = R*I_2*R.transpose();
 
+    /*
     cout << "Rotated Component:" << endl;
     cout << mat << endl;
     cout << "----------------------------------------" << endl;
+    */
 
     // center of mass
     VectorXd c(3);
@@ -562,20 +642,22 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
     c(2) = s_z;
     c =c/s_1;
 
+    cout << "----------------------------------------" << endl;
     cout << "Center of Mass:" << endl;
     cout << c << endl;
-    cout << "----------------------------------------" << endl;
 
+    cout << "----------------------------------------" << endl;
     cout << "Mass:" << endl;
     cout << s_1 << endl;
-    cout << "----------------------------------------" << endl;
 
+    cout << "----------------------------------------" << endl;
     cout << "phi:" << endl;
     cout << phi << endl;
-    cout << "----------------------------------------" << endl;
 
     if(cubeVector != NULL && cubeVector->size()<=20)
     {
+
+        cout << "----------------------------------------" << endl;
         cout << "L:" << endl;
         cout << L.toDense() << endl;
         cout << "----------------------------------------" << endl;
@@ -584,19 +666,9 @@ void BetaOptimization::calcInertiaTensor(VectorXd S_comp,MatrixXd S_mat,QVector<
         cout << "----------------------------------------" << endl;
         cout << "betas.T*(L*betas):" << endl;
         cout << (betas.transpose()*(L*betas))(0,0) << endl;
-        cout << "----------------------------------------" << endl;
 
     }
 
-    if(cubeVector != NULL)
-    {
-        VectorXd onebetas(cubeVector->size());
-        onebetas.setOnes();
-        cout << "test inner volume" << endl;
-        cout << (BetaOptimization::S_inner_comp-BetaOptimization::S_mat*onebetas) << endl;
-        cout << "----------------------------------------" << endl;    }
-
-    return;
 }
 
 /**
@@ -653,9 +725,9 @@ void BetaOptimization::setCheckMatrixForCubes()
         }
     }
 
+    cout << "----------------------------------------" << endl;
     cout << "complete inner volume" << endl;
     cout << BetaOptimization::S_inner_comp << endl;
-    cout << "----------------------------------------" << endl;
 
     return;
 }
@@ -689,18 +761,18 @@ GLfloat BetaOptimization::getEpsilon(GLint depth)
 void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 {
 
+    cout << "----------------------------------------" << endl;
     cout << "Beta Optimization Bottom Up" << endl;
-    cout << "----------------------------------------" << endl;    
 
     calcInertiaTensor(S_comp,S_mat,NULL,BetaOptimization::phi);
 
     GLint depth = BetaOptimization::octree.getOptimizationMaxDepth();
-    GLint maxDepth = 4;
 
-    for (int i = 3; i < depth && i <= maxDepth; i++) {
+    for (int i = 4; i < depth; i++) {
 
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
 
+        cout << "----------------------------------------" << endl;
         cout << "number of cubes is " << cubeVector->size() << endl;
 
         BetaOptimization::setSMatrixForCubes(cubeVector);
@@ -708,7 +780,7 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        BetaOptimization::optimizeBetas(cubeVector,optimizationType);
+        BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
 
         calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
@@ -727,26 +799,25 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
  * @param optimizationType
  * @param withPhi
  */
-void BetaOptimization::optimizeBetasForYoyo(int optimizationType)
+void BetaOptimization::optimizeBetas(int optimizationType)
 {
 
-    cout << "Beta Optimization" << endl;
     cout << "----------------------------------------" << endl;
+    cout << "Beta Optimization" << endl;
 
     QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
 
-    cout << "number of cubes is " << cubeVector->size() << endl;
     cout << "----------------------------------------" << endl;
-
+    cout << "number of cubes is " << cubeVector->size() << endl;
 
     BetaOptimization::setSMatrixForCubes(cubeVector);
     BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
-    calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
+    BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-    BetaOptimization::optimizeBetas(cubeVector,optimizationType);
+    BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
 
-    calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
+    BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
     BetaOptimization::octree.updateBetaValues();
 
@@ -764,29 +835,30 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 
     bool notConverged =  true;
 
-    cout << "Beta Optimization with Split and Merge Step" << endl;
     cout << "----------------------------------------" << endl;
+    cout << "Beta Optimization with Split and Merge Step" << endl;
 
     GLint counter=1;
 
     while(notConverged)
     {
 
-        cout << "Split and Merge Step (" << counter << ")" << endl;
         cout << "----------------------------------------" << endl;
+        cout << "Split and Merge Step (" << counter << ")" << endl;
         counter++;
 
+        cout << "----------------------------------------" << endl;
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
         cout << "number of cubes is " << cubeVector->size() << endl;
 
         BetaOptimization::setSMatrixForCubes(cubeVector);
         BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
-        calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
+        BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        BetaOptimization::optimizeBetas(cubeVector,optimizationType);
+        BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
 
-        calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
+        BetaOptimization::calcInertiaTensor(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
         BetaOptimization::octree.updateBetaValues();
 

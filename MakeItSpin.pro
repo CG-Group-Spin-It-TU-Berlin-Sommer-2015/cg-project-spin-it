@@ -56,9 +56,6 @@ DEPENDPATH += $$PWD/../cork/include
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a
 
-INCLUDEPATH += $$PWD/../eigen
-DEPENDPATH += $$PWD/../eigen
-
 unix:!macx: LIBS += -L$$PWD/../../../../usr/lib/x86_64-linux-gnu/ -lgmp
 
 INCLUDEPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu

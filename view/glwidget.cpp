@@ -66,6 +66,23 @@ void GLWidget::resetGLWidget()
 
     rebuildOctree = true;
 
+
+    if(YOYO_MODE)
+    {
+        deactivateCSpinBox(true);
+        setCWeightSpinBox(0);
+        setIWeightSpinBox(BetaOptimization::gamma_i_yoyo);
+        setLWeightSpinBox(BetaOptimization::gamma_l_yoyo);
+    }
+    else
+    {
+        activateCSpinBox(true);
+        setCWeightSpinBox(BetaOptimization::gamma_c_top);
+        setIWeightSpinBox(BetaOptimization::gamma_i_top);
+        setLWeightSpinBox(BetaOptimization::gamma_l_top);
+    }
+
+
     emit setStartDepthSpinBoxValue(this->startMaximalDepth);
     emit setMaximumDepthSpinBoxValue(this->optimizationMaximalDepth);
     emit setShellExtensionSpinBoxValue(shellExtensionValue);
@@ -149,7 +166,7 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     // load helper meshes
-    rot_axis = readMeshFromObjFileDirectory("rot_axis_bold");
+    rot_axis = readMeshFromObjFileDirectory("rot_axis");
     half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
     yoyo_center = readMeshFromObjFileDirectory("yoyo_center_object");
 
@@ -960,6 +977,21 @@ void GLWidget::updateView()
         this->rot_obj_psy = 0;
     }
 
+    if(YOYO_MODE)
+    {
+        deactivateCSpinBox(true);
+        setCWeightSpinBox(0);
+        setIWeightSpinBox(BetaOptimization::gamma_i_yoyo);
+        setLWeightSpinBox(BetaOptimization::gamma_l_yoyo);
+    }
+    else
+    {
+        activateCSpinBox(true);
+        setCWeightSpinBox(BetaOptimization::gamma_c_top);
+        setIWeightSpinBox(BetaOptimization::gamma_i_top);
+        setLWeightSpinBox(BetaOptimization::gamma_l_top);
+    }
+
     setViewDefault();
 }
 
@@ -1155,3 +1187,34 @@ void GLWidget::setShellExtensionValue(int value)
     rebuildOctree = true;
 
 }
+
+
+void GLWidget::setCWeight(double value)
+{
+    BetaOptimization::gamma_c_top=value;
+}
+
+void GLWidget::setIWeight(double value)
+{
+    if(YOYO_MODE)
+    {
+        BetaOptimization::gamma_i_yoyo=value;
+    }
+    else
+    {
+        BetaOptimization::gamma_i_top=value;
+    }
+}
+
+void GLWidget::setLWeight(double value)
+{
+    if(YOYO_MODE)
+    {
+        BetaOptimization::gamma_l_yoyo=value;
+    }
+    else
+    {
+        BetaOptimization::gamma_l_top=value;
+    }
+}
+

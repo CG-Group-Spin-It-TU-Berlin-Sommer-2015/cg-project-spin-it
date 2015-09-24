@@ -257,9 +257,10 @@ void BasicOctree::quantizeSurface()
 
     }
 
+    cout << "----------------------------------------" << endl;
     cout << "Number of raw voxels" << endl;
     cout << this->rawVoxels.size()/3 << endl;
-    cout << "----------------------------------------" << endl;
+
 
 }
 
@@ -287,9 +288,9 @@ void BasicOctree::setupVectors()
       voxels.push_back(point);
     }
 
+    cout << "----------------------------------------" << endl;
     cout << "Number of voxels" << endl;
     cout << this->voxels.size() << endl;
-    cout << "----------------------------------------" << endl;
 
 }
 
@@ -931,10 +932,11 @@ void BasicOctree::setupOctree(){
 
     this->octreeNodes.clear();
 
+    cout << "----------------------------------------" << endl;
     cout << "Setup Octree with" << endl;
     cout << "start depht:" << this->startMaxDepth << endl;
     cout << "optimization depht:" << this->optimizationMaxDepth << endl;
-    cout << "----------------------------------------" << endl;
+
 
     this->rootNodeIndex = setupOctreeHelper(0,0,this->voxels.size(),0,0,0);
 
@@ -1351,13 +1353,14 @@ void BasicOctree::initiateMergeRoots()
     d = vec.size();
     vec.clear();
 
+    cout << "----------------------------------------" << endl;
     cout << "Merge Roots: " << a << endl;
     cout << "Merge Children: " << b << endl;
     cout << "Ignored Nodes: " << c << endl;
     cout << "Merge Root Candidates: " << d << endl;
     cout << "Sum of Nodes: " << (a+b+c+d) << endl;
     cout << "Octree Node: " << this->octreeNodes.size() << endl;
-    cout << "----------------------------------------" << endl;
+
 
 }
 
@@ -1385,12 +1388,12 @@ void BasicOctree::printNumberOfLeafTypes()
     c = vec.size();
     vec.clear();
 
+    cout << "----------------------------------------" << endl;
     cout << "Inner Leaves: " << a << endl;
     cout << "Shell Leaves: " << b << endl;
     cout << "Outer Leaves: " << c << endl;
     cout << "Sum Leaves: " << (a+b+c) << endl;
     cout << "Octree Node: " << this->octreeNodes.size() << endl;
-    cout << "----------------------------------------" << endl;
 
 }
 

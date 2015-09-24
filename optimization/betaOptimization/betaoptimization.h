@@ -28,6 +28,13 @@ public:
     static Mesh* shellMesh;
     static ExtendedOctree octree;
 
+    static double gamma_c_top;
+    static double gamma_i_top;
+    static double gamma_l_top;
+
+    static double gamma_i_yoyo;
+    static double gamma_l_yoyo;
+
 public:
 
     static void doTopOptimization();
@@ -40,13 +47,6 @@ public:
             GLint shellExtensionValue);
 
 private:
-
-    static double gamma_c_top;
-    static double gamma_i_top;
-    static double gamma_l_top;
-
-    static double gamma_i_yoyo;
-    static double gamma_l_yoyo;
 
     static SpMat L;
 
@@ -64,7 +64,7 @@ private:
 
     static GLfloat phi;
 
-    static void optimizeBetas(QVector<octree::cubeObject>* cubeVector,GLint optimizationType);
+    static void executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType);
 
     static float* calculateVolume(Mesh* mesh, float p = 1.f);
 
@@ -78,7 +78,7 @@ private:
 
     static void setCheckMatrixForCubes();
 
-    static void optimizeBetasForYoyo(int optimizationType);
+    static void optimizeBetas(int optimizationType);
     static void optimizeBetasWithSplitAndMerge(int optimizationType);
     static void optimizeBetasBottomUp(GLint optimizationType);
 

@@ -146,6 +146,10 @@ public slots:
     void setAddAxis(bool);
     void setTippeTop(bool);
 
+    void setCWeight(double);
+    void setIWeight(double);
+    void setLWeight(double);
+
 signals:
 
     void setStartDepthSpinBoxValue(int);
@@ -172,6 +176,13 @@ signals:
     void setAddAxisCheckBox(bool);
 
     void setViewBack(bool);
+
+    void setCWeightSpinBox(double);
+    void setIWeightSpinBox(double);
+    void setLWeightSpinBox(double);
+
+    void activateCSpinBox(bool);
+    void deactivateCSpinBox(bool);
 
 protected:
 
