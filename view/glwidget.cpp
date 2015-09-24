@@ -642,6 +642,13 @@ void GLWidget::makeItSpin()
 
     }
     else
+    if(TIPPE_TOP_MODE)
+    {
+
+        BetaOptimization::doTippeTopOptimization();
+
+    }
+    else
     if(YOYO_MODE)
     {
 
@@ -985,6 +992,14 @@ void GLWidget::updateView()
         setLWeightSpinBox(BetaOptimization::gamma_l_yoyo);
     }
     else
+    if(TIPPE_TOP_MODE)
+    {
+        deactivateCSpinBox(true);
+        setCWeightSpinBox(0);
+        setIWeightSpinBox(BetaOptimization::gamma_i_tippe_top);
+        setLWeightSpinBox(BetaOptimization::gamma_l_tippe_top);
+    }
+    else
     {
         activateCSpinBox(true);
         setCWeightSpinBox(BetaOptimization::gamma_c_top);
@@ -1202,7 +1217,14 @@ void GLWidget::setIWeight(double value)
     }
     else
     {
-        BetaOptimization::gamma_i_top=value;
+        if(TIPPE_TOP_MODE)
+        {
+            BetaOptimization::gamma_i_tippe_top=value;
+        }
+        else
+        {
+            BetaOptimization::gamma_i_top=value;
+        }
     }
 }
 
@@ -1214,7 +1236,14 @@ void GLWidget::setLWeight(double value)
     }
     else
     {
-        BetaOptimization::gamma_l_top=value;
+        if(TIPPE_TOP_MODE)
+        {
+            BetaOptimization::gamma_l_tippe_top=value;
+        }
+        else
+        {
+            BetaOptimization::gamma_l_top=value;
+        }
     }
 }
 

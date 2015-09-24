@@ -43,6 +43,9 @@ using namespace std;
 #define GAMMA_I_TOP 1e-0
 #define GAMMA_L_TOP 1e-6
 
+#define GAMMA_I_TIPPE_TOP 1e-0
+#define GAMMA_L_TIPPE_TOP 1e-6
+
 #define GAMMA_I_YOYO 1e-0
 #define GAMMA_L_YOYO 1e-6
 
@@ -56,6 +59,10 @@ using namespace std;
 double BetaOptimization::gamma_c_top = GAMMA_C_TOP;
 double BetaOptimization::gamma_i_top = GAMMA_I_TOP;
 double BetaOptimization::gamma_l_top = GAMMA_L_TOP;
+
+double BetaOptimization::gamma_i_tippe_top = GAMMA_I_TIPPE_TOP;
+double BetaOptimization::gamma_l_tippe_top = GAMMA_L_TIPPE_TOP;
+
 double BetaOptimization::gamma_i_yoyo = GAMMA_I_YOYO;
 double BetaOptimization::gamma_l_yoyo = GAMMA_L_YOYO;
 
@@ -92,6 +99,35 @@ void BetaOptimization::doTopOptimization()
     BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TOP);
 
     //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
+
+    BetaOptimization::mesh->swapYZ();
+
+    cout << "----------------------------------------" << endl;
+    cout << "Top Optimization (Finish)" << endl;
+
+}
+
+/**
+ * @brief BetaOptimization::doTippeTopOptimization Execute the optimization for a top
+ */
+void BetaOptimization::doTippeTopOptimization()
+{
+
+    cout << "----------------------------------------" << "----------------------------------------" << endl;
+    cout << "Top Optimization (Start)" << endl;
+
+    BetaOptimization::mesh->swapYZ();
+
+    BetaOptimization::setSForCompleteMesh();
+    BetaOptimization::setCheckMatrixForCubes();
+    BetaOptimization::octree.deleteNodeMeshes();
+
+    BetaOptimization::resetPhi();
+
+    BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TIPPE_TOP);
+    BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TIPPE_TOP);
+
+    //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TIPPE_TOP);
 
     BetaOptimization::mesh->swapYZ();
 
@@ -301,6 +337,7 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
 }
 
 #define IS_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TOP
+#define IS_TIPPE_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TIPPE_TOP
 
 /**
  * @brief spinItEnergyFunction
@@ -356,14 +393,27 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
 
 
     double gc = gamma_c_top;
-    double gi = IS_TOP_OPTIMIZATION?gamma_i_top:gamma_i_yoyo;
-    double gl = IS_TOP_OPTIMIZATION?gamma_l_top:gamma_l_yoyo;
+    double gi = IS_TOP_OPTIMIZATION?gamma_i_top:(IS_TIPPE_TOP_OPTIMIZATION?gamma_i_tippe_top:gamma_i_yoyo);
+    double gl = IS_TOP_OPTIMIZATION?gamma_l_top:(IS_TIPPE_TOP_OPTIMIZATION?gamma_l_tippe_top:gamma_l_yoyo);
 
     double M = s_1;
     double l = s_z/s_1;
 
     double fFirstPart = IS_TOP_OPTIMIZATION?gc*pow(l*M,2):0;
-    double fSecondPart = gi*(pow(IX/IZ,2)+pow(IY/IZ,2));
+    double fSecondPart = 0;
+
+    if(IS_TIPPE_TOP_OPTIMIZATION)
+    {
+        fSecondPart += pow(IX/IZ,2)+pow(IY/IZ,2);
+        fSecondPart += pow(IX/IY,2)+pow(IZ/IY,2);
+        fSecondPart += pow(IY/IX,2)+pow(IZ/IX,2);
+        fSecondPart *= gi;
+    }
+    else
+    {
+        fSecondPart += gi*(pow(IX/IZ,2)+pow(IY/IZ,2));
+    }
+
     double fThirdPart = gl*(0.5f)*(betas.transpose()*(L*betas))(0,0);
 
     double f = fFirstPart+fSecondPart+fThirdPart;
@@ -377,7 +427,20 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
         // gradient depending on phi
         double dIxdphi = 2*cosp*sinp*(pow(s_x,2)-pow(s_y,2))+(pow(cosp,2)-pow(sinp,2))*s_xy;
         double dIydphi = 2*cosp*sinp*(pow(s_y,2)-pow(s_x,2))+(pow(sinp,2)-pow(cosp,2))*s_xy;
-        grad[0] = gi*(2/pow(IZ,2))*(dIxdphi*IX+dIydphi*IY);
+
+        if(IS_TIPPE_TOP_OPTIMIZATION)
+        {
+            grad[0] = 0;
+            grad[0] += (dIxdphi*IX+dIydphi*IY)/pow(IZ,2);
+            grad[0] += (dIxdphi*IX*IY-dIydphi*(pow(IX,2)+pow(IZ,2)))/pow(IZ,3);
+            grad[0] += (dIydphi*IY*IX-dIxdphi*(pow(IY,2)+pow(IZ,2)))/pow(IZ,2);
+            grad[0] *= 2*gi;
+        }
+        else
+        {
+            grad[0] = gi*(2/pow(IZ,2))*(dIxdphi*IX+dIydphi*IY);
+        }
+
 
         //----------------------------------------
         for(unsigned int i=0;i<n-1;i++){
@@ -403,6 +466,21 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
             double dFirstPart = IS_TOP_OPTIMIZATION?gc*(-2)*s_z*Smat_z(i):0;
             double dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
             double dThirdPart = gl*(betas.transpose()*(L*vec))(0,0);
+
+
+            if(IS_TIPPE_TOP_OPTIMIZATION)
+            {
+                dSecondPart = 0;
+                dSecondPart += (dIxb*IX*IZ + dIyb*IY*IZ - dIzb*(pow(IX,2)+pow(IY,2)))/pow(IZ,3);
+                dSecondPart += (dIxb*IX*IY + dIzb*IZ*IY - dIyb*(pow(IX,2)+pow(IZ,2)))/pow(IY,3);
+                dSecondPart += (dIyb*IY*IX + dIzb*IZ*IX - dIxb*(pow(IY,2)+pow(IZ,2)))/pow(IX,3);
+                dSecondPart *= gi*2;
+            }
+            else
+            {
+                dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
+            }
+
 
             grad[i+1] = dFirstPart+dSecondPart+dThirdPart;
         }

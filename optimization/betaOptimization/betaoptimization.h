@@ -12,8 +12,11 @@
 
 #define PI 3.14159265359
 
-#define OPTIMIZATION_TYPE_YOYO 0
-#define OPTIMIZATION_TYPE_TOP 1
+
+#define OPTIMIZATION_TYPE_TOP 0
+#define OPTIMIZATION_TYPE_TIPPE_TOP 1
+#define OPTIMIZATION_TYPE_YOYO 2
+
 
 typedef struct {
     int index;
@@ -32,12 +35,16 @@ public:
     static double gamma_i_top;
     static double gamma_l_top;
 
+    static double gamma_i_tippe_top;
+    static double gamma_l_tippe_top;
+
     static double gamma_i_yoyo;
     static double gamma_l_yoyo;
 
 public:
 
     static void doTopOptimization();
+    static void doTippeTopOptimization();
     static void doYoyoOptimization();
 
     static void initializeOctree(
