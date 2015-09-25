@@ -286,6 +286,9 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
 
     L.setFromTriplets(coefficients.begin(), coefficients.end());
 
+    cout << "----------------------------------------" << endl;
+    cout << "finished laplace operator!" << endl;
+
     return L;
 }
 
@@ -596,6 +599,22 @@ QVector<cubeObject>* ExtendedOctree::getInnerCubes()
 }
 
 /**
+ * @brief ExtendedOctree::getMergedCubes
+ * @return
+ */
+GLint ExtendedOctree::getMergedCubesNumber()
+{
+    QVector<GLint> mergeIndices;
+    this->getMergeRoots(&mergeIndices);
+
+    GLint number = mergeIndices.size();
+
+    mergeIndices.clear();
+
+    return number;
+}
+
+/**
  * @brief ExtendedOctree::getMergedCubes Get a pointer of a vector of cubes which represent the geometry of all inner leaf nodes.
  * @return pointer of vector
  */
@@ -740,9 +759,10 @@ QVector<octree::cubeObject>* ExtendedOctree::getCubesOfLowerDepth(int depth)
 /**
  * @brief ExtendedOctree::splitStep
  * @param epsilon
+ * @param depth
  * @return
  */
-bool ExtendedOctree::splitStep(GLfloat epsilon)
+bool ExtendedOctree::splitStep(GLfloat epsilon,GLint depth)
 {
 
     octreeNode* nodePointer;
@@ -761,6 +781,11 @@ bool ExtendedOctree::splitStep(GLfloat epsilon)
     {
 
         nodePointer = &this->octreeNodes.data()[innerLeafIndices.data()[i]];
+
+        if(nodePointer->nodeDepth>depth)
+        {
+            continue;
+        }
 
         if(!nodePointer->isMergeRoot)
         {
@@ -822,10 +847,68 @@ bool ExtendedOctree::splitStep(GLfloat epsilon)
 }
 
 /**
+ * @brief ExtendedOctree::countPossibleSplits
+ * @param epsilon
+ * @param depth
+ * @return
+ */
+GLint ExtendedOctree::countPossibleSplits(GLfloat epsilon,GLint depth)
+{
+
+    octreeNode* nodePointer;
+
+    GLfloat oneMinusEpsilon = 1-epsilon;
+
+    GLint splitValue = 0;
+    GLint splitNumber = 0;
+
+    // get a vector of the indices of all inner nodes
+    QVector<GLint> innerLeafIndices;
+    getInnerLeaves(&innerLeafIndices);
+
+    // split step
+    for(int i=0;i<innerLeafIndices.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[innerLeafIndices.data()[i]];
+
+        if(nodePointer->nodeDepth>depth)
+        {
+            continue;
+        }
+
+        if(!nodePointer->isMergeRoot)
+        {
+            continue;
+        }
+
+        // if the beta value is in the set (0,epsilon)^(1-epsilon,1)
+        if( epsilon < nodePointer->beta && nodePointer->beta < oneMinusEpsilon )
+        {
+
+            nodePointer = &this->octreeNodes.data()[innerLeafIndices.data()[i]];
+
+            if(nodePointer->nodeDepth<this->optimizationMaxDepth)
+            {
+                splitValue+=7;
+                splitNumber+=1;
+            }
+        }
+    }
+
+    innerLeafIndices.clear();
+
+    cout << "Number of Splits: " << splitNumber << endl;
+
+    return splitValue;
+}
+
+/**
  * @brief ExtendedOctree::mergeStep
  * @param epsilon
+ * @param depth
  */
-void ExtendedOctree::mergeStep(GLfloat epsilon)
+void ExtendedOctree::mergeStep(GLfloat epsilon,GLint depth)
 {
 
     octreeNode* nodePointer;
@@ -852,6 +935,11 @@ void ExtendedOctree::mergeStep(GLfloat epsilon)
         {
 
             nodePointer = &this->octreeNodes.data()[mergeCandidates.data()[i]];
+
+            if(nodePointer->nodeDepth>depth)
+            {
+                continue;
+            }
 
             c0p = &this->octreeNodes.data()[nodePointer->childIndex0];
             c1p = &this->octreeNodes.data()[nodePointer->childIndex1];
@@ -934,16 +1022,112 @@ void ExtendedOctree::mergeStep(GLfloat epsilon)
 }
 
 /**
- * @brief ExtendedOctree::splitAndMerge Split and merge inner nodes.
- * @param epsilon range for the merge area (0,epsilon) and (1-epsilon,1)
- * @return true, if there was a split, false, otherwise
+ * @brief ExtendedOctree::countPossibleMerges
+ * @param epsilon
+ * @param depth
+ * @return
  */
-bool ExtendedOctree::splitAndMerge(GLfloat epsilon)
+GLint ExtendedOctree::countPossibleMerges(GLfloat epsilon,GLint depth)
 {
 
-    bool isSplited = splitStep(epsilon);
+    octreeNode* nodePointer;
 
-    mergeStep(epsilon);
+    GLfloat oneMinusEpsilon = 1-epsilon;
+    GLint mergeValue = 0;
+    GLint mergeNumber = 0;
+
+    // get a vector of the indices of all merge candidates
+    QVector<GLint> mergeCandidates;
+    getMergeRootCandidates(&mergeCandidates);
+
+    octreeNode *c0p,*c1p,*c2p,*c3p,*c4p,*c5p,*c6p,*c7p;
+
+    // merge step
+    for(int i=0;i<mergeCandidates.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[mergeCandidates.data()[i]];
+
+        if(nodePointer->nodeDepth>depth)
+        {
+            continue;
+        }
+
+        c0p = &this->octreeNodes.data()[nodePointer->childIndex0];
+        c1p = &this->octreeNodes.data()[nodePointer->childIndex1];
+        c2p = &this->octreeNodes.data()[nodePointer->childIndex2];
+        c3p = &this->octreeNodes.data()[nodePointer->childIndex3];
+        c4p = &this->octreeNodes.data()[nodePointer->childIndex4];
+        c5p = &this->octreeNodes.data()[nodePointer->childIndex5];
+        c6p = &this->octreeNodes.data()[nodePointer->childIndex6];
+        c7p = &this->octreeNodes.data()[nodePointer->childIndex7];
+
+        bool ignoreC0 = c0p->isIgnored;
+        bool ignoreC1 = c1p->isIgnored;
+        bool ignoreC2 = c2p->isIgnored;
+        bool ignoreC3 = c3p->isIgnored;
+        bool ignoreC4 = c4p->isIgnored;
+        bool ignoreC5 = c5p->isIgnored;
+        bool ignoreC6 = c6p->isIgnored;
+        bool ignoreC7 = c7p->isIgnored;
+
+
+        bool allSmallerEpsilon =
+                (ignoreC0 || (c0p->isMergeRoot && c0p->beta < epsilon)) &&
+                (ignoreC1 || (c1p->isMergeRoot && c1p->beta < epsilon)) &&
+                (ignoreC2 || (c2p->isMergeRoot && c2p->beta < epsilon)) &&
+                (ignoreC3 || (c3p->isMergeRoot && c3p->beta < epsilon)) &&
+                (ignoreC4 || (c4p->isMergeRoot && c4p->beta < epsilon)) &&
+                (ignoreC5 || (c5p->isMergeRoot && c5p->beta < epsilon)) &&
+                (ignoreC6 || (c6p->isMergeRoot && c6p->beta < epsilon)) &&
+                (ignoreC7 || (c7p->isMergeRoot && c7p->beta < epsilon));
+
+        bool allGreaterEpsilon =
+                (ignoreC0 || (c0p->isMergeRoot && c0p->beta > oneMinusEpsilon)) &&
+                (ignoreC1 || (c1p->isMergeRoot && c1p->beta > oneMinusEpsilon)) &&
+                (ignoreC2 || (c2p->isMergeRoot && c2p->beta > oneMinusEpsilon)) &&
+                (ignoreC3 || (c3p->isMergeRoot && c3p->beta > oneMinusEpsilon)) &&
+                (ignoreC4 || (c4p->isMergeRoot && c4p->beta > oneMinusEpsilon)) &&
+                (ignoreC5 || (c5p->isMergeRoot && c5p->beta > oneMinusEpsilon)) &&
+                (ignoreC6 || (c6p->isMergeRoot && c6p->beta > oneMinusEpsilon)) &&
+                (ignoreC7 || (c7p->isMergeRoot && c7p->beta > oneMinusEpsilon));
+
+
+        if( (allSmallerEpsilon && !allGreaterEpsilon) || (!allSmallerEpsilon && allGreaterEpsilon))
+        {
+            mergeValue--;
+            mergeValue+=ignoreC0?0:1;
+            mergeValue+=ignoreC1?0:1;
+            mergeValue+=ignoreC2?0:1;
+            mergeValue+=ignoreC3?0:1;
+            mergeValue+=ignoreC4?0:1;
+            mergeValue+=ignoreC5?0:1;
+            mergeValue+=ignoreC6?0:1;
+            mergeValue+=ignoreC7?0:1;
+            mergeNumber++;
+        }
+
+    }
+
+    mergeCandidates.clear();
+
+    cout << "Number of Merges: " << mergeNumber << endl;
+
+    return mergeValue;
+}
+
+/**
+ * @brief ExtendedOctree::splitAndMerge Split and merge inner nodes.
+ * @param epsilon range for the merge area (0,epsilon) and (1-epsilon,1)
+ * @param depth
+ * @return true, if there was a split, false, otherwise
+ */
+bool ExtendedOctree::splitAndMerge(GLfloat epsilon,GLint depth)
+{
+
+    bool isSplited = splitStep(epsilon,depth);
+
+    mergeStep(epsilon,depth);
 
     return isSplited;
 
@@ -1044,7 +1228,7 @@ void ExtendedOctree::split(octreeNode* nodePointer, GLint maxDepth)
     }
 
     // the node has not to have the maximal depth
-    if( (nodePointer->nodeDepth + 1) > maxDepth)
+    if( nodePointer->nodeDepth >= maxDepth)
     {
         return;
     }

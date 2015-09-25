@@ -6,14 +6,6 @@ using namespace std;
 //Sequential Quadratic Programming(local and derivative-based)
 #define USED_ALGO NLOPT_LD_SLSQP
 
-#define DEPTH_2_EPSILON_VALUE 1e-5
-#define DEPTH_3_EPSILON_VALUE 1e-4
-#define DEPTH_4_EPSILON_VALUE 1e-3
-#define DEPTH_5_EPSILON_VALUE 1e-2
-#define DEPTH_6_EPSILON_VALUE 0.5*1e-1
-#define DEPTH_7_EPSILON_VALUE 1e-1
-#define DEPTH_8_EPSILON_VALUE 1e-1
-
 #define BOTTOM_UP_START_DEPTH 4
 
 #define s_1  S(0)
@@ -51,10 +43,15 @@ using namespace std;
 #define GAMMA_I_YOYO 1e-0
 #define GAMMA_L_YOYO 1e-6
 
-#define MAX_TIME 240
+#define MAX_TIME 180
 
 #define OPTIMIZATION_FUNUNCTION_THRESHOLD 1e-4
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD 1e-8
+
+#define MAX_NUMBER_OF_VARIABLES 3800
+#define SMALLEST_EPSILON 1*1e-8
+#define LARGEST_EPSILON 4*1e-1
+#define MAX_LOOPS_FOR_EPSILON_SEARCH 30
 
 /* weights for optimization */
 
@@ -815,24 +812,88 @@ void BetaOptimization::setCheckMatrixForCubes()
 }
 
 /**
- * @brief BetaOptimization::getEpsilon Choosing a specific elpsilon value for a depht
+ * @brief BetaOptimization::getFittestEpsilon Choosing a specific elpsilon value for a depht
  * @param depth
  * @return epsilon value
  */
-GLfloat BetaOptimization::getEpsilon(GLint depth)
+GLfloat BetaOptimization::getFittestEpsilon(GLint depth)
 {
 
-    switch(depth){
-    case 2: return DEPTH_2_EPSILON_VALUE;
-    case 3: return DEPTH_3_EPSILON_VALUE;
-    case 4: return DEPTH_4_EPSILON_VALUE;
-    case 5: return DEPTH_5_EPSILON_VALUE;
-    case 6: return DEPTH_6_EPSILON_VALUE;
-    case 7: return DEPTH_7_EPSILON_VALUE;
-    default: return DEPTH_8_EPSILON_VALUE;
+    GLint mergedCubeNumber = BetaOptimization::octree.getMergedCubesNumber();
+
+    GLint number;
+
+    GLfloat min_epsilon = SMALLEST_EPSILON;
+    GLfloat max_epsilon = LARGEST_EPSILON;
+    GLfloat current_epsilon;
+
+    GLint merges,splits;
+
+    cout << "----------------------------------------" << endl;
+
+    // test max epsilon
+    merges = BetaOptimization::octree.countPossibleMerges(max_epsilon,depth);
+    splits = BetaOptimization::octree.countPossibleSplits(max_epsilon,depth);
+    number = mergedCubeNumber+splits-merges;
+    if(number>MAX_NUMBER_OF_VARIABLES)
+    {
+        cout << "--- test 1: curr=" << mergedCubeNumber << ",  m=" << merges << ", s=" << splits << ", n=" << number << endl;
+        return -1.f;
     }
 
-    return 0.5;
+    // test min epsilon
+    merges = BetaOptimization::octree.countPossibleMerges(min_epsilon,depth);
+    splits = BetaOptimization::octree.countPossibleSplits(min_epsilon,depth);
+    number = mergedCubeNumber+splits-merges;
+    if(number<MAX_NUMBER_OF_VARIABLES)
+    {
+        cout << "--- test 2: curr=" << mergedCubeNumber << ",  m=" << merges << ", s=" << splits << ", n=" << number << endl;
+        return min_epsilon;
+    }
+
+    GLfloat fittest_epsilon = -1.f;
+    bool found_fittest_epsilon = false;
+
+    cout << "----------------------------------------" << endl;
+    cout << "test counts" << endl;
+
+    for(int i=0;i<MAX_LOOPS_FOR_EPSILON_SEARCH;i++)
+    {
+        current_epsilon = (max_epsilon+min_epsilon)/2.f;
+
+        merges = BetaOptimization::octree.countPossibleMerges(current_epsilon,depth);
+        splits = BetaOptimization::octree.countPossibleSplits(current_epsilon,depth);
+        number = mergedCubeNumber+splits-merges;
+
+        cout << "--- test 1: curr=" << mergedCubeNumber << ",  m=" << merges << ", s=" << splits << ", n=" << number << endl;
+
+        if(number>MAX_NUMBER_OF_VARIABLES)
+        {
+            cout << "---- min" << endl;
+            min_epsilon = current_epsilon;
+        }
+        else
+        {
+            cout << "---- max" << endl;
+            max_epsilon = current_epsilon;
+
+            fittest_epsilon = current_epsilon;
+            found_fittest_epsilon = true;
+        }
+
+    }
+
+    if(found_fittest_epsilon)
+    {
+        cout << "---- fittest yes " << fittest_epsilon << endl;
+        return fittest_epsilon;
+    }
+    else
+    {
+        cout << "---- fittest no " << fittest_epsilon << endl;
+        return LARGEST_EPSILON;
+    }
+
 }
 
 /**
@@ -857,6 +918,14 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
         cout << "----------------------------------------" << endl;
         cout << "number of cubes is " << cubeVector->size() << endl;
 
+        if(cubeVector->size()>MAX_NUMBER_OF_VARIABLES)
+        {
+            cout << "----------------------------------------" << endl;
+            cout << "finished optimization (bottom up)" << endl;
+            cout << "because max number of variables is reached!" << endl;
+            break;
+        }
+
         BetaOptimization::setSMatrixForCubes(cubeVector);
         BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
@@ -868,7 +937,19 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 
         BetaOptimization::octree.updateBetaValuesWithPropagation();
 
-        BetaOptimization::octree.mergeStep(BetaOptimization::getEpsilon(BetaOptimization::octree.getOptimizationMaxDepth()));
+        GLfloat epsilon = BetaOptimization::getFittestEpsilon(i);
+        cout << "----------------------------------------" << endl;
+        if(epsilon<0.f)
+        {
+            cout << "no fittest epsilon has been founded!" << endl;
+            break;
+        }
+        else
+        {
+            cout << "fittest epsilon is " << epsilon << "!" << endl;
+        }
+
+        BetaOptimization::octree.splitAndMerge(epsilon,i);
 
     }
 
@@ -933,6 +1014,14 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
         cout << "number of cubes is " << cubeVector->size() << endl;
 
+        if(cubeVector->size()>MAX_NUMBER_OF_VARIABLES)
+        {
+            cout << "----------------------------------------" << endl;
+            cout << "finished optimization with split and merge" << endl;
+            cout << "because max number of variables is reached!" << endl;
+            break;
+        }
+
         BetaOptimization::setSMatrixForCubes(cubeVector);
         BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
@@ -944,7 +1033,19 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 
         BetaOptimization::octree.updateBetaValues();
 
-        notConverged = BetaOptimization::octree.splitAndMerge(BetaOptimization::getEpsilon(BetaOptimization::octree.getOptimizationMaxDepth()));
+        GLfloat epsilon = BetaOptimization::getFittestEpsilon(BetaOptimization::octree.getOptimizationMaxDepth());
+        cout << "----------------------------------------" << endl;
+        if(epsilon<0.f)
+        {
+            cout << "no fittest epsilon has been founded!" << endl;
+            break;
+        }
+        else
+        {
+            cout << "fittest epsilon is " << epsilon << "!" << endl;
+        }
+
+        notConverged = BetaOptimization::octree.splitAndMerge(epsilon,BetaOptimization::octree.getOptimizationMaxDepth());
     }
 
     BetaOptimization::finishBetaOptimization();
@@ -1042,7 +1143,7 @@ void BetaOptimization::testSplitAndMerge()
         BetaOptimization::octree.updateBetaValues();
 
         // do split and merge
-        not_converged = BetaOptimization::octree.splitAndMerge(0.0001);
+        not_converged = BetaOptimization::octree.splitAndMerge(0.001,1000);
     }
 
     BetaOptimization::finishBetaOptimization();

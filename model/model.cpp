@@ -116,7 +116,7 @@ void Model::hollow()
 
         // do split and merge
 
-        not_converged = octree->splitAndMerge(0.001);
+        not_converged = octree->splitAndMerge(0.001,1000);
     }
 
     octree->deleteNodeMeshes();

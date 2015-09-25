@@ -40,9 +40,12 @@ public:
     QVector<octree::cubeObject>* getMergedCubes();
     QVector<octree::cubeObject>* getCubesOfLowerDepth(int depth);
 
-    bool splitAndMerge(GLfloat epsilon);
-    bool splitStep(GLfloat epsilon);
-    void mergeStep(GLfloat epsilon);
+    bool splitAndMerge(GLfloat epsilon,GLint depth);
+    bool splitStep(GLfloat epsilon,GLint depth);
+    void mergeStep(GLfloat epsilon,GLint depth);
+
+    GLint countPossibleSplits(GLfloat epsilon,GLint depth);
+    GLint countPossibleMerges(GLfloat epsilon,GLint depth);
 
     void split(octree::octreeNode* nodePointer, GLint maxDepht);
     void split(GLint nodeIndex, GLint maxDepht);
@@ -60,6 +63,8 @@ public:
     void makeDirty();
 
     SpMat getUniformLaplace(QVector<octree::cubeObject>* cubes);
+
+    GLint getMergedCubesNumber();
 
 private:
 
@@ -87,7 +92,6 @@ private:
     void propagateBeta(GLint index, GLfloat beta);
 
     void getInnerLeavesForNodeForSurface(GLint index,QVector<GLint>* indices,GLint surfaceIndex);
-
 
 };
 
