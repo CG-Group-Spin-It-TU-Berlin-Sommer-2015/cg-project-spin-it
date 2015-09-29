@@ -603,7 +603,8 @@ void GLWidget::loadNewMesh()
     else
     if(TOP_WITH_AXIS_MODE || TIPPE_TOP_MODE)
     {
-        alignPos = object->getMiddle();
+        alignPos = QVector3D(0,0,0);
+        //alignPos = object->getMiddle();
         trans = QVector3D(0,3,0);
     }
     else
@@ -785,12 +786,6 @@ void GLWidget::calculateOctree()
         delete newModifiedMesh;
         newModifiedMesh = tempMesh;
     }
-    if(TOP_WITH_AXIS_MODE)
-    {
-        Mesh* tempMesh = booleanUnion(newModifiedMesh,rot_axis);
-        delete newModifiedMesh;
-        newModifiedMesh = tempMesh;
-    }
 
     BetaOptimization::initializeOctree(
                 newModifiedMesh,
@@ -860,8 +855,21 @@ void GLWidget::saveMeshAsTop(QString fileName)
 {
 
     Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-    Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
+
+    Mesh* objMesh = BetaOptimization::mesh;
+
+    if(TOP_WITH_AXIS_MODE)
+    {
+        objMesh = booleanUnion(objMesh,rot_axis);
+    }
+
+    Mesh* mesh = mergeMeshes(objMesh,shell);
     writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+    if(TOP_WITH_AXIS_MODE)
+    {
+        delete objMesh;
+    }
 
     delete shell;
     delete mesh;
@@ -986,7 +994,8 @@ void GLWidget::updateView()
         else
         if(TOP_WITH_AXIS_MODE || TIPPE_TOP_MODE)
         {
-            alignPos = object->getMiddle();
+            alignPos = QVector3D(0,0,0);
+            //alignPos = object->getMiddle();
             trans = QVector3D(0,3,0);
         }
         else

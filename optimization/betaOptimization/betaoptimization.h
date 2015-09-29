@@ -67,7 +67,12 @@ private:
 
     static GLfloat getFittestEpsilon(GLint depth);
 
-    static void calcInertiaTensor(Eigen::VectorXd S_comp,Eigen::MatrixXd S_mat,QVector<octree::cubeObject>* cubeVector, double angle);
+    static void showProperties(
+            Eigen::VectorXd S_comp,
+            Eigen::MatrixXd S_mat,
+            QVector<octree::cubeObject>* cubeVector,
+            double phi,
+            bool useMinMaxValues=false);
 
     static GLfloat phi;
 

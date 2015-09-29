@@ -279,12 +279,22 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
         }
     }
 
+    double maxValue = -1.0;
+
     for(int i=0;i<cubes->size();i++)
     {
         coefficients.push_back(T(i,i,diagonalValues.data()[i]));
+        if(maxValue<diagonalValues.data()[i])
+        {
+           maxValue = diagonalValues.data()[i];
+        }
     }
 
     L.setFromTriplets(coefficients.begin(), coefficients.end());
+    if(maxValue>0)
+    {
+        L /= maxValue;
+    }
 
     cout << "----------------------------------------" << endl;
     cout << "finished laplace operator!" << endl;
@@ -1139,6 +1149,7 @@ bool ExtendedOctree::splitAndMerge(GLfloat epsilon,GLint depth)
 void ExtendedOctree::setVoids()
 {
 
+    /*
     octreeNode* nodePointer;
     octreeNode* tempNodePointer;
 
@@ -1185,6 +1196,19 @@ void ExtendedOctree::setVoids()
     }
 
     innerLeafIndices.clear();
+    */
+
+    octreeNode* nodePointer;
+
+    for(int i=0;i<this->octreeNodes.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+
+        nodePointer->isVoid = nodePointer->beta>0.5f;
+
+    }
+
 }
 
 /**
@@ -1589,7 +1613,7 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
             index +=8;
 
-            if(nodePointer->nodeDepth<=7)
+            if(nodePointer->nodeDepth<=6)
             {
                 buffer_vertices_line.push_back(nodePointer->p0.x());buffer_vertices_line.push_back(nodePointer->p0.y());buffer_vertices_line.push_back(nodePointer->p0.z());
                 buffer_vertices_line.push_back(nodePointer->p1.x());buffer_vertices_line.push_back(nodePointer->p1.y());buffer_vertices_line.push_back(nodePointer->p1.z());
