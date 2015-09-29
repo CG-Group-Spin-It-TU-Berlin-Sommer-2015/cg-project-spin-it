@@ -286,6 +286,8 @@ void GLWidget::paintGL()
 
     if(!transformMode && showInnerSurface && BetaOptimization::shellMesh != NULL)
     {
+        model_matrix.rotate(BetaOptimization::align_phi,QVector3D(0,1,0));
+
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
         shader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
         shader->setUniformValue("color", QColor(115, 115, 85));
@@ -297,6 +299,8 @@ void GLWidget::paintGL()
 
         shader->release();
         colorshader->bind();
+
+        model_matrix.rotate(BetaOptimization::align_phi,QVector3D(0,1,0));
 
         colorshader->setUniformValue("direction_light", direction_light);
         colorshader->setUniformValue("ambient_light", ambient_light);

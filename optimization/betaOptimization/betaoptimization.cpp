@@ -68,6 +68,7 @@ VectorXd BetaOptimization::S_comp;
 MatrixXd BetaOptimization::S_mat;
 SpMat BetaOptimization::L;
 
+GLfloat BetaOptimization::align_phi = 0.f;
 GLfloat BetaOptimization::phi = 0.f;
 float BetaOptimization::mesh_volume[10];
 
@@ -108,7 +109,6 @@ void BetaOptimization::doTopOptimization()
     BetaOptimization::setSMatrixForCubes(cubeVector);
     BetaOptimization::showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi,true);
     /* -------------------------------------------------------------------------- */
-
 
     BetaOptimization::finishBetaOptimization();
 
@@ -206,9 +206,31 @@ void BetaOptimization::initializeOctree(
 
     BetaOptimization::mesh = newModifiedMesh;
 
+    /*--------------------------------------------------------------*/
+
+    BetaOptimization::mesh->swapYZ();
+
+    BetaOptimization::setSForCompleteMesh();
+    double phi = BetaOptimization::executePhiOptimization();
+    QMatrix4x4 rot;
+    rot.setToIdentity();
+    phi = (phi*180)/PI;
+
+    cout << "----------------------------------------" << endl;
+    cout << "Aligned phi is " << phi << "!" << endl;
+
+    rot.rotate(phi,QVector3D(0,0,1));
+    BetaOptimization::mesh->transform(rot);
+
+    BetaOptimization::align_phi = phi;
+
+    BetaOptimization::mesh->swapYZ();
+
+    /*--------------------------------------------------------------*/
+
     // initialize the octree
     // set point cloud
-    BetaOptimization::octree.setMesh(mesh);
+    BetaOptimization::octree.setMesh(BetaOptimization::mesh);
     BetaOptimization::octree.setStartMaxDepth(startDepth);
     BetaOptimization::octree.setOptimizationMaxDepth(maximumDepth);
     BetaOptimization::octree.quantizeSurface();
@@ -743,11 +765,9 @@ void BetaOptimization::showProperties(
     // Givens Rotation representation
     MatrixXd mat = R*I_2*R.transpose();
 
-    /*
+    cout << "----------------------------------------" << endl;
     cout << "Rotated Component:" << endl;
     cout << mat << endl;
-    cout << "----------------------------------------" << endl;
-    */
 
     // center of mass
     VectorXd c(3);
@@ -768,7 +788,8 @@ void BetaOptimization::showProperties(
     cout << "phi:" << endl;
     cout << phi << endl;
 
-    if(cubeVector != NULL && cubeVector->size()<=20)
+    /*
+    if(cubeVector != NULL && cubeVector->size()<=10)
     {
 
         cout << "----------------------------------------" << endl;
@@ -776,6 +797,7 @@ void BetaOptimization::showProperties(
         cout << L.toDense() << endl;
 
     }
+    */
 
 }
 
@@ -845,12 +867,14 @@ void BetaOptimization::setCheckMatrixForCubes()
 #define MAX_NUMBER_OF_VARIABLES 3800
 
 /**
- * @brief BetaOptimization::getFittestEpsilon Choosing a specific elpsilon value for a depht
+ * @brief BetaOptimization::getEpsilon Choosing a specific elpsilon value for a depht
  * @param depth
  * @return epsilon value
  */
-GLfloat BetaOptimization::getFittestEpsilon(GLint depth)
+GLfloat BetaOptimization::getEpsilon(GLint depth)
 {
+
+    (void)depth;
 
     return 0.5f*1e-1;
 
@@ -895,7 +919,7 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 
         BetaOptimization::octree.updateBetaValuesWithPropagation();
 
-        GLfloat epsilon = BetaOptimization::getFittestEpsilon(BetaOptimization::octree.getOptimizationMaxDepth());
+        GLfloat epsilon = BetaOptimization::getEpsilon(BetaOptimization::octree.getOptimizationMaxDepth());
         cout << "----------------------------------------" << endl;
         if(epsilon<0.f)
         {
@@ -991,7 +1015,7 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 
         BetaOptimization::octree.updateBetaValuesWithPropagation();
 
-        GLfloat epsilon = BetaOptimization::getFittestEpsilon(BetaOptimization::octree.getOptimizationMaxDepth());
+        GLfloat epsilon = BetaOptimization::getEpsilon(BetaOptimization::octree.getOptimizationMaxDepth());
         cout << "----------------------------------------" << endl;
         if(epsilon<0.f)
         {
@@ -1211,4 +1235,146 @@ float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
     }
 
     return BetaOptimization::mesh_volume;
+}
+
+/**
+ * @brief BetaOptimization::phiEnergyFunction
+ * @param n
+ * @param x
+ * @param grad
+ * @param my_func_data
+ * @return
+ */
+double BetaOptimization::phiEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data)
+{
+    (void )n;
+    (void)my_func_data;
+
+    GLdouble phi = x[0];
+
+    double cosp = cos(phi);
+    double sinp = sin(phi);
+
+    // current model volumes
+    MatrixXd S = BetaOptimization::S_comp;
+
+    double f = cosp*sinp*(s_x2-s_y2)+(pow(cosp,2)-pow(sinp,2))*s_xy;
+
+    // gradient for Givens Rotation constraint
+    if(grad != NULL)
+    {
+        double firstPart = f;
+        double secondPart = 0;
+
+        secondPart += ( pow(cosp,2) - pow(sinp,2) )*(s_x2-s_y2);
+        secondPart += (-1)*4*sinp*cosp*s_xy;
+
+        grad[0] = 2*firstPart*secondPart;
+
+    }
+
+    return pow(f,2);
+
+}
+
+/**
+ * @brief BetaOptimization::executePhiOptimization
+ * @return
+ */
+double BetaOptimization::executePhiOptimization()
+{
+
+    double minf;
+
+    double lb_si = -PI;
+    double ub_si = +PI;
+    double phi = 0;
+
+    //------------------------------
+    nlopt_opt opt_phi;
+    opt_phi = nlopt_create( USED_ALGO, 1);
+
+    // set borders
+    nlopt_set_lower_bounds(opt_phi, &lb_si);
+    nlopt_set_upper_bounds(opt_phi, &ub_si);
+
+    // set optimization function
+    nlopt_set_min_objective(opt_phi, phiEnergyFunction, NULL);
+
+    double val1 = OPTIMIZATION_FUNCTION_THRESHOLD;
+
+    // set tolerance value
+    nlopt_set_xtol_rel(opt_phi, val1);
+
+    // set maximal time
+    nlopt_set_maxtime(opt_phi,MAX_TIME);
+
+    // execute optimization
+    nlopt_result result =  nlopt_optimize(opt_phi, &phi, &minf);
+
+    cout << "----------------------------------------" << endl;
+    if ( result < 0)
+    {
+
+        cout << "optimization failed!" << endl;
+
+        if(result == NLOPT_FAILURE)
+        {
+            cout << "Generic failure code!" << endl;
+        }
+        else
+        if(result == NLOPT_INVALID_ARGS)
+        {
+            cout << "Invalid arguments (e.g. lower bounds are bigger than upper bounds, an unknown algorithm was specified, etcetera)!" << endl;
+        }
+        else
+        if(result == NLOPT_OUT_OF_MEMORY)
+        {
+            cout << "Ran out of memory!" << endl;
+        }
+        else
+        if(result == NLOPT_ROUNDOFF_LIMITED)
+        {
+            cout << "Halted because roundoff errors limited progress! (In this case, the optimization still typically returns a useful result.)" << endl;
+        }
+        else
+        if(result == NLOPT_FORCED_STOP)
+        {
+            cout << "Forced stop!" << endl;
+        }
+
+    }
+    else
+    {
+        cout << "optimization successful (found minimum " << minf << ")" << endl;
+
+        if(result == NLOPT_SUCCESS){
+            cout << "Generic success return value!" << endl;
+        }
+        else
+        if(result == NLOPT_STOPVAL_REACHED){
+            cout << "Optimization stopped because stopval (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_FTOL_REACHED){
+            cout << "Optimization stopped because ftol_rel or ftol_abs (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_XTOL_REACHED){
+            cout << "Optimization stopped because xtol_rel or xtol_abs (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_MAXEVAL_REACHED){
+            cout << "Optimization stopped because maxeval (above) was reached!" << endl;
+        }
+        else
+        if(result == NLOPT_MAXTIME_REACHED){
+            cout << "Optimization stopped because maxtime (above) was reached!" << endl;
+        }
+
+    }
+
+    nlopt_destroy(opt_phi);
+
+    return phi;
 }

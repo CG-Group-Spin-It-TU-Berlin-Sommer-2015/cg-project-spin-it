@@ -41,6 +41,8 @@ public:
     static double gamma_i_yoyo;
     static double gamma_l_yoyo;
 
+    static GLfloat align_phi;
+
 public:
 
     static void doTopOptimization();
@@ -65,7 +67,7 @@ private:
 
 private:
 
-    static GLfloat getFittestEpsilon(GLint depth);
+    static GLfloat getEpsilon(GLint depth);
 
     static void showProperties(
             Eigen::VectorXd S_comp,
@@ -98,6 +100,10 @@ private:
     static void testSplitAndMerge();
 
     static void resetPhi();
+
+    static double executePhiOptimization();
+    static double phiEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data);
+
 
 };
 
