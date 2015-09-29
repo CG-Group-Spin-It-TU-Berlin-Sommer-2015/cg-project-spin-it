@@ -13,7 +13,6 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    model/model.cpp \
     view/mainwindow.cpp \
     view/glwidget.cpp \
     view/utility/shader.cpp \
@@ -27,7 +26,6 @@ SOURCES += main.cpp \
     mesh/mesh.cpp
 
 HEADERS  += view/mainwindow.h \
-    model/model.h \
     view/glwidget.h \
     view/utility/shader.h \
     view/utility/meshreader.h \
