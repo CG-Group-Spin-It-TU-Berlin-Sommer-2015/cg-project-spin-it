@@ -1466,6 +1466,105 @@ void ExtendedOctree::deleteNodeMeshes()
 
 }
 
+void ExtendedOctree::transformOctree(QMatrix4x4 mat)
+{
+
+    octreeNode* nodePointer;
+
+    QVector4D temp1,temp2;
+
+    temp1.setW(1);
+
+    for(int i=0;i<this->octreeNodes.size();i++)
+    {
+
+        nodePointer = &this->octreeNodes.data()[i];
+        QVector3D vec;
+
+        vec = nodePointer->p0;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p0 = vec;
+
+        vec = nodePointer->p1;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p1 = vec;
+
+        vec = nodePointer->p2;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p2 = vec;
+
+        vec = nodePointer->p3;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p3 = vec;
+
+        vec = nodePointer->p4;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p4 = vec;
+
+        vec = nodePointer->p5;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p5 = vec;
+
+        vec = nodePointer->p6;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p6 = vec;
+
+        vec = nodePointer->p7;
+        temp1.setX(vec.x());
+        temp1.setY(vec.y());
+        temp1.setZ(vec.z());
+        temp2 = mat*temp1;
+        vec.setX(temp2.x());
+        vec.setY(temp2.y());
+        vec.setZ(temp2.z());
+        nodePointer->p7 = vec;
+
+    }
+
+}
+
 //-------------------------------------------------- draw octree grid
 
 /**

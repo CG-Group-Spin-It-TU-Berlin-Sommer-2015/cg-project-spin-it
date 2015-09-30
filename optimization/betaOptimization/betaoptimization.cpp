@@ -47,6 +47,11 @@ using namespace std;
 
 #define ONLY_LOWERING false
 
+#define NUMBER_IS_ACCEPTABLE (number<=MAX_NUMBER_OF_VARIABLES)
+
+#define MAX_NUMBER_OF_VARIABLES 3800
+
+#define FIXED_EPSILON (0.5f*1e-1)
 
 #define OPTIMIZATION_FUNCTION_THRESHOLD (1e-4)
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD (1e-8)
@@ -213,21 +218,44 @@ void BetaOptimization::initializeOctree(
 
     BetaOptimization::mesh->swapYZ();
 
+    QMatrix4x4 mat;
+    VectorXd S;
+
     BetaOptimization::setSForCompleteMesh();
+    S = BetaOptimization::S_comp;
+
+    QVector3D vec1(s_x,s_y,0);
+    QVector3D vec2(s_x,0,s_y);
+    QVector3D com1 = vec1/s_1;
+    QVector3D com2 = vec2/s_1;
+
+    com1 *=-1;
+
+    mat.setToIdentity();
+    mat.translate(com1);
+
+    BetaOptimization::mesh->transform(mat);
+
+    BetaOptimization::setSForCompleteMesh();
+    S = BetaOptimization::S_comp;
+
     double phi = BetaOptimization::executePhiOptimization();
-    QMatrix4x4 rot;
-    rot.setToIdentity();
     phi = (phi*180)/PI;
 
     cout << "----------------------------------------" << endl;
     cout << "Aligned phi is " << phi << "!" << endl;
 
-    rot.rotate(phi,QVector3D(0,0,1));
-    BetaOptimization::mesh->transform(rot);
+    mat.setToIdentity();
+    mat.rotate(phi,QVector3D(0,0,1));
+    BetaOptimization::mesh->transform(mat);
 
     BetaOptimization::align_phi = phi;
 
     BetaOptimization::mesh->swapYZ();
+
+    mat.setToIdentity();
+    mat.rotate(-phi,QVector3D(0,1,0));
+    com2 = mat*com2;
 
     /*--------------------------------------------------------------*/
 
@@ -265,7 +293,14 @@ void BetaOptimization::initializeOctree(
 
     BetaOptimization::shellMesh = newShellMesh;
 
-    BetaOptimization::mesh = newModifiedMesh;
+    /*--------------------------------------------------------------*/
+    /*only tranlation in xz plane is possible currently*/
+    mat.setToIdentity();
+    mat.translate(com2);
+    BetaOptimization::mesh->transform(mat);
+    BetaOptimization::shellMesh->transform(mat);
+    BetaOptimization::octree.transformOctree(mat);
+    /*--------------------------------------------------------------*/
 
     cout << "----------------------------------------" << endl;
     cout << "Create Octree (Finish)" << endl;
@@ -891,10 +926,6 @@ void BetaOptimization::setCheckMatrixForCubes()
     return;
 }
 
-#define NUMBER_IS_ACCEPTABLE (number<=MAX_NUMBER_OF_VARIABLES)
-
-#define MAX_NUMBER_OF_VARIABLES 3800
-
 /**
  * @brief BetaOptimization::getEpsilon Choosing a specific elpsilon value for a depht
  * @param depth
@@ -905,7 +936,7 @@ GLfloat BetaOptimization::getEpsilon(GLint depth)
 
     (void)depth;
 
-    return 0.5f*1e-1;
+    return FIXED_EPSILON;
 
 }
 

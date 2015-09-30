@@ -66,6 +66,8 @@ public:
 
     GLint getMergedCubesNumber();
 
+    void transformOctree(QMatrix4x4 mat);
+
 private:
 
     QVector<octree::cubeObject> cubeVector;
