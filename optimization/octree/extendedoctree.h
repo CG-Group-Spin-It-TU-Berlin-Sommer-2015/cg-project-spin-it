@@ -44,9 +44,6 @@ public:
     bool splitStep(GLfloat epsilon,GLint depth);
     void mergeStep(GLfloat epsilon,GLint depth);
 
-    GLint countPossibleSplits(GLfloat epsilon,GLint depth);
-    GLint countPossibleMerges(GLfloat epsilon,GLint depth);
-
     void split(octree::octreeNode* nodePointer, GLint maxDepht);
     void split(GLint nodeIndex, GLint maxDepht);
 
