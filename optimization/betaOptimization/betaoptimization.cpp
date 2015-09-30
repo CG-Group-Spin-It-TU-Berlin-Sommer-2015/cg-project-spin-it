@@ -45,6 +45,9 @@ using namespace std;
 
 #define MAX_TIME (30*60)
 
+#define ONLY_LOWERING false
+
+
 #define OPTIMIZATION_FUNCTION_THRESHOLD (1e-4)
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD (1e-8)
 
@@ -435,7 +438,20 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
     double gi = IS_TOP_OPTIMIZATION?gamma_i_top:(IS_TIPPE_TOP_OPTIMIZATION?gamma_i_tippe_top:gamma_i_yoyo);
     double gl = IS_TOP_OPTIMIZATION?gamma_l_top:(IS_TIPPE_TOP_OPTIMIZATION?gamma_l_tippe_top:gamma_l_yoyo);
 
-    double fFirstPart = IS_TOP_OPTIMIZATION?gc*pow(s_z,2):0;
+    double fFirstPart = 0;
+
+    if(IS_TOP_OPTIMIZATION)
+    {
+        if(ONLY_LOWERING)
+        {
+            fFirstPart = gc*pow(s_z/s_1,2);
+        }
+        else
+        {
+            fFirstPart = gc*pow(s_z,2);
+        }
+    }
+
     double fSecondPart = 0;
 
     if(IS_TIPPE_TOP_OPTIMIZATION)
@@ -499,7 +515,20 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
             dIyb += cosp*sinp*Smat_xy(i);
             double dIzb = -(Smat_x2(i)+Smat_y2(i));
 
-            double dFirstPart = IS_TOP_OPTIMIZATION?gc*(-2)*s_z*Smat_z(i):0;
+            double dFirstPart = 0;
+
+            if(IS_TOP_OPTIMIZATION)
+            {
+                if(ONLY_LOWERING)
+                {
+                    dFirstPart = gc*(2)*(s_z/pow(s_1,3))*(s_z*Smat_1(i)-Smat_z(i)*s_1);
+                }
+                else
+                {
+                    dFirstPart = gc*(-2)*s_z*Smat_z(i);
+                }
+            }
+
             double dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
             double dThirdPart = gl*(betas.transpose()*(L*vec))(0,0);
 
