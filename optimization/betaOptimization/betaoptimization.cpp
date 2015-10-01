@@ -287,21 +287,21 @@ void BetaOptimization::initializeOctree(
 
     // get mesh for inner shell (needed for view)
     BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
 
+
+    Mesh* newShellMesh = BetaOptimization::getShellMesh();
     if(BetaOptimization::shellMesh != NULL)
     {
        delete BetaOptimization::shellMesh;
     }
-
     BetaOptimization::shellMesh = newShellMesh;
+
 
     /*--------------------------------------------------------------*/
     /*only tranlation in xz plane is possible currently*/
     mat.setToIdentity();
     mat.translate(com2);
     BetaOptimization::mesh->transform(mat);
-    BetaOptimization::shellMesh->transform(mat);
     BetaOptimization::octree.transformOctree(mat);
     /*--------------------------------------------------------------*/
 
@@ -1196,6 +1196,17 @@ void BetaOptimization::testSplitAndMerge()
 
 }
 
+Mesh* BetaOptimization::getShellMesh(bool flipped)
+{
+    Mesh* mesh = BetaOptimization::octree.getShellMesh(flipped);
+    QMatrix4x4 mat;
+    mat.setToIdentity();
+    mat.translate(BetaOptimization::com2);
+    mesh->transform(mat);
+
+    return mesh;
+}
+
 /**
  * @brief BetaOptimization2::finishBetaOptimization2 Execute task after optimization
  */
@@ -1207,7 +1218,7 @@ void BetaOptimization::finishBetaOptimization()
     BetaOptimization::octree.setVoids();
 
     BetaOptimization::octree.createInnerSurface();
-    Mesh* newShellMesh = BetaOptimization::octree.getShellMesh();
+    Mesh* newShellMesh = BetaOptimization::getShellMesh();
 
     if(shellMesh != NULL)
     {

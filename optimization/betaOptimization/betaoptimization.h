@@ -52,6 +52,8 @@ public:
     static void doTippeTopOptimization();
     static void doYoyoOptimization();
 
+    static Mesh* getShellMesh(bool flipped = false);
+
     static void initializeOctree(
             Mesh* newModifiedMesh,
             GLint startDepth,

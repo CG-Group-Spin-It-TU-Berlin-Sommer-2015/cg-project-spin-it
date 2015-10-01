@@ -863,15 +863,7 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
     else
     {
 
-        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-
-        //------------------------------------------
-        QMatrix4x4 mat;
-        mat.setToIdentity();
-        mat.translate(BetaOptimization::com2);
-        shell->transform(mat);
-        //------------------------------------------
-
+        Mesh* shell = BetaOptimization::getShellMesh(true);
         Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
         writeMeshFromObjFile(fileName.toStdString(),mesh);
 
@@ -908,15 +900,7 @@ void GLWidget::saveMeshAsTop(QString fileName)
     else
     {
 
-        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-
-        //------------------------------------------
-        QMatrix4x4 mat;
-        mat.setToIdentity();
-        mat.translate(BetaOptimization::com2);
-        shell->transform(mat);
-        //------------------------------------------
-
+        Mesh* shell = BetaOptimization::getShellMesh(true);
         Mesh* objMesh = BetaOptimization::mesh;
 
         if(TOP_WITH_AXIS_MODE)
@@ -958,16 +942,7 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
     else
     {
 
-        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-
-        //------------------------------------------
-        QMatrix4x4 mat;
-        mat.setToIdentity();
-        mat.translate(BetaOptimization::com2);
-        shell->transform(mat);
-        //------------------------------------------
-
-
+        Mesh* shell = BetaOptimization::getShellMesh(true);
         Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
         writeMeshFromObjFile(fileName.toStdString(),mesh);
 
