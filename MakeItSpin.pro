@@ -39,12 +39,10 @@ HEADERS  += view/mainwindow.h \
 
 FORMS    += view/mainwindow.ui
 
-OTHER_FILES += \
-    simple.vsh \
-    simple.fsh
+OTHER_FILES +=
 
 RESOURCES += \
-    shader.qrc
+    resources.qrc
 
 
 unix:!macx: LIBS += -L$$PWD/../cork/lib/ -lcork
@@ -65,3 +63,19 @@ unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnlopt
 INCLUDEPATH += $$PWD/../../../../usr/local/include/
 DEPENDPATH += $$PWD/../../../../usr/local/include/
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/local/lib/libnlopt.a
+
+DISTFILES += \
+    test_models/special_objs/test_spinning_top.obj \
+    test_models/special_objs/test_yoyo.obj \
+    test_models/standard_objs/cube.obj \
+    test_models/standard_objs/dragon.obj \
+    test_models/standard_objs/ellipsoid.obj \
+    test_models/standard_objs/sphere.obj \
+    test_models/standard_objs/teapot.obj \
+    spinIt_models/rot_axis.obj \
+    spinIt_models/tippe_top_object.obj \
+    spinIt_models/yoyo_center_object.obj \
+    shaders/colorshader.fsh \
+    shaders/simple.fsh \
+    shaders/colorshader.vsh \
+    shaders/simple.vsh

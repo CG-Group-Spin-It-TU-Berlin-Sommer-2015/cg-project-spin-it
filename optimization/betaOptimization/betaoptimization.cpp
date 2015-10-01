@@ -51,7 +51,7 @@ using namespace std;
 
 #define MAX_NUMBER_OF_VARIABLES 3800
 
-#define FIXED_EPSILON (0.5f*1e-1)
+#define FIXED_EPSILON (1.f*1e-1)
 
 #define OPTIMIZATION_FUNCTION_THRESHOLD (1e-4)
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD (1e-8)

@@ -144,13 +144,13 @@ void GLWidget::initializeGL()
     qglClearColor(QColor(205, 205, 255));
 
     colorshader = new QGLShaderProgram();
-    colorshader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/colorshader.vsh");
-    colorshader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/colorshader.fsh");
+    colorshader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/shaders/colorshader.vsh");
+    colorshader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/shaders/colorshader.fsh");
     colorshader->link();
 
     shader = new QGLShaderProgram();
-    shader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/simple.vsh");
-    shader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/simple.fsh");
+    shader->addShaderFromSourceFile(QGLShader::Vertex, ":/shader/shaders/simple.vsh");
+    shader->addShaderFromSourceFile(QGLShader::Fragment, ":/shader/shaders/simple.fsh");
     shader->link();
 
     setViewDefault();
@@ -166,9 +166,9 @@ void GLWidget::initializeGL()
     diffuse_light.setW(1);
 
     // load helper meshes
-    rot_axis = readMeshFromObjFileDirectory("rot_axis");
-    half_sphere = readMeshFromObjFileDirectory("tippe_top_object");
-    yoyo_center = readMeshFromObjFileDirectory("yoyo_center_object");
+    rot_axis = readMeshFromObjFile(":/obj/spinIt_models/rot_axis.obj");
+    half_sphere = readMeshFromObjFile(":/obj/spinIt_models/tippe_top_object.obj");
+    yoyo_center = readMeshFromObjFile(":/obj/spinIt_models/yoyo_center_object.obj");
 
     setAddAxisCheckBox(this->addSpinAxisToTop);
 
@@ -522,7 +522,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 void GLWidget::loadInitialMesh()
 {
 
-    Mesh* newObject = readMeshFromObjFileDirectory("cube");
+    Mesh* newObject = readMeshFromObjFile(":/obj/test_models/standard_objs/cube.obj");
 
     if(newObject==NULL)
     {

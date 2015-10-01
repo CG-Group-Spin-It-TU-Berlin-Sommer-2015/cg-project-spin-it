@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/shader">
+        <file>shaders/colorshader.fsh</file>
+        <file>shaders/colorshader.vsh</file>
+        <file>shaders/simple.fsh</file>
+        <file>shaders/simple.vsh</file>
+    </qresource>
+    <qresource prefix="/obj">
+        <file>test_models/standard_objs/cube.obj</file>
+        <file>spinIt_models/rot_axis.obj</file>
+        <file>spinIt_models/tippe_top_object.obj</file>
+        <file>spinIt_models/yoyo_center_object.obj</file>
+    </qresource>
+</RCC>

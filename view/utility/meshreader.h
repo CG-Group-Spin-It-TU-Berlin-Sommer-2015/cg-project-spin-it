@@ -12,7 +12,6 @@
 
 using namespace std;
 
-Mesh* readMeshFromObjFileDirectory (string file_name);
 Mesh* readMeshFromObjFile (string file_name);
 
 #endif // OBJREADER_H
