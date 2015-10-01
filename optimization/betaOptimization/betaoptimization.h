@@ -43,6 +43,9 @@ public:
 
     static GLfloat align_phi;
 
+    static QVector3D com1;
+    static QVector3D com2;
+
 public:
 
     static void doTopOptimization();

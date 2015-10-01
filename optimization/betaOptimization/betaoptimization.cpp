@@ -80,6 +80,9 @@ GLfloat BetaOptimization::align_phi = 0.f;
 GLfloat BetaOptimization::phi = 0.f;
 float BetaOptimization::mesh_volume[10];
 
+QVector3D BetaOptimization::com1;
+QVector3D BetaOptimization::com2;
+
 VectorXd BetaOptimization::S_inner_comp;
 
 /**
@@ -226,8 +229,8 @@ void BetaOptimization::initializeOctree(
 
     QVector3D vec1(s_x,s_y,0);
     QVector3D vec2(s_x,0,s_y);
-    QVector3D com1 = vec1/s_1;
-    QVector3D com2 = vec2/s_1;
+    BetaOptimization::com1 = vec1/s_1;
+    BetaOptimization::com2 = vec2/s_1;
 
     com1 *=-1;
 

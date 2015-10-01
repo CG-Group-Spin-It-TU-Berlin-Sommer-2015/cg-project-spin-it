@@ -584,6 +584,12 @@ void GLWidget::loadNewMesh()
         return;
     }
 
+    if(newObject->getGeometry()->size()<1 || newObject->getIndices()->size()<1)
+    {
+        delete newObject;
+        return;
+    }
+
     if(object!=NULL)
     {
         delete object;
@@ -608,6 +614,7 @@ void GLWidget::loadNewMesh()
     if(TOP_WITH_AXIS_MODE || TIPPE_TOP_MODE)
     {
         alignPos = QVector3D(0,0,0);
+        //deactivated
         //alignPos = object->getMiddle();
         trans = QVector3D(0,3,0);
     }
@@ -842,12 +849,36 @@ void GLWidget::saveMesh()
 void GLWidget::saveMeshAsTippeTop(QString fileName)
 {
 
-    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-    Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
-    writeMeshFromObjFile(fileName.toStdString(),mesh);
+    if(octreeIsDirty)
+    {
 
-    delete shell;
-    delete mesh;
+        Mesh* modifiedMesh = object->copy();
+        modifiedMesh->transform(this->last_object_model_matrix);
+        Mesh* mesh = booleanUnion(modifiedMesh,half_sphere);
+        writeMeshFromObjFile(fileName.toStdString(),mesh);
+        delete mesh;
+        delete modifiedMesh;
+
+    }
+    else
+    {
+
+        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+
+        //------------------------------------------
+        QMatrix4x4 mat;
+        mat.setToIdentity();
+        mat.translate(BetaOptimization::com2);
+        shell->transform(mat);
+        //------------------------------------------
+
+        Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
+        writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+        delete shell;
+        delete mesh;
+
+    }
 
 }
 
@@ -858,25 +889,53 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 void GLWidget::saveMeshAsTop(QString fileName)
 {
 
-    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-
-    Mesh* objMesh = BetaOptimization::mesh;
-
-    if(TOP_WITH_AXIS_MODE)
+    if(octreeIsDirty)
     {
-        objMesh = booleanUnion(objMesh,rot_axis);
+        Mesh* mesh = object->copy();
+
+        mesh->transform(this->last_object_model_matrix);
+
+        if(TOP_WITH_AXIS_MODE)
+        {
+            mesh = booleanUnion(mesh,rot_axis);
+        }
+
+        writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+        delete mesh;
+
     }
-
-    Mesh* mesh = mergeMeshes(objMesh,shell);
-    writeMeshFromObjFile(fileName.toStdString(),mesh);
-
-    if(TOP_WITH_AXIS_MODE)
+    else
     {
-        delete objMesh;
-    }
 
-    delete shell;
-    delete mesh;
+        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+
+        //------------------------------------------
+        QMatrix4x4 mat;
+        mat.setToIdentity();
+        mat.translate(BetaOptimization::com2);
+        shell->transform(mat);
+        //------------------------------------------
+
+        Mesh* objMesh = BetaOptimization::mesh;
+
+        if(TOP_WITH_AXIS_MODE)
+        {
+            objMesh = booleanUnion(objMesh,rot_axis);
+        }
+
+        Mesh* mesh = mergeMeshes(objMesh,shell);
+        writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+        if(TOP_WITH_AXIS_MODE)
+        {
+            delete objMesh;
+        }
+
+        delete shell;
+        delete mesh;
+
+    }
 
 }
 
@@ -887,12 +946,36 @@ void GLWidget::saveMeshAsTop(QString fileName)
 void GLWidget::saveMeshAsYoyo(QString fileName)
 {
 
-    Mesh* shell = BetaOptimization::octree.getShellMesh(true);
-    Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
-    writeMeshFromObjFile(fileName.toStdString(),mesh);
+    if(octreeIsDirty)
+    {
 
-    delete shell;
-    delete mesh;
+        Mesh* modifiedMesh = object->copy();
+        modifiedMesh->transform(this->last_object_model_matrix);
+        writeMeshFromObjFile(fileName.toStdString(),modifiedMesh);
+        delete modifiedMesh;
+
+    }
+    else
+    {
+
+        Mesh* shell = BetaOptimization::octree.getShellMesh(true);
+
+        //------------------------------------------
+        QMatrix4x4 mat;
+        mat.setToIdentity();
+        mat.translate(BetaOptimization::com2);
+        shell->transform(mat);
+        //------------------------------------------
+
+
+        Mesh* mesh = mergeMeshes(BetaOptimization::mesh,shell);
+        writeMeshFromObjFile(fileName.toStdString(),mesh);
+
+        delete shell;
+        delete mesh;
+
+    }
+
 }
 
 /**
@@ -999,6 +1082,7 @@ void GLWidget::updateView()
         if(TOP_WITH_AXIS_MODE || TIPPE_TOP_MODE)
         {
             alignPos = QVector3D(0,0,0);
+            //deactivated
             //alignPos = object->getMiddle();
             trans = QVector3D(0,3,0);
         }
