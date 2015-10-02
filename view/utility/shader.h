@@ -9,8 +9,6 @@
 #include <QtOpenGL>
 #include <QOpenGLFunctions>
 
-using namespace std;
-
-GLuint loadShader(string shader_name);
+GLuint loadShader(std::string shader_name);
 
 #endif // SHADER_H

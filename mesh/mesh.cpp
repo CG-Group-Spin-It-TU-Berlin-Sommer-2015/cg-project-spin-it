@@ -224,7 +224,7 @@ void Mesh::render(QGLShaderProgram* shader, GLenum primitive)
 }
 
 /**
- * @brief Mesh::getMiddle Get the middle point according to minimal and maximal coordinates
+ * @brief Mesh::getMiddle Get the middle point according to minimal and maximal coordinates.
  * @return the middle of the mesh
  */
 QVector3D Mesh::getMiddle()
@@ -272,7 +272,7 @@ QVector3D Mesh::getMiddle()
 }
 
 /**
- * @brief Mesh::getMaxDistance2Middle Get the maximal distance according to the middle point
+ * @brief Mesh::getMaxDistance2Middle Get the maximal distance according to the middle point.
  * @return the maximal distance
  */
 GLfloat Mesh::getMaxDistance2Middle()
@@ -297,6 +297,10 @@ GLfloat Mesh::getMaxDistance2Middle()
    return max;
 }
 
+/**
+ * @brief Mesh::getMean Get the mean point of the mesh.
+ * @return the mean point of the mesh
+ */
 QVector3D Mesh::getMean()
 {
     QVector3D mean;
@@ -312,7 +316,7 @@ QVector3D Mesh::getMean()
 }
 
 /**
- * @brief Mesh::copy Make a copy of the mesh
+ * @brief Mesh::copy Make a copy of the mesh.
  * @return the copy of the mesh
  */
 Mesh* Mesh::copy()
@@ -336,7 +340,7 @@ Mesh* Mesh::copy()
 }
 
 /**
- * @brief Mesh::transform Transform the vertices of the mesh
+ * @brief Mesh::transform Transform the vertices of the mesh.
  * @param matrix the transformation matrix
  */
 void Mesh::transform(QMatrix4x4 matrix)
@@ -365,7 +369,7 @@ void Mesh::transform(QMatrix4x4 matrix)
 }
 
 /**
- * @brief Mesh::swapYZ Swap the y and z coordinate
+ * @brief Mesh::swapYZ Swap the y and z coordinate.
  */
 void Mesh::swapYZ()
 {
@@ -391,7 +395,7 @@ void Mesh::swapYZ()
 }
 
 /**
- * @brief Mesh::updateNormals
+ * @brief Mesh::updateNormals Update the normals of the mesh.
  */
 void Mesh::updateNormals()
 {
@@ -451,8 +455,8 @@ void Mesh::updateNormals()
 }
 
 /**
- * @brief Mesh::getLowestPoint
- * @return
+ * @brief Mesh::getLowestPoint Get the lowest point according to y axis direction.
+ * @return the lowest point
  */
 QVector3D Mesh::getLowestPoint()
 {

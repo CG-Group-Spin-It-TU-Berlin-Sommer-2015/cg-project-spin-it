@@ -3,7 +3,7 @@
 using namespace std;
 
 /**
- * @brief writeMeshFromObjFile Write the mesh to a specific file
+ * @brief writeMeshFromObjFile Write the mesh to a specific file.
  * @param file_name the file with the path
  * @param mesh the mesh
  * @return True if the process was successful. False otherwise.

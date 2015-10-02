@@ -56,6 +56,8 @@ using namespace std;
 #define OPTIMIZATION_FUNCTION_THRESHOLD (1e-4)
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD (1e-8)
 
+#define IS_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TOP
+#define IS_TIPPE_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TIPPE_TOP
 
 /* weights for optimization */
 
@@ -86,7 +88,7 @@ QVector3D BetaOptimization::com2;
 VectorXd BetaOptimization::S_inner_comp;
 
 /**
- * @brief BetaOptimization::doTopOptimization Execute the optimization for a top
+ * @brief BetaOptimization::doTopOptimization Execute the optimization for a top.
  */
 void BetaOptimization::doTopOptimization()
 {
@@ -132,38 +134,51 @@ void BetaOptimization::doTopOptimization()
 }
 
 /**
- * @brief BetaOptimization::doTippeTopOptimization Execute the optimization for a top
+ * @brief BetaOptimization::doTippeTopOptimization Execute the optimization for a tippe top.
  */
 void BetaOptimization::doTippeTopOptimization()
 {
 
     cout << "----------------------------------------" << "----------------------------------------" << endl;
-    cout << "Top Optimization (Start)" << endl;
+    cout << "Tippe Top Optimization (Start)" << endl;
 
     BetaOptimization::mesh->swapYZ();
 
     BetaOptimization::setSForCompleteMesh();
     BetaOptimization::setCheckMatrixForCubes();
     BetaOptimization::octree.deleteNodeMeshes();
-
     BetaOptimization::resetPhi();
+
+    /* -------------------------------------------------------------------------- */
+    cout << "----------------------------------------" << endl;
+    cout << "Start Inertia Properties" << endl;
+    showProperties(S_comp,S_mat,NULL,BetaOptimization::phi);
+    /* -------------------------------------------------------------------------- */
 
     BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_TIPPE_TOP);
     BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_TIPPE_TOP);
-
     //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TIPPE_TOP);
+
+    /* -------------------------------------------------------------------------- */
+    cout << "----------------------------------------" << endl;
+    cout << "Final Inertia Properties" << endl;
+    QVector<octree::cubeObject>* cubeVector = NULL;
+    cubeVector = BetaOptimization::octree.getMergedCubes();
+    BetaOptimization::setSMatrixForCubes(cubeVector);
+    BetaOptimization::showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi,true);
+    /* -------------------------------------------------------------------------- */
 
     BetaOptimization::finishBetaOptimization();
 
     BetaOptimization::mesh->swapYZ();
 
     cout << "----------------------------------------" << endl;
-    cout << "Top Optimization (Finish)" << endl;
+    cout << "Tippe Top Optimization (Finish)" << endl;
 
 }
 
 /**
- * @brief BetaOptimization::doYoyoOptimization Execute the optimization for a yoyo
+ * @brief BetaOptimization::doYoyoOptimization Execute the optimization for a yoyo.
  */
 void BetaOptimization::doYoyoOptimization()
 {
@@ -176,13 +191,26 @@ void BetaOptimization::doYoyoOptimization()
     BetaOptimization::setSForCompleteMesh();
     BetaOptimization::setCheckMatrixForCubes();
     BetaOptimization::octree.deleteNodeMeshes();
-
     BetaOptimization::resetPhi();
+
+    /* -------------------------------------------------------------------------- */
+    cout << "----------------------------------------" << endl;
+    cout << "Start Inertia Properties" << endl;
+    showProperties(S_comp,S_mat,NULL,BetaOptimization::phi);
+    /* -------------------------------------------------------------------------- */
 
     BetaOptimization::optimizeBetasBottomUp(OPTIMIZATION_TYPE_YOYO);
     BetaOptimization::optimizeBetasWithSplitAndMerge(OPTIMIZATION_TYPE_YOYO);
-
     //BetaOptimization::optimizeBetas(OPTIMIZATION_TYPE_TOP);
+
+    /* -------------------------------------------------------------------------- */
+    cout << "----------------------------------------" << endl;
+    cout << "Final Inertia Properties" << endl;
+    QVector<octree::cubeObject>* cubeVector = NULL;
+    cubeVector = BetaOptimization::octree.getMergedCubes();
+    BetaOptimization::setSMatrixForCubes(cubeVector);
+    BetaOptimization::showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi,true);
+    /* -------------------------------------------------------------------------- */
 
     BetaOptimization::finishBetaOptimization();
 
@@ -194,7 +222,7 @@ void BetaOptimization::doYoyoOptimization()
 }
 
 /**
- * @brief BetaOptimization2::initializeOctree Initialize the octree for the optimation
+ * @brief BetaOptimization::initializeOctree Initialize the octree for the optimation.
  * @param newModifiedMesh the mesh for the optimation
  * @param startDepth the start depth
  * @param maximumDepth the maximum depth
@@ -218,6 +246,7 @@ void BetaOptimization::initializeOctree(
     BetaOptimization::mesh = newModifiedMesh;
 
     /*--------------------------------------------------------------*/
+    // pre processing for align octree according to center of mass and x and y inertia axes
     BetaOptimization::mesh->swapYZ();
 
     QMatrix4x4 mat;
@@ -309,7 +338,7 @@ void BetaOptimization::initializeOctree(
 }
 
 /**
- * @brief spinItContraints
+ * @brief spinItContraints Constraints function for spin it optimization!
  * @param n dimension
  * @param x current value
  * @param grad gradient
@@ -414,11 +443,10 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
    return -1;
 }
 
-#define IS_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TOP
-#define IS_TIPPE_TOP_OPTIMIZATION optimization_type == OPTIMIZATION_TYPE_TIPPE_TOP
+
 
 /**
- * @brief spinItEnergyFunction
+ * @brief spinItEnergyFunction Energy function for spin it optimization!
  * @param n dimension
  * @param x current value
  * @param grad gradient
@@ -592,7 +620,7 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
 }
 
 /**
- * @brief BetaOptimization::executeBetasOptimization
+ * @brief BetaOptimization::executeBetasOptimization Execute beta optimization.
  * @param cubeVector
  * @param optimizationType
  */
@@ -737,7 +765,7 @@ void BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cub
 }
 
 /**
- * @brief BetaOptimization::resetPhi
+ * @brief BetaOptimization::resetPhi Reset phi.
  */
 void BetaOptimization::resetPhi()
 {
@@ -867,7 +895,7 @@ void BetaOptimization::showProperties(
 }
 
 /**
- * @brief BetaOptimization2::setSForCompleteMesh
+ * @brief BetaOptimization::setSForCompleteMesh Set the integral vector for the entire mesh.
  */
 void  BetaOptimization::setSForCompleteMesh()
 {
@@ -882,7 +910,7 @@ void  BetaOptimization::setSForCompleteMesh()
 }
 
 /**
- * @brief BetaOptimization2::setSMatrixForCubes
+ * @brief BetaOptimization::setSMatrixForCubes Set the integral matrix for the currently considered cubes.
  * @param cubeVector
  */
 void  BetaOptimization::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVector)
@@ -902,7 +930,7 @@ void  BetaOptimization::setSMatrixForCubes(QVector<octree::cubeObject>* cubeVect
 }
 
 /**
- * @brief setCheckMatrixForCubes
+ * @brief setCheckMatrixForCubes Get matrix for testing!
  */
 void BetaOptimization::setCheckMatrixForCubes()
 {
@@ -928,8 +956,8 @@ void BetaOptimization::setCheckMatrixForCubes()
 }
 
 /**
- * @brief BetaOptimization::getEpsilon Choosing a specific elpsilon value for a depht
- * @param depth
+ * @brief BetaOptimization::getEpsilon Choosing a specific elpsilon value for a depth.
+ * @param depth depth used for finding an appropriate epsilon (currently not used)
  * @return epsilon value
  */
 GLfloat BetaOptimization::getEpsilon(GLint depth)
@@ -942,9 +970,8 @@ GLfloat BetaOptimization::getEpsilon(GLint depth)
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasBottomUp
+ * @brief BetaOptimization::optimizeBetasBottomUp Optimize betas (bottum up).
  * @param optimizationType
- * @param withPhi
  */
 void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 {
@@ -1001,9 +1028,8 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
 }
 
 /**
- * @brief BetaOptimization::optimizeBetas
+ * @brief BetaOptimization::optimizeBetas Optimize betas (simple).
  * @param optimizationType
- * @param withPhi
  */
 void BetaOptimization::optimizeBetas(int optimizationType)
 {
@@ -1032,9 +1058,8 @@ void BetaOptimization::optimizeBetas(int optimizationType)
 }
 
 /**
- * @brief BetaOptimization::optimizeBetasWithSplitAndMerge
+ * @brief BetaOptimization::optimizeBetasWithSplitAndMerge Optimize betas (with split and merge).
  * @param optimizationType
- * @param withPhi
  */
 void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 {
@@ -1097,7 +1122,7 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
 }
 
 /**
- * @brief BetaOptimization2::testSimpleSplitAndMerge Test function
+ * @brief BetaOptimization::testSimpleSplitAndMerge Test function!
  */
 void BetaOptimization::testSimpleSplitAndMerge()
 {
@@ -1143,7 +1168,7 @@ void BetaOptimization::testSimpleSplitAndMerge()
 }
 
 /**
- * @brief BetaOptimization2::testSplitAndMerge Test function
+ * @brief BetaOptimization::testSplitAndMerge Test function!
  */
 void BetaOptimization::testSplitAndMerge()
 {
@@ -1199,9 +1224,9 @@ void BetaOptimization::testSplitAndMerge()
 }
 
 /**
- * @brief BetaOptimization::getShellMesh
- * @param flipped
- * @return
+ * @brief BetaOptimization::getShellMesh Get shell mesh which must be translated.
+ * @param flipped flip normals
+ * @return shell mesh
  */
 Mesh* BetaOptimization::getShellMesh(bool flipped)
 {
@@ -1216,7 +1241,7 @@ Mesh* BetaOptimization::getShellMesh(bool flipped)
 }
 
 /**
- * @brief BetaOptimization2::finishBetaOptimization2 Execute task after optimization
+ * @brief BetaOptimization::finishBetaOptimization Execute task after optimization.
  */
 void BetaOptimization::finishBetaOptimization()
 {
@@ -1240,11 +1265,11 @@ void BetaOptimization::finishBetaOptimization()
 }
 
 /**
- * @brief BetaOptimization2::calculateVolume calculates volumne integrals of an object
+ * @brief BetaOptimization::calculateVolume calculates volumne integrals of an object.
  * (s_1,s_x,s_y,s_z,s_xy,s_yz,s_xz,s_x2,s_y2,s_z2)
  * @param mesh triangulated surface of object
  * @param p density of object (default 1)
- * @return
+ * @return pointer of array
  */
 float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
 {
@@ -1320,7 +1345,7 @@ float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
 }
 
 /**
- * @brief BetaOptimization::phiEnergyFunction
+ * @brief BetaOptimization::phiEnergyFunction Energy function for phi optimization.
  * @param n
  * @param x
  * @param grad
@@ -1360,7 +1385,7 @@ double BetaOptimization::phiEnergyFunction(unsigned n, const double *x, double *
 }
 
 /**
- * @brief BetaOptimization::executePhiOptimization
+ * @brief BetaOptimization::executePhiOptimization Execute phi optimization.
  * @return
  */
 double BetaOptimization::executePhiOptimization()

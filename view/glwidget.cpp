@@ -92,7 +92,7 @@ void GLWidget::resetGLWidget()
 }
 
 /**
- * @brief GLWidget::createGrid
+ * @brief GLWidget::createGrid Create a grid model.
  */
 void GLWidget::createGrid()
 {
@@ -190,7 +190,7 @@ void GLWidget::initializeGL()
 
     last_object_model_matrix.setToIdentity();
 
-    /* test loading start */
+    /* loading initial mesh */
 
     loadInitialMesh();
 
@@ -215,7 +215,6 @@ void GLWidget::initializeGL()
     last_object_model_matrix = model_matrix;
 
     calculateOctree();
-    /* test loading end */
 
 }
 
@@ -269,6 +268,7 @@ void GLWidget::paintGL()
 
     model_matrix.translate(-alignPos);
 
+    // show loaded mesh
     if((transformMode || showOuterSurface) && object != NULL)
     {
 
@@ -286,6 +286,8 @@ void GLWidget::paintGL()
 
     if(!transformMode && showInnerSurface && BetaOptimization::shellMesh != NULL)
     {
+        // show inner surface
+
         model_matrix.rotate(BetaOptimization::align_phi,QVector3D(0,1,0));
 
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
@@ -296,6 +298,8 @@ void GLWidget::paintGL()
     else
     if(!transformMode && showGrid)
     {
+
+        // show grid ( interior which shows current beta values )
 
         shader->release();
         colorshader->bind();
@@ -309,16 +313,18 @@ void GLWidget::paintGL()
         colorshader->setUniformValue("nMatrix", view_matrix * model_matrix);
         colorshader->setUniformValue("mvpMatrix", projection_matrix * view_matrix * model_matrix);
         colorshader->setUniformValue("color", QColor(Qt::blue));
-        BetaOptimization::octree.renderOctreeGrid(colorshader);
+        BetaOptimization::octree.renderBetaGrid(colorshader);
 
         colorshader->release();
         shader->bind();
 
     }
 
-    // helper object
+
     if(showOuterSurface || transformMode)
     {
+
+        // show helper object
 
         model_matrix.setToIdentity();
         shader->setUniformValue("nMatrix", view_matrix * model_matrix);
@@ -517,7 +523,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *ev)
 }
 
 /**
- * @brief GLWidget::loadInitialMesh
+ * @brief GLWidget::loadInitialMesh Load a mesh at program start.
  */
 void GLWidget::loadInitialMesh()
 {
@@ -540,10 +546,12 @@ void GLWidget::loadInitialMesh()
 
     scaleFactor = object->getMaxDistance2Middle();
 
+    // send signals
     emit modelLoaded(true);
     emit setViewBack(true);
     emit deactivateViewControlWidget(true);
 
+    // set the transformation for the current mode
     if(YOYO_MODE)
     {
         alignPos = QVector3D(0,0,0);
@@ -572,7 +580,7 @@ void GLWidget::loadInitialMesh()
 }
 
 /**
- * @brief GLWidget::loadNewMesh
+ * @brief GLWidget::loadNewMesh Load a new mesh.
  */
 void GLWidget::loadNewMesh()
 {
@@ -601,10 +609,12 @@ void GLWidget::loadNewMesh()
 
     scaleFactor = object->getMaxDistance2Middle();
 
+    // send signals
     emit modelLoaded(true);
     emit setViewBack(true);
     emit deactivateViewControlWidget(true);
 
+    // set the transformation for the current mode
     if(YOYO_MODE)
     {
         alignPos = QVector3D(0,0,0);
@@ -635,11 +645,12 @@ void GLWidget::loadNewMesh()
 }
 
 /**
- * @brief GLWidget::makeItSpin
+ * @brief GLWidget::makeItSpin Start beta opimiztation.
  */
 void GLWidget::makeItSpin()
 {
 
+    // create octree when it does not exist or is dirty
     if(rebuildOctree || octreeIsDirty)
     {
         this->calculateOctree();
@@ -719,8 +730,8 @@ void GLWidget::showOnlyOctreeGrid()
 /* ----------------------------------------------- */
 
 /**
- * @brief GLWidget::setView
- * @param index
+ * @brief GLWidget::setView Set the view for the current mode and tab transition.
+ * @param index index of the current tab
  */
 void GLWidget::setView(int index)
 {
@@ -780,10 +791,8 @@ void GLWidget::setView(int index)
 
 }
 
-
-
 /**
- * @brief GLWidget::calculateOctree Calculate the octree
+ * @brief GLWidget::calculateOctree Calculate the octree.
  */
 void GLWidget::calculateOctree()
 {
@@ -804,6 +813,7 @@ void GLWidget::calculateOctree()
                 this->optimizationMaximalDepth,
                 this->shellExtensionValue);
 
+    // set flags and ui elements after initializing an octree
     rebuildOctree = false;
     octreeIsDirty=false;
 
@@ -815,7 +825,7 @@ void GLWidget::calculateOctree()
 }
 
 /**
- * @brief GLWidget::saveMesh
+ * @brief GLWidget::saveMesh Save object according to the current mode.
  */
 void GLWidget::saveMesh()
 {
@@ -843,7 +853,7 @@ void GLWidget::saveMesh()
 }
 
 /**
- * @brief GLWidget::saveMeshAsTippeTop Save object as tippe top
+ * @brief GLWidget::saveMeshAsTippeTop Save object as tippe top.
  * @param fileName name and path of file
  */
 void GLWidget::saveMeshAsTippeTop(QString fileName)
@@ -851,6 +861,8 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 
     if(octreeIsDirty)
     {
+
+        /* case when no octree is considered */
 
         Mesh* modifiedMesh = object->copy();
         modifiedMesh->transform(this->last_object_model_matrix);
@@ -875,7 +887,7 @@ void GLWidget::saveMeshAsTippeTop(QString fileName)
 }
 
 /**
- * @brief GLWidget::saveMeshAsTop Save object as top
+ * @brief GLWidget::saveMeshAsTop Save object as top.
  * @param fileName name and path of file
  */
 void GLWidget::saveMeshAsTop(QString fileName)
@@ -883,6 +895,8 @@ void GLWidget::saveMeshAsTop(QString fileName)
 
     if(octreeIsDirty)
     {
+        /* case when no octree is considered */
+
         Mesh* mesh = object->copy();
 
         mesh->transform(this->last_object_model_matrix);
@@ -924,7 +938,7 @@ void GLWidget::saveMeshAsTop(QString fileName)
 }
 
 /**
- * @brief GLWidget::saveMeshAsYoyo Save object as yoyo
+ * @brief GLWidget::saveMeshAsYoyo Save object as yoyo.
  * @param fileName name and path of file
  */
 void GLWidget::saveMeshAsYoyo(QString fileName)
@@ -932,6 +946,8 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
 
     if(octreeIsDirty)
     {
+
+        /* case when no octree is considered */
 
         Mesh* modifiedMesh = object->copy();
         modifiedMesh->transform(this->last_object_model_matrix);
@@ -954,7 +970,7 @@ void GLWidget::saveMeshAsYoyo(QString fileName)
 }
 
 /**
- * @brief GLWidget::setYoyo
+ * @brief GLWidget::setYoyo Set yoyo mode.
  */
 void GLWidget::setYoyo()
 {
@@ -969,7 +985,7 @@ void GLWidget::setYoyo()
 }
 
 /**
- * @brief GLWidget::setTop
+ * @brief GLWidget::setTop Set top mode.
  */
 void GLWidget::setTop()
 {
@@ -984,7 +1000,7 @@ void GLWidget::setTop()
 }
 
 /**
- * @brief GLWidget::setTippeTop
+ * @brief GLWidget::setTippeTop Set tippe top mode.
  * @param tippeTop
  */
 void GLWidget::setTippeTop(bool tippeTop)
@@ -1016,11 +1032,12 @@ void GLWidget::setAddAxis(bool addAxis)
 }
 
 /**
- * @brief GLWidget::updateView
+ * @brief GLWidget::updateView Update the view for the current mode.
  */
 void GLWidget::updateView()
 {
 
+    // enable/disable UI elements for the current mode
     if(YOYO_MODE)
     {
         emit yoyoIsSet(true);
@@ -1046,6 +1063,7 @@ void GLWidget::updateView()
         emit tippeTopIsSet(true);
     }
 
+    // set the transformation for the current mode
     if(object != NULL)
     {
         if(YOYO_MODE)
@@ -1072,6 +1090,7 @@ void GLWidget::updateView()
         this->rot_obj_psy = 0;
     }
 
+    // set the weight setting for the current mode
     if(YOYO_MODE)
     {
         deactivateCSpinBox(true);
@@ -1099,7 +1118,7 @@ void GLWidget::updateView()
 }
 
 /**
- * @brief GLWidget::setViewXY
+ * @brief GLWidget::setViewXY Set view for translating in xy plane (y and z are swapped).
  */
 void GLWidget::setViewXY()
 {
@@ -1124,7 +1143,7 @@ void GLWidget::setViewXY()
 }
 
 /**
- * @brief GLWidget::setViewZ
+ * @brief GLWidget::setViewZ Set view for translating in z axis direction (y and z are swapped).
  */
 void GLWidget::setViewZ()
 {
@@ -1148,7 +1167,7 @@ void GLWidget::setViewZ()
 }
 
 /**
- * @brief GLWidget::setViewRotationScale
+ * @brief GLWidget::setViewRotationScale Set the view for rotating and scaling.
  */
 void GLWidget::setViewRotationScale()
 {
@@ -1171,7 +1190,7 @@ void GLWidget::setViewRotationScale()
 }
 
 /**
- * @brief GLWidget::setViewDefault
+ * @brief GLWidget::setViewDefault Set the view to default.
  */
 void GLWidget::setViewDefault()
 {
@@ -1210,7 +1229,7 @@ void GLWidget::setViewDefault()
 }
 
 /**
- * @brief GLWidget::resetXY
+ * @brief GLWidget::resetXY Reset the x and y translation (y and z are swapped).
  */
 void GLWidget::resetXY()
 {
@@ -1222,7 +1241,7 @@ void GLWidget::resetXY()
 }
 
 /**
- * @brief GLWidget::resetZ
+ * @brief GLWidget::resetZ Reset the z axis translation (y and z are swapped).
  */
 void GLWidget::resetZ()
 {
@@ -1233,7 +1252,7 @@ void GLWidget::resetZ()
 }
 
 /**
- * @brief GLWidget::resetRotationScale
+ * @brief GLWidget::resetRotationScale Reste the rotation and scale tranformation.
  */
 void GLWidget::resetRotationScale()
 {
@@ -1246,7 +1265,7 @@ void GLWidget::resetRotationScale()
 }
 
 /**
- * @brief GLWidget::resetAll
+ * @brief GLWidget::resetAll Reset the all tranformation values.
  */
 void GLWidget::resetAll()
 {
@@ -1259,7 +1278,7 @@ void GLWidget::resetAll()
 }
 
 /**
- * @brief GLWidget::setStartDepthValue
+ * @brief GLWidget::setStartDepthValue Set new value for the maximal start depth.
  * @param value
  */
 void GLWidget::setStartDepthValue(int value)
@@ -1270,8 +1289,8 @@ void GLWidget::setStartDepthValue(int value)
 }
 
 /**
- * @brief GLWidget::setMaximumDepthValue
- * @param value
+ * @brief GLWidget::setMaximumDepthValue Set new value for the maximal optimization depth.
+ * @param value new value new value
  */
 void GLWidget::setMaximumDepthValue(int value)
 {
@@ -1281,8 +1300,8 @@ void GLWidget::setMaximumDepthValue(int value)
 }
 
 /**
- * @brief GLWidget::setShellExtensionValue
- * @param value
+ * @brief GLWidget::setShellExtensionValue Set new value of the shell extension
+ * @param value new value
  */
 void GLWidget::setShellExtensionValue(int value)
 {
@@ -1291,46 +1310,57 @@ void GLWidget::setShellExtensionValue(int value)
 
 }
 
-
-void GLWidget::setCWeight(double value)
+/**
+ * @brief GLWidget::setCWeight Set new weight for CenterOfMass.
+ * @param weight new weight
+ */
+void GLWidget::setCWeight(double weight)
 {
-    BetaOptimization::gamma_c_top=value;
+    BetaOptimization::gamma_c_top=weight;
 }
 
-void GLWidget::setIWeight(double value)
+/**
+ * @brief GLWidget::setIWeight Set new weight for Inertia.
+ * @param weight new weight
+ */
+void GLWidget::setIWeight(double weight)
 {
     if(YOYO_MODE)
     {
-        BetaOptimization::gamma_i_yoyo=value;
+        BetaOptimization::gamma_i_yoyo=weight;
     }
     else
     {
         if(TIPPE_TOP_MODE)
         {
-            BetaOptimization::gamma_i_tippe_top=value;
+            BetaOptimization::gamma_i_tippe_top=weight;
         }
         else
         {
-            BetaOptimization::gamma_i_top=value;
+            BetaOptimization::gamma_i_top=weight;
         }
     }
 }
 
-void GLWidget::setLWeight(double value)
+/**
+ * @brief GLWidget::setLWeight Set new weight for Laplace.
+ * @param weight new weight
+ */
+void GLWidget::setLWeight(double weight)
 {
     if(YOYO_MODE)
     {
-        BetaOptimization::gamma_l_yoyo=value;
+        BetaOptimization::gamma_l_yoyo=weight;
     }
     else
     {
         if(TIPPE_TOP_MODE)
         {
-            BetaOptimization::gamma_l_tippe_top=value;
+            BetaOptimization::gamma_l_tippe_top=weight;
         }
         else
         {
-            BetaOptimization::gamma_l_top=value;
+            BetaOptimization::gamma_l_top=weight;
         }
     }
 }

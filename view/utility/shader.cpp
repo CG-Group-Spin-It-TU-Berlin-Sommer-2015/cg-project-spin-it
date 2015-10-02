@@ -3,7 +3,7 @@
 using namespace std;
 
 /**
- * @brief initShader
+ * @brief initShader Initiate a shader.
  * @return the compiled shader program or 0 if the shader file does not exist
  */
 GLuint loadShader(string shader_name)

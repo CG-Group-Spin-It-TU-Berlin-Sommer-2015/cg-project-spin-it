@@ -23,8 +23,8 @@
 
 #define TOP_WITH_AXIS_MODE       (topOptimized && !tippeTopOptimized &&  addSpinAxisToTop)
 #define TOP_WITHOUT_AXIS_MODE    (topOptimized && !tippeTopOptimized && !addSpinAxisToTop)
-#define TIPPE_TOP_MODE               (topOptimized &&  tippeTopOptimized)
-#define YOYO_MODE                   !topOptimized
+#define TIPPE_TOP_MODE           (topOptimized &&  tippeTopOptimized)
+#define YOYO_MODE                (!topOptimized)
 
 #define TRANSLATION_TAB 0
 #define MODEL_TAB       1
@@ -206,8 +206,6 @@ protected:
     void resetGLWidget();
 
     void createGrid();
-    void createGridForYoyo();
-
 
 };
 

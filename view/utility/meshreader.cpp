@@ -3,7 +3,7 @@
 using namespace std;
 
 /**
- * @brief readMeshFromObjFile Loads a Mesh from an .obj file
+ * @brief readMeshFromObjFile Loads a Mesh from an .obj file.
  * @param file_name name and path of obj file
  * @return Mesh object from obj. file if successful, null else
  */

@@ -16,12 +16,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-private slots:
-
-    void on_loadMeshButton_clicked();
-
-    void on_hollowButton_clicked();
-
 private:
     Ui::MainWindow *ui;
 };

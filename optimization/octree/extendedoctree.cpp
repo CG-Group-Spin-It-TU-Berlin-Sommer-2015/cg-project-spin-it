@@ -4,6 +4,18 @@ using namespace std;
 using namespace octree;
 using namespace Eigen;
 
+#define CASE1(v1,v1_,v2,v2_) ((v1<=v2 && v2_<=v1_)||(v2<=v1 && v1_<=v2_))
+#define CASE2(v1,v1_,v2,v2_) ((v1<=v2 && v2<v1_ && v1_<=v2_)||(v2<=v1 && v1<v2_ && v2_<=v1_))
+
+#define MAX(v1,v2) (v1>v2?v1:v2);
+#define MIN(v1,v2) (v1<v2?v1:v2);
+
+#define TOP_SURFACE 0
+#define BOTTOM_SURFACE 1
+#define LEFT_SURFACE 2
+#define RIGHT_SURFACE 3
+#define FRONT_SURFACE 4
+#define BACK_SURFACE 5
 
 ExtendedOctree::ExtendedOctree():
 isDirty(true),
@@ -12,7 +24,7 @@ cbo(NULL),
 ibo(NULL),
 vbo_line(NULL),
 ibo_line(NULL),
-deactivateBetaOctree(false)
+deactivateBetaGrid(false)
 {
 
 }
@@ -65,16 +77,12 @@ void ExtendedOctree::updateBetaValues()
 
 }
 
-#define CASE1(v1,v1_,v2,v2_) ((v1<=v2 && v2_<=v1_)||(v2<=v1 && v1_<=v2_))
-#define CASE2(v1,v1_,v2,v2_) ((v1<=v2 && v2<v1_ && v1_<=v2_)||(v2<=v1 && v1<v2_ && v2_<=v1_))
 
-#define MAX(v1,v2) (v1>v2?v1:v2);
-#define MIN(v1,v2) (v1<v2?v1:v2);
 
 /**
- * @brief ExtendedOctree::getNeighborhoodValue
- * @param index1
- * @param index2
+ * @brief ExtendedOctree::getNeighborhoodValue Get the value of the neighborhood cell.
+ * @param index1 index of the current considered node
+ * @param index2 index of the current neighborhood node
  * @return
  */
 GLint ExtendedOctree::getNeighborhoodValue(GLint index1, GLint index2)
@@ -161,17 +169,10 @@ GLint ExtendedOctree::getNeighborhoodValue(GLint index1, GLint index2)
     return value;
 }
 
-#define TOP_SURFACE 0
-#define BOTTOM_SURFACE 1
-#define LEFT_SURFACE 2
-#define RIGHT_SURFACE 3
-#define FRONT_SURFACE 4
-#define BACK_SURFACE 5
-
 /**
- * @brief ExtendedOctree::getSurfaceIndex
- * @param index1
- * @param index2
+ * @brief ExtendedOctree::getSurfaceIndex Get value how the considered octree nodes are connected.
+ * @param index1 index of the first octree node
+ * @param index2 index of the second octree node
  * @return
  */
 GLint ExtendedOctree::getSurfaceIndex(GLint index1, GLint index2)
@@ -213,9 +214,9 @@ GLint ExtendedOctree::getSurfaceIndex(GLint index1, GLint index2)
 }
 
 /**
- * @brief ExtendedOctree::getUniformLaplace
- * @param cubes
- * @return
+ * @brief ExtendedOctree::getUniformLaplace Get the uniform Laplace matrix.
+ * @param cubes vector for considered octree nodes
+ * @return uniform Laplace matrix
  */
 SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
 {
@@ -304,10 +305,10 @@ SpMat ExtendedOctree::getUniformLaplace(QVector<cubeObject>* cubes)
 }
 
 /**
- * @brief ExtendedOctree::getInnerLeavesForNodeForSurface
- * @param index
- * @param indices
- * @param surfaceIndex
+ * @brief ExtendedOctree::getInnerLeavesForNodeForSurface Get a vector with the inner leaf nodes for a specific octree surface.
+ * @param index index of current octree node
+ * @param indices vector for found octree node indices
+ * @param surfaceIndex index of surface
  */
 void ExtendedOctree::getInnerLeavesForNodeForSurface(GLint index,QVector<GLint>* indices,GLint surfaceIndex)
 {
@@ -372,9 +373,9 @@ void ExtendedOctree::getInnerLeavesForNodeForSurface(GLint index,QVector<GLint>*
 }
 
 /**
- * @brief ExtendedOctree::propagateBeta
- * @param index
- * @param beta
+ * @brief ExtendedOctree::propagateBeta Propagate the beta value to the children nodes.
+ * @param index current index of octree node
+ * @param beta new beta value
  */
 void ExtendedOctree::propagateBeta(GLint index, GLfloat beta)
 {
@@ -400,7 +401,7 @@ void ExtendedOctree::propagateBeta(GLint index, GLfloat beta)
 }
 
 /**
- * @brief ExtendedOctree::updateBetaValuesWithPropagation
+ * @brief ExtendedOctree::updateBetaValuesWithPropagation Update the beta for each merged node and for each child of each merged node.
  */
 void ExtendedOctree::updateBetaValuesWithPropagation()
 {
@@ -418,7 +419,7 @@ void ExtendedOctree::updateBetaValuesWithPropagation()
 }
 
 /**
- * @brief ExtendedOctree::addCubeMesh Add the vertices and indices to the mesh
+ * @brief ExtendedOctree::addCubeMesh Add the vertices and indices to the mesh.
  * @param index index of the node
  * @param geometry the vector of vertices
  * @param indices the vector of indieces
@@ -1012,7 +1013,7 @@ void ExtendedOctree::setVoids()
 }
 
 /**
- * @brief ExtendedOctree::setMergeChild Set a merge root to a merge child
+ * @brief ExtendedOctree::setMergeChild Set a merge root to a merge child.
  * @param index index of the merge root
  * @param beta new beta value
  */
@@ -1136,7 +1137,7 @@ void ExtendedOctree::split(GLint nodeIndex, GLint maxDepth)
 }
 
 /**
- * @brief ExtendedOctree::allChildrenAreLeaves Check whether a specific node has only leaves as children
+ * @brief ExtendedOctree::allChildrenAreLeaves Check whether a specific node has only leaves as children.
  * @param nodeIndex index of the specific node
  * @return true if all children are leafes, false otherwise
  */
@@ -1167,7 +1168,7 @@ bool ExtendedOctree::allChildrenAreLeaves(GLint nodeIndex)
 }
 
 /**
- * @brief ExtendedOctree::handleShellNeighbor Make the node with the specific coordinate to shell node
+ * @brief ExtendedOctree::handleShellNeighbor Make the node with the specific coordinate to shell node.
  * @param x x-coordinate in octree
  * @param y y-coordinate in octree
  * @param z z-coordinate in octree
@@ -1209,7 +1210,7 @@ void inline ExtendedOctree::handleShellNeighbor(GLint x, GLint y, GLint z, QVect
 }
 
 /**
- * @brief ExtendedOctree::increaseShell Increase the shell torward the inner
+ * @brief ExtendedOctree::increaseShell Increase the shell torward the inner.
  * @param loopNumber number of loops for increasing the shell
  */
 void ExtendedOctree::increaseShell(GLint loopNumber)
@@ -1286,7 +1287,7 @@ void ExtendedOctree::increaseShell(GLint loopNumber)
 
 
 /**
- * @brief ExtendedOctree::deleteNodeMeshes Delete the meshes of all merge nodes
+ * @brief ExtendedOctree::deleteNodeMeshes Delete the meshes of all merge nodes.
  */
 void ExtendedOctree::deleteNodeMeshes()
 {
@@ -1307,6 +1308,10 @@ void ExtendedOctree::deleteNodeMeshes()
 
 }
 
+/**
+ * @brief ExtendedOctree::transformOctree Tranform the complete octree.
+ * @param mat tranfromation matrix
+ */
 void ExtendedOctree::transformOctree(QMatrix4x4 mat)
 {
 
@@ -1321,6 +1326,8 @@ void ExtendedOctree::transformOctree(QMatrix4x4 mat)
 
         nodePointer = &this->octreeNodes.data()[i];
         QVector3D vec;
+
+        // transform each point of the current octree node
 
         vec = nodePointer->p0;
         temp1.setX(vec.x());
@@ -1409,7 +1416,7 @@ void ExtendedOctree::transformOctree(QMatrix4x4 mat)
 //-------------------------------------------------- draw octree grid
 
 /**
- * @brief BasicOctree::setDirty
+ * @brief BasicOctree::makeDirty
  */
 void ExtendedOctree::makeDirty()
 {
@@ -1417,10 +1424,10 @@ void ExtendedOctree::makeDirty()
 }
 
 /**
- * @brief BasicOctree::renderOctreeGrid Render the grid of the octree
+ * @brief BasicOctree::renderBetaGrid Render the grid of the octree
  * @param shader the shader
  */
-void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
+void ExtendedOctree::renderBetaGrid(QGLShaderProgram* shader)
 {
 
     if(this->octreeNodes.size()<1){
@@ -1430,7 +1437,7 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
     GLenum primitive = GL_LINES;
 
     /* if needed needed variables are set for painting */
-    if (isDirty && !deactivateBetaOctree) {
+    if (isDirty && !deactivateBetaGrid) {
         QVector<GLfloat> buffer_vertices,buffer_colors,buffer_vertices_line;
 
         buffer_vertices.reserve( this->octreeNodes.size() * 8 * 3 * sizeof(GLfloat));
@@ -1665,7 +1672,7 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
           cout << "----------------------------------------" << endl;
           cout << "An exception occurred. Exception Nr. " << e << '\n';
 
-          deactivateBetaOctree = true;
+          deactivateBetaGrid = true;
         }
 
         buffer_vertices.clear();
@@ -1674,8 +1681,10 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
     }
 
-    if(!deactivateBetaOctree)
+    if(!deactivateBetaGrid)
     {
+
+        // show grid if no exception has occured
 
         GLint stride = sizeof(GLfloat) * (GEOMETRY_DATA_SIZE);
 
@@ -1717,7 +1726,10 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
 
 }
 
+/**
+ * @brief ExtendedOctree::resetBetaOctreeState Reset the betaOctree state
+ */
 void ExtendedOctree::resetBetaOctreeState()
 {
-    this->deactivateBetaOctree = false;
+    this->deactivateBetaGrid = false;
 }

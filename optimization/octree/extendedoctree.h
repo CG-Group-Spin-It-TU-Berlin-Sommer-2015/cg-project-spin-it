@@ -56,7 +56,7 @@ public:
     void deleteNodeMeshes();
 
     // methods for visualization
-    void renderOctreeGrid(QGLShaderProgram* shader);
+    void renderBetaGrid(QGLShaderProgram* shader);
     void makeDirty();
 
     SpMat getUniformLaplace(QVector<octree::cubeObject>* cubes);
@@ -81,7 +81,7 @@ private:
     QVector<int> indexBuffer;
     QVector<int> indexBuffer_line;
 
-    bool deactivateBetaOctree;
+    bool deactivateBetaGrid;
 
 private:
 

@@ -21,7 +21,7 @@ BasicOctree::~BasicOctree()
 //-------------------------------------------------- setup parameters
 
 /**
- * @brief BasicOctree::setMesh Set the mesh for the octree
+ * @brief BasicOctree::setMesh Set the mesh for the octree.
  * @param mesh the considered mesh
  */
 void BasicOctree::setMesh(Mesh* mesh)
@@ -30,7 +30,7 @@ void BasicOctree::setMesh(Mesh* mesh)
 }
 
 /**
- * @brief BasicOctree::setStartDepth Set a new start depth
+ * @brief BasicOctree::setStartDepth Set a new start depth.
  * @param depth the start depth
  */
 void BasicOctree::setStartMaxDepth(GLint depth)
@@ -41,7 +41,7 @@ void BasicOctree::setStartMaxDepth(GLint depth)
 }
 
 /**
- * @brief BasicOctree::setOptimizationMaxDepth Set a new maximal depth
+ * @brief BasicOctree::setOptimizationMaxDepth Set a new maximal depth.
  * @param depth the maximal depth
  */
 void BasicOctree::setOptimizationMaxDepth(GLint depth)
@@ -64,7 +64,7 @@ GLint BasicOctree::getOptimizationMaxDepth()
 //-------------------------------------------------- quantizing mesh
 
 /**
- * @brief BasicOctree::addTriangle Set the triangle defined be the three points
+ * @brief BasicOctree::addTriangle Set the triangle defined be the three points.
  * @param p1 point 1
  * @param p2 point 2
  * @param p3 point 3
@@ -86,7 +86,7 @@ void inline BasicOctree::addTriangle(QVector3D* p1,QVector3D* p2,QVector3D* p3,Q
 }
 
 /**
- * @brief BasicOctree::setRawVoxel Set a voxel
+ * @brief BasicOctree::setRawVoxel Set a voxel.
  * @param x x coordinate
  * @param y y coordinate
  * @param z z coordinate
@@ -101,7 +101,7 @@ void inline BasicOctree::setRawVoxel(GLfloat x,GLfloat y,GLfloat z)
 }
 
 /**
- * @brief BasicOctree::quantizeSurface Quantize the surface of the mesh
+ * @brief BasicOctree::quantizeSurface Quantize the surface of the mesh.
  */
 void BasicOctree::quantizeSurface()
 {
@@ -265,7 +265,7 @@ void BasicOctree::quantizeSurface()
 }
 
 /**
- * @brief BasicOctree::setupVectors Set voxel points for raw voxels
+ * @brief BasicOctree::setupVectors Set voxel points for raw voxels.
  */
 void BasicOctree::setupVectors()
 {
@@ -297,7 +297,7 @@ void BasicOctree::setupVectors()
 //-------------------------------------------------- helper functions for octree
 
 /**
- * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates.
  * @param x x coordinate
  * @param y y coordinate
  * @param z z coordinate
@@ -309,7 +309,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z)
 }
 
 /**
- * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates starting from specific node
+ * @brief BasicOctree::getLeafNodeByCoordinate Get leaf for the coordinates starting from specific node.
  * @param x x coordinate
  * @param y y coordinate
  * @param z z coordinate
@@ -331,7 +331,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinate(GLint x, GLint y, GLint z, GLin
 }
 
 /**
- * @brief BasicOctree::getLeafNodeByCoordinateHelper
+ * @brief BasicOctree::getLeafNodeByCoordinateHelper Helper method (see BasicOctree::getLeafNodeByCoordinate).
  * @param x x coordinate
  * @param y y coordinate
  * @param z z coordinate
@@ -369,7 +369,7 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
 }
 
 /**
- * @brief BasicOctree::createNode Create a new node
+ * @brief BasicOctree::createNode Create a new node.
  * @param x x coordinate of octree
  * @param y y coordinate of octree
  * @param z z coordinate of octree
@@ -401,13 +401,6 @@ GLint BasicOctree::createNode(
         QVector3D p5,
         QVector3D p6,
         QVector3D p7){
-
-    /*
-    GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
-    GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
-    GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
-    GLfloat cell_length = this->cell_length*(pow(2,this->basicMaxDepth-depth));
-    */
 
     octreeNode node;
 
@@ -445,7 +438,7 @@ GLint BasicOctree::createNode(
 //-------------------------------------------------- shell mesh calculation
 
 /**
- * @brief BasicOctree::handleHashItem Handle vertice for avoiding multiple set up of a vertex
+ * @brief BasicOctree::handleHashItem Handle vertice for avoiding multiple set up of a vertex.
  * @param vertexIndex unique index of a vertice
  * @param point point in world
  * @return index of the point
@@ -474,7 +467,7 @@ GLint inline BasicOctree::handleHashItem(GLint vertexIndex,QVector3D point)
 }
 
 /**
- * @brief BasicOctree::addTriangle Should triangles added here
+ * @brief BasicOctree::addTriangle Should triangles added here.
  * @param x x coordinate in octree
  * @param y y coordiante in octree
  * @param z z coordinate in octree
@@ -488,7 +481,7 @@ bool inline BasicOctree::addTriangle(GLint x, GLint y, GLint z)
 }
 
 /**
- * @brief BasicOctree::createTriangle Add vertices and indices for inner and shell border
+ * @brief BasicOctree::createTriangle Add vertices and indices for inner and shell border.
  * @param x x coordinate in octree
  * @param y y coordinate in octree
  * @param z z coordinate in octree
@@ -616,7 +609,7 @@ void BasicOctree::createTriangle(GLint x, GLint y, GLint z, GLint code)
 }
 
 /**
- * @brief BasicOctree::createInnerSurface Calculate vertices and indices for inner shell mesh
+ * @brief BasicOctree::createInnerSurface Calculate vertices and indices for inner shell mesh.
  */
 void BasicOctree::createInnerSurface()
 {
@@ -709,8 +702,8 @@ void BasicOctree::createInnerSurface()
 }
 
 /**
- * @brief BasicOctree::getShellMesh Get the mesh of the inner shell
- * @param flip true the normals are flip. false otherwise
+ * @brief BasicOctree::getShellMesh Get the mesh of the inner shell.
+ * @param flip true the normals are flip, false otherwise
  * @return the mesh
  */
 Mesh* BasicOctree::getShellMesh(bool flip)
@@ -753,7 +746,7 @@ Mesh* BasicOctree::getShellMesh(bool flip)
 //-------------------------------------------------- mark nodes
 
 /**
- * @brief BasicOctree::setOuterNodes Mark outer nodes
+ * @brief BasicOctree::setOuterNodes Mark outer nodes.
  */
 void BasicOctree::setupOuterNodes()
 {
@@ -894,7 +887,7 @@ void BasicOctree::setupOuterNodes()
 }
 
 /**
- * @brief BasicOctree::setInnerNodes Mark the inner nodes ( after calculating outer nodes)
+ * @brief BasicOctree::setInnerNodes Mark the inner nodes ( after calculating outer nodes).
  */
 void BasicOctree::setupInnerNodes()
 {
@@ -923,7 +916,7 @@ void BasicOctree::setupInnerNodes()
 //-------------------------------------------------- set up octree
 
 /**
- * @brief BasicOctree::sortHalf Sort voxels until half of the array size (for x,y or z coordinate)
+ * @brief BasicOctree::sortHalf Sort voxels until half of the array size (for x,y or z coordinate).
  * @param start start index
  * @param end end index
  * @param coor code for coordinate
@@ -959,7 +952,7 @@ GLint BasicOctree::sortHalf(GLint start,GLint end,GLint coor, GLint prior)
 }
 
 /**
- * @brief BasicOctree::setupOctree Create the octree according to set preferences
+ * @brief BasicOctree::setupOctree Create the octree according to set preferences.
  */
 void BasicOctree::setupOctree(){
 
@@ -979,7 +972,7 @@ void BasicOctree::setupOctree(){
 }
 
 /**
- * @brief BasicOctree::setupOctreeHelper Helper function for creating the octree
+ * @brief BasicOctree::setupOctreeHelper Helper function for creating the octree.
  * @param depth current depth
  * @param start start value for range
  * @param end end value for range
@@ -1134,7 +1127,7 @@ void BasicOctree::getNodesOfDepth(GLint depth,QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::adjustToBasicMaxDepth Adjust the octree to the maximal depth
+ * @brief BasicOctree::adjustToBasicMaxDepth Adjust the octree to the maximal depth.
  */
 void BasicOctree::adjustToBasicMaxDepth()
 {
@@ -1163,9 +1156,9 @@ void BasicOctree::adjustToBasicMaxDepth()
 }
 
 /**
- * @brief BasicOctree::mergeChildExists
- * @param index
- * @return
+ * @brief BasicOctree::mergeChildExists Check whether a child is a merged node.
+ * @param index index of the current octree node
+ * @return true if there is a child which is merged node, otherwise false
  */
 bool BasicOctree::mergeChildExists(GLint index)
 {
@@ -1186,7 +1179,7 @@ bool BasicOctree::mergeChildExists(GLint index)
 
 
 /**
- * @brief BasicOctree::initiateMergeRoots
+ * @brief BasicOctree::initiateMergeRoots Initialize merged nodes.
  */
 void BasicOctree::initiateMergeRoots()
 {
@@ -1400,7 +1393,7 @@ void BasicOctree::initiateMergeRoots()
 //-------------------------------------------------- getters vector
 
 /**
- * @brief BasicOctree::printNumberOfLeafTypes
+ * @brief BasicOctree::printNumberOfLeafTypes Print some information about the octree creation.
  */
 void BasicOctree::printNumberOfLeafTypes()
 {
@@ -1431,7 +1424,7 @@ void BasicOctree::printNumberOfLeafTypes()
 }
 
 /**
- * @brief BasicOctree::getInnerLeaves Get the indices of all inner leaf nodes
+ * @brief BasicOctree::getInnerLeaves Get the indices of all inner leaf nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
@@ -1454,7 +1447,7 @@ void BasicOctree::getInnerLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getShellLeaves Get the indices of all shell leaf nodes
+ * @brief BasicOctree::getShellLeaves Get the indices of all shell leaf nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getShellLeaves(QVector<GLint>* indices)
@@ -1477,7 +1470,7 @@ void BasicOctree::getShellLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getOuterLeaves Get the indices of all outer leaf nodes
+ * @brief BasicOctree::getOuterLeaves Get the indices of all outer leaf nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getOuterLeaves(QVector<GLint>* indices)
@@ -1500,7 +1493,7 @@ void BasicOctree::getOuterLeaves(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getMergeRoots Get the indices of all merge root nodes
+ * @brief BasicOctree::getMergeRoots Get the indices of all merge root nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeRoots(QVector<GLint>* indices)
@@ -1523,7 +1516,7 @@ void BasicOctree::getMergeRoots(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getMergeChilds Get the indices of all merge child nodes
+ * @brief BasicOctree::getMergeChilds Get the indices of all merge child nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeChilds(QVector<GLint>* indices)
@@ -1546,7 +1539,7 @@ void BasicOctree::getMergeChilds(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getIgnoredNodes Get the indices of all ignored nodes
+ * @brief BasicOctree::getIgnoredNodes Get the indices of all ignored nodes.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getIgnoredNodes(QVector<GLint>* indices)
@@ -1569,7 +1562,7 @@ void BasicOctree::getIgnoredNodes(QVector<GLint>* indices)
 }
 
 /**
- * @brief BasicOctree::getMergeCandidateIndices Get the indices of all nodes which are merge candidates
+ * @brief BasicOctree::getMergeCandidateIndices Get the indices of all nodes which are merge candidates.
  * @param indices a pointer of th vector which get the indices of the found nodes
  */
 void BasicOctree::getMergeRootCandidates(QVector<GLint>* indices)

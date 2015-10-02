@@ -10,8 +10,6 @@
 
 #include "mesh/mesh.h"
 
-using namespace std;
-
-Mesh* readMeshFromObjFile (string file_name);
+Mesh* readMeshFromObjFile (std::string file_name);
 
 #endif // OBJREADER_H
