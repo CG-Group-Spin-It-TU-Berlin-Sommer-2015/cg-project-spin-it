@@ -11,7 +11,8 @@ vbo(NULL),
 cbo(NULL),
 ibo(NULL),
 vbo_line(NULL),
-ibo_line(NULL)
+ibo_line(NULL),
+deactivateBetaOctree(false)
 {
 
 }
@@ -1069,15 +1070,56 @@ void ExtendedOctree::split(octreeNode* nodePointer, GLint maxDepth)
     GLint newLength = nodePointer->cell_length>>1;
     GLint index = nodePointer->index;
 
+    QVector3D p0 = nodePointer->p0;
+    QVector3D p2 = nodePointer->p1;
+    QVector3D p6 = nodePointer->p2;
+    QVector3D p8 = nodePointer->p3;
+    QVector3D p18 = nodePointer->p4;
+    QVector3D p20 = nodePointer->p5;
+    QVector3D p24 = nodePointer->p6;
+    QVector3D p26 = nodePointer->p7;
+
+    QVector3D p1 = (p2-p0)/2+p0;
+    QVector3D p3 = (p6-p0)/2+p0;
+    QVector3D p7 = (p8-p6)/2+p6;
+    QVector3D p5 = (p8-p2)/2+p2;
+
+    QVector3D p19 = (p20-p18)/2+p18;
+    QVector3D p21 = (p24-p18)/2+p18;
+    QVector3D p25 = (p26-p24)/2+p24;
+    QVector3D p23 = (p26-p20)/2+p20;
+
+    QVector3D p9 = (p18-p0)/2+p0;
+    QVector3D p11 = (p20-p2)/2+p2;
+    QVector3D p15 = (p24-p6)/2+p6;
+    QVector3D p17 = (p26-p8)/2+p8;
+
+    QVector3D p10 = (p11-p9)/2+p9;
+    QVector3D p12 = (p15-p9)/2+p9;
+    QVector3D p16 = (p17-p15)/2+p15;
+    QVector3D p14 = (p17-p11)/2+p11;
+
+    QVector3D p4 = (p7-p1)/2+p1;
+    QVector3D p13 = (p16-p10)/2+p10;
+    QVector3D p22 = (p25-p19)/2+p19;
+
     // create all new nodes
-    nodePointer->childIndex0=createNode(x,y,z,newDepth,isInside,index);
-    nodePointer->childIndex1=createNode(x,y,z+newLength,newDepth,isInside,index);
-    nodePointer->childIndex2=createNode(x,y+newLength,z,newDepth,isInside,index);
-    nodePointer->childIndex3=createNode(x,y+newLength,z+newLength,newDepth,isInside,index);
-    nodePointer->childIndex4=createNode(x+newLength,y,z,newDepth,isInside,index);
-    nodePointer->childIndex5=createNode(x+newLength,y,z+newLength,newDepth,isInside,index);
-    nodePointer->childIndex6=createNode(x+newLength,y+newLength,z,newDepth,isInside,index);
-    nodePointer->childIndex7=createNode(x+newLength,y+newLength,z+newLength,newDepth,isInside,index);
+    nodePointer->childIndex0=createNode(x,y,z,newDepth,isInside,index,
+                                        p0,p1,p3,p4,p9,p10,p12,p13);
+    nodePointer->childIndex1=createNode(x,y,z+newLength,newDepth,isInside,index,
+                                        p1,p2,p4,p5,p10,p11,p13,p14);
+    nodePointer->childIndex2=createNode(x,y+newLength,z,newDepth,isInside,index,
+                                        p3,p4,p6,p7,p12,p13,p15,p16);
+    nodePointer->childIndex3=createNode(x,y+newLength,z+newLength,newDepth,isInside,index,
+                                        p4,p5,p7,p8,p13,p14,p16,p17);
+    nodePointer->childIndex4=createNode(x+newLength,y,z,newDepth,isInside,index,
+                                        p9,p10,p12,p13,p18,p19,p21,p22);
+    nodePointer->childIndex5=createNode(x+newLength,y,z+newLength,newDepth,isInside,index,
+                                        p10,p11,p13,p14,p19,p20,p22,p23);
+    nodePointer->childIndex6=createNode(x+newLength,y+newLength,z,newDepth,isInside,index,
+                                        p12,p13,p15,p16,p21,p22,p24,p25);
+    nodePointer->childIndex7=createNode(x+newLength,y+newLength,z+newLength,newDepth,isInside,index,
+                                        p13,p14,p16,p17,p22,p23,p25,p26);
 
 }
 
@@ -1388,7 +1430,7 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
     GLenum primitive = GL_LINES;
 
     /* if needed needed variables are set for painting */
-    if (isDirty) {
+    if (isDirty && !deactivateBetaOctree) {
         QVector<GLfloat> buffer_vertices,buffer_colors,buffer_vertices_line;
 
         buffer_vertices.reserve( this->octreeNodes.size() * 8 * 3 * sizeof(GLfloat));
@@ -1542,114 +1584,140 @@ void ExtendedOctree::renderOctreeGrid(QGLShaderProgram* shader)
             }
         }
 
-        if(vbo != NULL)
+        try
         {
-            vbo->destroy();
-            vbo = NULL;
+
+            if(vbo != NULL)
+            {
+                vbo->destroy();
+                vbo = NULL;
+            }
+
+            vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+            vbo->create();
+            vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+            vbo->bind();
+            vbo->allocate(buffer_vertices.size() * sizeof(GLfloat));
+            vbo->write(0, buffer_vertices.constData(), buffer_vertices.size() * sizeof(GLfloat));
+            vbo->release();
+
+            if(cbo != NULL)
+            {
+                cbo->destroy();
+                cbo = NULL;
+            }
+
+            cbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+            cbo->create();
+            cbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+            cbo->bind();
+            cbo->allocate(buffer_colors.size() * 3 * sizeof(GLfloat));
+            cbo->write(0, buffer_colors.constData(), buffer_colors.size() * sizeof(GLfloat));
+            cbo->release();
+
+            if(ibo != NULL)
+            {
+                ibo->destroy();
+                ibo = NULL;
+            }
+
+            ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+            ibo->create();
+            ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+            ibo->bind();
+            ibo->allocate(indexBuffer.size() * sizeof(GLint));
+            ibo->write(0, indexBuffer.constData(), indexBuffer.size() * sizeof(GLint));
+            ibo->release();
+
+            if(vbo_line != NULL)
+            {
+                vbo_line->destroy();
+                vbo_line = NULL;
+            }
+
+            vbo_line = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+            vbo_line->create();
+            vbo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
+            vbo_line->bind();
+            vbo_line->allocate(buffer_vertices_line.size() * 3 * sizeof(GLfloat));
+            vbo_line->write(0, buffer_vertices_line.constData(), buffer_vertices_line.size() * sizeof(GLfloat));
+            vbo_line->release();
+
+            if(ibo_line != NULL)
+            {
+                ibo_line->destroy();
+                ibo_line = NULL;
+            }
+
+            ibo_line = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+            ibo_line->create();
+            ibo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
+            ibo_line->bind();
+            ibo_line->allocate(indexBuffer_line.size() * sizeof(GLint));
+            ibo_line->write(0, indexBuffer_line.constData(), indexBuffer_line.size() * sizeof(GLint));
+            ibo_line->release();
+
+            isDirty = false;
+
+        }
+        catch (int e)
+        {
+          cout << "----------------------------------------" << endl;
+          cout << "An exception occurred. Exception Nr. " << e << '\n';
+
+          deactivateBetaOctree = true;
         }
 
-        vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        vbo->create();
-        vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        vbo->bind();
-        vbo->allocate(buffer_vertices.size() * sizeof(GLfloat));
-        vbo->write(0, buffer_vertices.constData(), buffer_vertices.size() * sizeof(GLfloat));
-        vbo->release();
-
-        if(cbo != NULL)
-        {
-            cbo->destroy();
-            cbo = NULL;
-        }
-
-        cbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        cbo->create();
-        cbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        cbo->bind();
-        cbo->allocate(buffer_colors.size() * 3 * sizeof(GLfloat));
-        cbo->write(0, buffer_colors.constData(), buffer_colors.size() * sizeof(GLfloat));
-        cbo->release();
-
-        if(ibo != NULL)
-        {
-            ibo->destroy();
-            ibo = NULL;
-        }
-
-        ibo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        ibo->create();
-        ibo->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        ibo->bind();
-        ibo->allocate(indexBuffer.size() * sizeof(GLint));
-        ibo->write(0, indexBuffer.constData(), indexBuffer.size() * sizeof(GLint));
-        ibo->release();
-
-        if(vbo_line != NULL)
-        {
-            vbo_line->destroy();
-            vbo_line = NULL;
-        }
-
-        vbo_line = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        vbo_line->create();
-        vbo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        vbo_line->bind();
-        vbo_line->allocate(buffer_vertices_line.size() * 3 * sizeof(GLfloat));
-        vbo_line->write(0, buffer_vertices_line.constData(), buffer_vertices_line.size() * sizeof(GLfloat));
-        vbo_line->release();
-
-        if(ibo_line != NULL)
-        {
-            ibo_line->destroy();
-            ibo_line = NULL;
-        }
-
-        ibo_line = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-        ibo_line->create();
-        ibo_line->setUsagePattern(QOpenGLBuffer::StaticDraw);
-        ibo_line->bind();
-        ibo_line->allocate(indexBuffer_line.size() * sizeof(GLint));
-        ibo_line->write(0, indexBuffer_line.constData(), indexBuffer_line.size() * sizeof(GLint));
-        ibo_line->release();
-
-        isDirty = false;
+        buffer_vertices.clear();
+        buffer_colors.clear();
+        buffer_vertices_line.clear();
 
     }
 
-    GLint stride = sizeof(GLfloat) * (GEOMETRY_DATA_SIZE);
+    if(!deactivateBetaOctree)
+    {
 
-    vbo->bind();
-    shader->enableAttributeArray("geometry");
-    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
-    vbo->release();
+        GLint stride = sizeof(GLfloat) * (GEOMETRY_DATA_SIZE);
 
-    cbo->bind();
-    shader->enableAttributeArray("color");
-    shader->setAttributeBuffer("color", GL_FLOAT, 0, 3, stride);
-    cbo->release();
+        vbo->bind();
+        shader->enableAttributeArray("geometry");
+        shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
+        vbo->release();
 
-    ibo->bind();
-    glDrawElements(GL_TRIANGLES, indexBuffer.size(), GL_UNSIGNED_INT, (void*) 0);
-    ibo->release();
+        cbo->bind();
+        shader->enableAttributeArray("color");
+        shader->setAttributeBuffer("color", GL_FLOAT, 0, 3, stride);
+        cbo->release();
 
-    shader->disableAttributeArray("geometry");
-    shader->disableAttributeArray("color");
+        ibo->bind();
+        glDrawElements(GL_TRIANGLES, indexBuffer.size(), GL_UNSIGNED_INT, (void*) 0);
+        ibo->release();
 
-    shader->setAttributeValue("color",QColor(Qt::black));
+        shader->disableAttributeArray("geometry");
+        shader->disableAttributeArray("color");
 
-    glLineWidth(2);
+        shader->setAttributeValue("color",QColor(Qt::black));
 
-    vbo_line->bind();
-    shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
-    shader->enableAttributeArray("geometry");
-    vbo_line->release();
+        glLineWidth(2);
 
-    ibo_line->bind();
-    glDrawElements(primitive, indexBuffer_line.size(), GL_UNSIGNED_INT, (void*) 0);
-    ibo_line->release();
+        vbo_line->bind();
+        shader->setAttributeBuffer("geometry", GL_FLOAT, 0, 3, stride);
+        shader->enableAttributeArray("geometry");
+        vbo_line->release();
 
-    glLineWidth(1);
+        ibo_line->bind();
+        glDrawElements(primitive, indexBuffer_line.size(), GL_UNSIGNED_INT, (void*) 0);
+        ibo_line->release();
 
-    shader->disableAttributeArray("geometry");
+        glLineWidth(1);
 
+        shader->disableAttributeArray("geometry");
+
+    }
+
+}
+
+void ExtendedOctree::resetBetaOctreeState()
+{
+    this->deactivateBetaOctree = false;
 }

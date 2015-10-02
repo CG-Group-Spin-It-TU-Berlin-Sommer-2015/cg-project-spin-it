@@ -44,7 +44,9 @@ OTHER_FILES +=
 RESOURCES += \
     resources.qrc
 
-
+#----------------------------------------------------
+# cork boolean library - must be adapted
+#----------------------------------------------------
 unix:!macx: LIBS += -L$$PWD/../cork/lib/ -lcork
 
 INCLUDEPATH += $$PWD/../cork/include
@@ -52,6 +54,9 @@ DEPENDPATH += $$PWD/../cork/include
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../cork/lib/libcork.a
 
+#----------------------------------------------------
+# gmp (necessary for cork boolean library) - must be adapted
+#----------------------------------------------------
 unix:!macx: LIBS += -L$$PWD/../../../../usr/lib/x86_64-linux-gnu/ -lgmp
 
 INCLUDEPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
@@ -59,6 +64,9 @@ DEPENDPATH += $$PWD/../../../../usr/include/x86_64-linux-gnu
 
 unix:!macx: PRE_TARGETDEPS += $$PWD/../../../../usr/lib/x86_64-linux-gnu/libgmp.a
 
+#----------------------------------------------------
+# nlopt - must be adapted
+#----------------------------------------------------
 unix:!macx: LIBS += -L$$PWD/../../../../usr/local/lib/ -lnlopt
 INCLUDEPATH += $$PWD/../../../../usr/local/include/
 DEPENDPATH += $$PWD/../../../../usr/local/include/
@@ -78,4 +86,5 @@ DISTFILES += \
     shaders/colorshader.fsh \
     shaders/simple.fsh \
     shaders/colorshader.vsh \
-    shaders/simple.vsh
+    shaders/simple.vsh \
+    test_models/standard_objs/teddy.obj

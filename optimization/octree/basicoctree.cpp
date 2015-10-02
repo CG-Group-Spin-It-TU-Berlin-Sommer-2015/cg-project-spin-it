@@ -376,16 +376,49 @@ octreeNode* BasicOctree::getLeafNodeByCoordinateHelper(GLint x, GLint y, GLint z
  * @param depth node depth
  * @param addToInteriors should be added to interiors
  * @param parentIndex index of the parent node
+ * @param p0
+ * @param p1
+ * @param p2
+ * @param p3
+ * @param p4
+ * @param p5
+ * @param p6
+ * @param p7
  * @return index of new node
  */
-GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,GLint parentIndex){
+GLint BasicOctree::createNode(
+        GLint x,
+        GLint y,
+        GLint z,
+        GLint depth,
+        bool isInside,
+        GLint parentIndex,
+        QVector3D p0,
+        QVector3D p1,
+        QVector3D p2,
+        QVector3D p3,
+        QVector3D p4,
+        QVector3D p5,
+        QVector3D p6,
+        QVector3D p7){
 
+    /*
     GLfloat xf = x*this->cell_length-(max_g-this->mean.x());
     GLfloat yf = y*this->cell_length-(max_g-this->mean.y());
     GLfloat zf = z*this->cell_length-(max_g-this->mean.z());
     GLfloat cell_length = this->cell_length*(pow(2,this->basicMaxDepth-depth));
+    */
 
     octreeNode node;
+
+    node.p0 = p0;
+    node.p1 = p1;
+    node.p2 = p2;
+    node.p3 = p3;
+    node.p4 = p4;
+    node.p5 = p5;
+    node.p6 = p6;
+    node.p7 = p7;
 
     node.isSet = true;
 
@@ -394,7 +427,7 @@ GLint BasicOctree::createNode(GLint x,GLint y,GLint z,GLint depth,bool isInside,
     node.isShell = false;
 
     node.parentIndex = parentIndex;
-    node.setPoints(xf,yf,zf,cell_length);
+    //node.setPoints(xf,yf,zf,cell_length);
     node.x = x;
     node.y = y;
     node.z = z;

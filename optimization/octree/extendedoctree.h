@@ -65,6 +65,8 @@ public:
 
     void transformOctree(QMatrix4x4 mat);
 
+    void resetBetaOctreeState();
+
 private:
 
     QVector<octree::cubeObject> cubeVector;
@@ -78,6 +80,8 @@ private:
     QOpenGLBuffer* ibo_line;
     QVector<int> indexBuffer;
     QVector<int> indexBuffer_line;
+
+    bool deactivateBetaOctree;
 
 private:
 

@@ -33,9 +33,9 @@ using namespace std;
 #define MAX(v1,v2) (v1>v2?v1:v2);
 #define MIN(v1,v2) (v1<v2?v1:v2);
 
-#define GAMMA_C_TOP (1e-0)
+#define GAMMA_C_TOP (1e-4)
 #define GAMMA_I_TOP (1e-0)
-#define GAMMA_L_TOP (1e-0)
+#define GAMMA_L_TOP (1e-1)
 
 #define GAMMA_I_TIPPE_TOP (1e-0)
 #define GAMMA_L_TIPPE_TOP (1e-0)
@@ -51,7 +51,7 @@ using namespace std;
 
 #define MAX_NUMBER_OF_VARIABLES 3800
 
-#define FIXED_EPSILON (1.f*1e-1)
+#define FIXED_EPSILON (0.5f*1e-1)
 
 #define OPTIMIZATION_FUNCTION_THRESHOLD (1e-4)
 #define OPTIMIZATION_CONSTAINTS_THRESHOLD (1e-8)
@@ -218,7 +218,6 @@ void BetaOptimization::initializeOctree(
     BetaOptimization::mesh = newModifiedMesh;
 
     /*--------------------------------------------------------------*/
-
     BetaOptimization::mesh->swapYZ();
 
     QMatrix4x4 mat;
@@ -259,7 +258,6 @@ void BetaOptimization::initializeOctree(
     mat.setToIdentity();
     mat.rotate(-phi,QVector3D(0,1,0));
     com2 = mat*com2;
-
     /*--------------------------------------------------------------*/
 
     // initialize the octree
@@ -296,14 +294,14 @@ void BetaOptimization::initializeOctree(
     }
     BetaOptimization::shellMesh = newShellMesh;
 
-
     /*--------------------------------------------------------------*/
-    /*only tranlation in xz plane is possible currently*/
     mat.setToIdentity();
     mat.translate(com2);
     BetaOptimization::mesh->transform(mat);
     BetaOptimization::octree.transformOctree(mat);
     /*--------------------------------------------------------------*/
+
+    BetaOptimization::octree.resetBetaOctreeState();
 
     cout << "----------------------------------------" << endl;
     cout << "Create Octree (Finish)" << endl;
@@ -1140,6 +1138,8 @@ void BetaOptimization::testSimpleSplitAndMerge()
 
     BetaOptimization::octree.deleteNodeMeshes();
 
+    BetaOptimization::finishBetaOptimization();
+
 }
 
 /**
@@ -1186,7 +1186,7 @@ void BetaOptimization::testSplitAndMerge()
         }
 
         // set new betas and clrea cubeVector
-        BetaOptimization::octree.updateBetaValues();
+        BetaOptimization::octree.updateBetaValuesWithPropagation();
 
         // do split and merge
         not_converged = BetaOptimization::octree.splitAndMerge(0.001,1000);
@@ -1194,11 +1194,19 @@ void BetaOptimization::testSplitAndMerge()
 
     BetaOptimization::octree.deleteNodeMeshes();
 
+    BetaOptimization::finishBetaOptimization();
+
 }
 
+/**
+ * @brief BetaOptimization::getShellMesh
+ * @param flipped
+ * @return
+ */
 Mesh* BetaOptimization::getShellMesh(bool flipped)
 {
     Mesh* mesh = BetaOptimization::octree.getShellMesh(flipped);
+
     QMatrix4x4 mat;
     mat.setToIdentity();
     mat.translate(BetaOptimization::com2);

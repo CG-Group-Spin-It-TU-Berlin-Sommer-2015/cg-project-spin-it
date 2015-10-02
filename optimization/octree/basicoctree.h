@@ -221,7 +221,21 @@ protected:
 
 protected:
 
-    GLint createNode(GLint x,GLint y,GLint z,GLint depth,bool addToInteriors,GLint parentIndex);
+    GLint createNode(
+            GLint x,
+            GLint y,
+            GLint z,
+            GLint depth,
+            bool isInside,
+            GLint parentIndex,
+            QVector3D p0,
+            QVector3D p1,
+            QVector3D p2,
+            QVector3D p3,
+            QVector3D p4,
+            QVector3D p5,
+            QVector3D p6,
+            QVector3D p7);
 
     void getInnerLeaves(QVector<GLint>* indices);
     void getShellLeaves(QVector<GLint>* indices);
