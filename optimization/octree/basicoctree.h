@@ -10,7 +10,7 @@
 
 #include "mesh/mesh.h"
 
-#define START_DENSITY 1.f
+#define START_DENSITY 0.9f
 
 #define IS_SHELL_NODE (nodePointer->isShell)
 #define IS_INNER_NODE (!nodePointer->isShell && nodePointer->isInside)

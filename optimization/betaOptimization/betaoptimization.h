@@ -70,6 +70,10 @@ private:
 
     static Eigen::VectorXd S_inner_comp;
 
+    static bool* isUsed;
+    static double* currentBetas;
+    static int betaSize;
+
 private:
 
     static GLfloat getEpsilon(GLint depth);
@@ -83,7 +87,7 @@ private:
 
     static GLfloat phi;
 
-    static void executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType);
+    static bool executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType);
 
     static float* calculateVolume(Mesh* mesh, float p = 1.f);
 

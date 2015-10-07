@@ -1274,6 +1274,8 @@ void GLWidget::resetAll()
     this->rot_obj_phi = 0;
     this->rot_obj_psy = 0;
     this->scale_xyz = 1;
+
+    octreeIsDirty = true;
     this->updateGL();
 }
 

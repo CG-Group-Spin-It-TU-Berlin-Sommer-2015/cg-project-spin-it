@@ -8,6 +8,8 @@ using namespace std;
 
 #define BOTTOM_UP_START_DEPTH 3
 
+#define IGNORE_BINARIES true
+
 #define s_1  S(0)
 #define s_x  S(1)
 #define s_y  S(2)
@@ -86,6 +88,10 @@ QVector3D BetaOptimization::com1;
 QVector3D BetaOptimization::com2;
 
 VectorXd BetaOptimization::S_inner_comp;
+
+bool* BetaOptimization::isUsed;
+double* BetaOptimization::currentBetas;
+int BetaOptimization::betaSize;
 
 /**
  * @brief BetaOptimization::doTopOptimization Execute the optimization for a top.
@@ -347,14 +353,29 @@ void BetaOptimization::initializeOctree(
  */
 double BetaOptimization::spinItContraints(unsigned n, const double *x, double *grad, void *data)
 {
+
+   (void)n;
+
    spin_it_constraint_data *d = (spin_it_constraint_data *) data;
    int index = d->index;
 
-   VectorXd betas(n-1);
+   VectorXd betas(BetaOptimization::betaSize);
    GLdouble phi = x[0];
-   for(unsigned int i=1;i<n;i++){
-       betas(i-1) = x[i];
+
+   int counter = 1;
+   for(int i=0;i<BetaOptimization::betaSize;i++)
+   {
+       if(BetaOptimization::isUsed[i])
+       {
+           betas(i) = x[counter];
+           counter++;
+       }
+       else
+       {
+           betas(i) = BetaOptimization::currentBetas[i];
+       }
    }
+
    MatrixXd S = BetaOptimization::S_comp - BetaOptimization::S_mat*betas;
 
    double cosp = cos(phi);
@@ -368,8 +389,16 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
        if(grad != NULL)
        {
            grad[0] = 0;
-           for(unsigned int i=0;i<n-1;i++){
-               grad[i+1] = -Smat_x(i);
+           //----------------------------------------
+           int counter = 1;
+           for(int i=0;i<BetaOptimization::betaSize;i++){
+
+               if(BetaOptimization::isUsed[i])
+               {
+                   grad[counter] = -Smat_x(i);
+                   counter++;
+               }
+
            }
        }
 
@@ -380,9 +409,18 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
        if(grad != NULL)
        {
           grad[0] = 0;
-          for(unsigned int i=0;i<n-1;i++){
-              grad[i+1] = -Smat_y(i);
+          //----------------------------------------
+          int counter = 1;
+          for(int i=0;i<BetaOptimization::betaSize;i++){
+
+              if(BetaOptimization::isUsed[i])
+              {
+                  grad[counter] = -Smat_y(i);
+                  counter++;
+              }
+
           }
+
        }
 
        return s_y;
@@ -392,9 +430,18 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
        if(grad != NULL)
        {
           grad[0] = 0;
-          for(unsigned int i=0;i<n-1;i++){
-              grad[i+1] = -Smat_yz(i);
+          //----------------------------------------
+          int counter = 1;
+          for(int i=0;i<BetaOptimization::betaSize;i++){
+
+              if(BetaOptimization::isUsed[i])
+              {
+                  grad[counter] = -Smat_yz(i);
+                  counter++;
+              }
+
           }
+
        }
 
        return s_yz;
@@ -404,9 +451,18 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
        if(grad != NULL)
        {
           grad[0] = 0;
-          for(unsigned int i=0;i<n-1;i++){
-               grad[i+1] = -Smat_xz(i);
+          //----------------------------------------
+          int counter = 1;
+          for(int i=0;i<BetaOptimization::betaSize;i++){
+
+              if(BetaOptimization::isUsed[i])
+              {
+                  grad[counter] = -Smat_xz(i);
+                  counter++;
+              }
+
           }
+
        }
 
        return s_xz;
@@ -416,9 +472,18 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
        if(grad != NULL)
        {
           grad[0] = 0;
-          for(unsigned int i=0;i<n-1;i++){
-               grad[i+1] = -Smat_z(i);
+          //----------------------------------------
+          int counter = 1;
+          for(int i=0;i<BetaOptimization::betaSize;i++){
+
+              if(BetaOptimization::isUsed[i])
+              {
+                  grad[counter] = -Smat_z(i);
+                  counter++;
+              }
+
           }
+
        }
 
        return s_z;
@@ -430,11 +495,18 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
            grad[0] = 0;
            grad[0] += ( pow(cosp,2) - pow(sinp,2) )*(s_x2-s_y2);
            grad[0] += (-1)*4*sinp*cosp*s_xy;
+           //----------------------------------------
+           int counter = 1;
+           for(int i=0;i<BetaOptimization::betaSize;i++){
 
-           for(unsigned int i=0;i<n-1;i++){
-                grad[i+1] = 0;
-                grad[i+1] += cosp*sinp*(Smat_y2(i)-Smat_x2(i));
-                grad[i+1] += (pow(sinp,2)-pow(cosp,2))*Smat_xy(i);
+               if(BetaOptimization::isUsed[i])
+               {
+                   grad[counter] = 0;
+                   grad[counter] += cosp*sinp*(Smat_y2(i)-Smat_x2(i));
+                   grad[counter] += (pow(sinp,2)-pow(cosp,2))*Smat_xy(i);
+                   counter++;
+               }
+
            }
        }
 
@@ -456,12 +528,25 @@ double BetaOptimization::spinItContraints(unsigned n, const double *x, double *g
 double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data)
 {
 
+    (void)n;
+
     GLint optimization_type = ((GLint*)my_func_data)[0];
 
-    VectorXd betas(n-1);
+    VectorXd betas(BetaOptimization::betaSize);
     GLdouble phi = x[0];
-    for(unsigned int i=1;i<n;i++){
-        betas(i-1) = x[i];
+
+    int counter = 1;
+    for(int i=0;i<BetaOptimization::betaSize;i++)
+    {
+        if(BetaOptimization::isUsed[i])
+        {
+            betas(i) = x[counter];
+            counter++;
+        }
+        else
+        {
+            betas(i) = BetaOptimization::currentBetas[i];
+        }
     }
 
     double cosp = cos(phi);
@@ -555,12 +640,16 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
         else
         {
             grad[0] = gi*(2/pow(IZ,2))*(dIxdphi*IX+dIydphi*IY);
-        }
-
+        }       
 
         //----------------------------------------
-        for(unsigned int i=0;i<n-1;i++){
+        int counter = 1;
+        for(int i=0;i<BetaOptimization::betaSize;i++){
 
+            if(!BetaOptimization::isUsed[i])
+            {
+                continue;
+            }
 
             SpMat vec(betas.size(),1);
             std::vector<T> coefficients;
@@ -610,8 +699,8 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
                 dSecondPart = gi*(2/pow(IZ,3))*( dIxb*IZ*IX + dIyb*IZ*IY - dIzb*(pow(IX,2)+pow(IY,2)));
             }
 
-
-            grad[i+1] = dFirstPart+dSecondPart+dThirdPart;
+            grad[counter] = dFirstPart+dSecondPart+dThirdPart;
+            counter++;
         }
     }
     //----------------------------------------
@@ -623,25 +712,61 @@ double BetaOptimization::spinItEnergyFunction(unsigned n, const double *x, doubl
  * @brief BetaOptimization::executeBetasOptimization Execute beta optimization.
  * @param cubeVector
  * @param optimizationType
+ * @return
  */
-void BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType)
+bool BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cubeVector,GLint optimizationType)
 {
 
     double minf;
+    int counter;
+
+    int usedCubeCounter = 0;
+
+    BetaOptimization::isUsed = new bool[cubeVector->size()];
+    BetaOptimization::currentBetas = new double[cubeVector->size()];
+    BetaOptimization::betaSize = cubeVector->size();
+
+    for(int i=0;i<cubeVector->size();i++)
+    {
+        octree::cubeObject* obj = &cubeVector->data()[i];
+        bool isUsed = !IGNORE_BINARIES || ((FIXED_EPSILON)<obj->beta && obj->beta<(1-FIXED_EPSILON));
+        BetaOptimization::isUsed[i] = isUsed;
+        BetaOptimization::currentBetas[i] = obj->beta;
+        usedCubeCounter += isUsed ?1:0;
+    }
+
+    cout << "----------------------------------------" << endl;
+    cout << "number of cubes (comp): " << cubeVector->size() << endl;
+    cout << "number of cubes (used): " << usedCubeCounter << endl;
+
+    if(usedCubeCounter>MAX_NUMBER_OF_VARIABLES)
+    {
+        cout << "----------------------------------------" << endl;
+        cout << "abort execution of optimization" << endl;
+        cout << "because max number of variables is reached!" << endl;
+        return false;
+    }
 
     //------------------------------
-    int bs = cubeVector->size()+1;
+    int bs = usedCubeCounter+1;
     //------------------------------
+
 
     // lower and upper borders (0,1) for betas
     double* lb_si = new double[bs];
     double* ub_si = new double[bs];
     double* betas = new double[bs];
-    for(int i=1;i<bs;i++)
+
+    counter = 1;
+    for(int i=0;i<cubeVector->size();i++)
     {
-        lb_si[i] = 0.0;
-        ub_si[i] = 1.0;
-        betas[i] = cubeVector->data()[i-1].beta;
+        if(BetaOptimization::isUsed[i])
+        {
+            lb_si[counter] = 0.0;
+            ub_si[counter] = 1.0;
+            betas[counter] = cubeVector->data()[i].beta;
+            counter++;
+        }
     }
 
     // lower and upper borders (-pi,+pi) for phi
@@ -718,6 +843,18 @@ void BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cub
             cout << "Forced stop!" << endl;
         }
 
+        nlopt_destroy(opt_spin_it);
+        delete lb_si;
+        delete ub_si;
+        delete betas;
+        delete BetaOptimization::isUsed;
+        delete BetaOptimization::currentBetas;
+        BetaOptimization::isUsed = NULL;
+        BetaOptimization::currentBetas = NULL;
+        BetaOptimization::betaSize = -1;
+
+        return false;
+
     }
     else
     {
@@ -749,19 +886,31 @@ void BetaOptimization::executeBetasOptimization(QVector<octree::cubeObject>* cub
 
     }
 
-    nlopt_destroy(opt_spin_it);
-
     // update betas
-    for (int i = 1; i < bs; i++) {
-        octree::cubeObject* obj = &cubeVector->data()[i-1];
-        obj->beta = betas[i];
+    counter = 1;
+    for(int i=0;i<cubeVector->size();i++)
+    {
+        if(BetaOptimization::isUsed[i])
+        {
+            octree::cubeObject* obj = &cubeVector->data()[i];
+            obj->beta = betas[counter];
+            counter++;
+        }
     }
+
     BetaOptimization::phi = betas[0];
 
+    nlopt_destroy(opt_spin_it);
     delete lb_si;
     delete ub_si;
     delete betas;
+    delete BetaOptimization::isUsed;
+    delete BetaOptimization::currentBetas;
+    BetaOptimization::isUsed = NULL;
+    BetaOptimization::currentBetas = NULL;
+    BetaOptimization::betaSize = -1;
 
+    return true;
 }
 
 /**
@@ -952,7 +1101,6 @@ void BetaOptimization::setCheckMatrixForCubes()
     cout << "complete inner volume" << endl;
     cout << BetaOptimization::S_inner_comp << endl;
 
-    return;
 }
 
 /**
@@ -984,24 +1132,19 @@ void BetaOptimization::optimizeBetasBottomUp(GLint optimizationType)
     for (int i = BOTTOM_UP_START_DEPTH; i < depth; i++) {
 
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getCubesOfLowerDepth(i);
-
-        cout << "----------------------------------------" << endl;
-        cout << "number of cubes is " << cubeVector->size() << endl;
-
-        if(cubeVector->size()>MAX_NUMBER_OF_VARIABLES)
-        {
-            cout << "----------------------------------------" << endl;
-            cout << "finished optimization (bottom up)" << endl;
-            cout << "because max number of variables is reached!" << endl;
-            break;
-        }
-
         BetaOptimization::setSMatrixForCubes(cubeVector);
         BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
         showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
+        bool wasSuccessful = BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
+
+        if(!wasSuccessful)
+        {
+            cout << "----------------------------------------" << endl;
+            cout << "abort optimization (bottom up)" << endl;
+            break;
+        }
 
         showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
@@ -1078,24 +1221,20 @@ void BetaOptimization::optimizeBetasWithSplitAndMerge(int optimizationType)
         cout << "Split and Merge Step (" << counter << ")" << endl;
         counter++;
 
-        cout << "----------------------------------------" << endl;
         QVector<octree::cubeObject>* cubeVector = BetaOptimization::octree.getMergedCubes();
-        cout << "number of cubes is " << cubeVector->size() << endl;
-
-        if(cubeVector->size()>MAX_NUMBER_OF_VARIABLES)
-        {
-            cout << "----------------------------------------" << endl;
-            cout << "finished optimization with split and merge" << endl;
-            cout << "because max number of variables is reached!" << endl;
-            break;
-        }
-
         BetaOptimization::setSMatrixForCubes(cubeVector);
         BetaOptimization::L = BetaOptimization::octree.getUniformLaplace(cubeVector);
 
         BetaOptimization::showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
-        BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
+        bool wasSuccessful = BetaOptimization::executeBetasOptimization(cubeVector,optimizationType);
+
+        if(!wasSuccessful)
+        {
+            cout << "----------------------------------------" << endl;
+            cout << "abort optimization (split and merge)" << endl;
+            break;
+        }
 
         BetaOptimization::showProperties(S_comp,S_mat,cubeVector,BetaOptimization::phi);
 
@@ -1354,7 +1493,7 @@ float* BetaOptimization::calculateVolume(Mesh* mesh, float p)
  */
 double BetaOptimization::phiEnergyFunction(unsigned n, const double *x, double *grad, void *my_func_data)
 {
-    (void )n;
+    (void)n;
     (void)my_func_data;
 
     GLdouble phi = x[0];
