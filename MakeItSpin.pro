@@ -87,4 +87,5 @@ DISTFILES += \
     shaders/simple.fsh \
     shaders/colorshader.vsh \
     shaders/simple.vsh \
-    test_models/standard_objs/teddy.obj
+    test_models/standard_objs/teddy.obj \
+    test_models/standard_objs/heart.obj
